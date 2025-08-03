@@ -1,0 +1,149 @@
+version: '3.8'
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: wagateway-mysql-dev
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: wagateway_dev
+      MYSQL_USER: wagateway
+      MYSQL_PASSWORD: wagateway123
+    volumes:
+      - mysql_dev_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    ports:
+      - "3306:3306"
+    networks:
+      - wagateway-dev-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: wagateway-redis-dev
+    restart: unless-stopped
+    volumes:
+      - redis_dev_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - wagateway-dev-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      timeout: 20s
+      retries: 10
+
+  # Backend API (Development)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: wagateway-backend-dev
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: wagateway_dev
+      DB_USER: wagateway
+      DB_PASSWORD: wagateway123
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: dev-jwt-secret
+      JWT_EXPIRES_IN: 7d
+      SESSION_SECRET: dev-session-secret
+      UPLOAD_PATH: /app/uploads
+      LOG_PATH: /app/logs
+      SESSION_PATH: /app/sessions
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - backend_dev_uploads:/app/uploads
+      - backend_dev_logs:/app/logs
+      - backend_dev_sessions:/app/sessions
+    ports:
+      - "3001:3001"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - wagateway-dev-network
+    command: npm run dev
+
+  # Frontend Application (Development)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: wagateway-frontend-dev
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      NUXT_PUBLIC_API_URL: http://localhost:3001
+      NUXT_PUBLIC_WS_URL: ws://localhost:3001
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - wagateway-dev-network
+    command: npm run dev
+
+  # phpMyAdmin (Development)
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: wagateway-phpmyadmin-dev
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: wagateway
+      PMA_PASSWORD: wagateway123
+    ports:
+      - "8080:80"
+    depends_on:
+      - mysql
+    networks:
+      - wagateway-dev-network
+
+  # Redis Commander (Development)
+  redis-commander:
+    image: rediscommander/redis-commander
+    container_name: wagateway-redis-commander-dev
+    restart: unless-stopped
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - wagateway-dev-network
+
+volumes:
+  mysql_dev_data:
+    driver: local
+  redis_dev_data:
+    driver: local
+  backend_dev_uploads:
+    driver: local
+  backend_dev_logs:
+    driver: local
+  backend_dev_sessions:
+    driver: local
+
+networks:
+  wagateway-dev-network:
+    driver: bridge 
