@@ -1,0 +1,877 @@
+{
+  "info": {
+    "name": "WA Gateway API",
+    "description": "Complete API collection for WhatsApp Gateway application",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3001/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"admin123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('token', response.data.token);",
+                  "    pm.collectionVariables.set('token', response.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"user\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Devices",
+      "item": [
+        {
+          "name": "Get All Devices",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/devices",
+              "host": ["{{baseUrl}}"],
+              "path": ["devices"]
+            }
+          }
+        },
+        {
+          "name": "Create Device",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Device\",\n  \"description\": \"Test WhatsApp device\",\n  \"phoneNumber\": \"6281234567890\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/devices",
+              "host": ["{{baseUrl}}"],
+              "path": ["devices"]
+            }
+          }
+        },
+        {
+          "name": "Get Device by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/devices/:deviceId",
+              "host": ["{{baseUrl}}"],
+              "path": ["devices", ":deviceId"],
+              "variable": [
+                {
+                  "key": "deviceId",
+                  "value": "device-uuid-here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Connect Device",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/devices/:deviceId/connect",
+              "host": ["{{baseUrl}}"],
+              "path": ["devices", ":deviceId", "connect"],
+              "variable": [
+                {
+                  "key": "deviceId",
+                  "value": "device-uuid-here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Disconnect Device",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/devices/:deviceId/disconnect",
+              "host": ["{{baseUrl}}"],
+              "path": ["devices", ":deviceId", "disconnect"],
+              "variable": [
+                {
+                  "key": "deviceId",
+                  "value": "device-uuid-here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Device",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/devices/:deviceId",
+              "host": ["{{baseUrl}}"],
+              "path": ["devices", ":deviceId"],
+              "variable": [
+                {
+                  "key": "deviceId",
+                  "value": "device-uuid-here"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Messages",
+      "item": [
+        {
+          "name": "Get Messages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messages?deviceId=:deviceId&limit=50&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["messages"],
+              "query": [
+                {
+                  "key": "deviceId",
+                  "value": ":deviceId",
+                  "description": "Filter by device ID"
+                },
+                {
+                  "key": "limit",
+                  "value": "50",
+                  "description": "Number of messages to return"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Number of messages to skip"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Send Text Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceId\": \"device-uuid-here\",\n  \"to\": \"6281234567890\",\n  \"message\": \"Hello from WA Gateway!\",\n  \"type\": \"text\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/messages/send",
+              "host": ["{{baseUrl}}"],
+              "path": ["messages", "send"]
+            }
+          }
+        },
+        {
+          "name": "Send Media Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceId\": \"device-uuid-here\",\n  \"to\": \"6281234567890\",\n  \"message\": \"Check this image!\",\n  \"type\": \"image\",\n  \"fileId\": \"file-uuid-here\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/messages/send-media",
+              "host": ["{{baseUrl}}"],
+              "path": ["messages", "send-media"]
+            }
+          }
+        },
+        {
+          "name": "Get Message by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messages/:messageId",
+              "host": ["{{baseUrl}}"],
+              "path": ["messages", ":messageId"],
+              "variable": [
+                {
+                  "key": "messageId",
+                  "value": "message-uuid-here"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Contacts",
+      "item": [
+        {
+          "name": "Get All Contacts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/contacts?limit=50&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["contacts"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Contact",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"phoneNumber\": \"6281234567890\",\n  \"email\": \"john@example.com\",\n  \"group\": \"Friends\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/contacts",
+              "host": ["{{baseUrl}}"],
+              "path": ["contacts"]
+            }
+          }
+        },
+        {
+          "name": "Import Contacts (CSV)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/contacts/import",
+              "host": ["{{baseUrl}}"],
+              "path": ["contacts", "import"]
+            }
+          }
+        },
+        {
+          "name": "Export Contacts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/contacts/export?format=csv",
+              "host": ["{{baseUrl}}"],
+              "path": ["contacts", "export"],
+              "query": [
+                {
+                  "key": "format",
+                  "value": "csv"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Contact by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/contacts/:contactId",
+              "host": ["{{baseUrl}}"],
+              "path": ["contacts", ":contactId"],
+              "variable": [
+                {
+                  "key": "contactId",
+                  "value": "contact-uuid-here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Contact",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe Updated\",\n  \"phoneNumber\": \"6281234567890\",\n  \"email\": \"john.updated@example.com\",\n  \"group\": \"Family\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/contacts/:contactId",
+              "host": ["{{baseUrl}}"],
+              "path": ["contacts", ":contactId"],
+              "variable": [
+                {
+                  "key": "contactId",
+                  "value": "contact-uuid-here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Contact",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/contacts/:contactId",
+              "host": ["{{baseUrl}}"],
+              "path": ["contacts", ":contactId"],
+              "variable": [
+                {
+                  "key": "contactId",
+                  "value": "contact-uuid-here"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Files",
+      "item": [
+        {
+          "name": "Get All Files",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/files?limit=50&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["files"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Upload File",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "type",
+                  "value": "image",
+                  "description": "File type: image, video, audio, document, archive"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/files/upload",
+              "host": ["{{baseUrl}}"],
+              "path": ["files", "upload"]
+            }
+          }
+        },
+        {
+          "name": "Get File by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/files/:fileId",
+              "host": ["{{baseUrl}}"],
+              "path": ["files", ":fileId"],
+              "variable": [
+                {
+                  "key": "fileId",
+                  "value": "file-uuid-here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Download File",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/files/:fileId/download",
+              "host": ["{{baseUrl}}"],
+              "path": ["files", ":fileId", "download"],
+              "variable": [
+                {
+                  "key": "fileId",
+                  "value": "file-uuid-here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete File",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/files/:fileId",
+              "host": ["{{baseUrl}}"],
+              "path": ["files", ":fileId"],
+              "variable": [
+                {
+                  "key": "fileId",
+                  "value": "file-uuid-here"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Broadcasts",
+      "item": [
+        {
+          "name": "Get All Broadcasts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/broadcasts?limit=50&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["broadcasts"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Broadcast",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceId\": \"device-uuid-here\",\n  \"message\": \"Hello everyone! This is a broadcast message.\",\n  \"contactIds\": [\"contact-uuid-1\", \"contact-uuid-2\"],\n  \"scheduledAt\": null\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/broadcasts",
+              "host": ["{{baseUrl}}"],
+              "path": ["broadcasts"]
+            }
+          }
+        },
+        {
+          "name": "Get Broadcast by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/broadcasts/:broadcastId",
+              "host": ["{{baseUrl}}"],
+              "path": ["broadcasts", ":broadcastId"],
+              "variable": [
+                {
+                  "key": "broadcastId",
+                  "value": "broadcast-uuid-here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Cancel Broadcast",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/broadcasts/:broadcastId/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["broadcasts", ":broadcastId", "cancel"],
+              "variable": [
+                {
+                  "key": "broadcastId",
+                  "value": "broadcast-uuid-here"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auto Replies",
+      "item": [
+        {
+          "name": "Get All Auto Replies",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auto-replies",
+              "host": ["{{baseUrl}}"],
+              "path": ["auto-replies"]
+            }
+          }
+        },
+        {
+          "name": "Create Auto Reply",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"keyword\": \"hello\",\n  \"response\": \"Hi there! How can I help you?\",\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auto-replies",
+              "host": ["{{baseUrl}}"],
+              "path": ["auto-replies"]
+            }
+          }
+        },
+        {
+          "name": "Update Auto Reply",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"keyword\": \"hello\",\n  \"response\": \"Hello! Welcome to our service.\",\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auto-replies/:autoReplyId",
+              "host": ["{{baseUrl}}"],
+              "path": ["auto-replies", ":autoReplyId"],
+              "variable": [
+                {
+                  "key": "autoReplyId",
+                  "value": "auto-reply-uuid-here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Auto Reply",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auto-replies/:autoReplyId",
+              "host": ["{{baseUrl}}"],
+              "path": ["auto-replies", ":autoReplyId"],
+              "variable": [
+                {
+                  "key": "autoReplyId",
+                  "value": "auto-reply-uuid-here"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Analytics",
+      "item": [
+        {
+          "name": "Get Message Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/messages?period=7d",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "messages"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "7d",
+                  "description": "Period: 1d, 7d, 30d, 90d"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Device Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/devices",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "devices"]
+            }
+          }
+        },
+        {
+          "name": "Get File Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/files",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "files"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Webhooks",
+      "item": [
+        {
+          "name": "Get All Webhooks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/webhooks",
+              "host": ["{{baseUrl}}"],
+              "path": ["webhooks"]
+            }
+          }
+        },
+        {
+          "name": "Create Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://your-webhook-url.com/webhook\",\n  \"events\": [\"message.received\", \"message.sent\"],\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/webhooks",
+              "host": ["{{baseUrl}}"],
+              "path": ["webhooks"]
+            }
+          }
+        },
+        {
+          "name": "Test Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"test\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/webhooks/:webhookId/test",
+              "host": ["{{baseUrl}}"],
+              "path": ["webhooks", ":webhookId", "test"],
+              "variable": [
+                {
+                  "key": "webhookId",
+                  "value": "webhook-uuid-here"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+} 
