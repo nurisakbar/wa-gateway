@@ -357,6 +357,73 @@ const validateWebhook = [
   handleValidationErrors
 ];
 
+/**
+ * Broadcast validation
+ */
+const validateBroadcastRequest = (data) => {
+  const errors = [];
+
+  // Validate device_id
+  if (!data.device_id) {
+    errors.push({ field: 'device_id', message: 'Device ID is required' });
+  }
+
+  // Validate message_data
+  if (!data.message_data) {
+    errors.push({ field: 'message_data', message: 'Message data is required' });
+  } else {
+    const { message_type, content, media_url, template_data } = data.message_data;
+    
+    if (!message_type) {
+      errors.push({ field: 'message_data.message_type', message: 'Message type is required' });
+    } else if (!['text', 'media', 'template'].includes(message_type)) {
+      errors.push({ field: 'message_data.message_type', message: 'Invalid message type' });
+    }
+
+    if (message_type === 'text' && !content) {
+      errors.push({ field: 'message_data.content', message: 'Content is required for text messages' });
+    }
+
+    if (message_type === 'media' && !media_url) {
+      errors.push({ field: 'message_data.media_url', message: 'Media URL is required for media messages' });
+    }
+
+    if (message_type === 'template' && !template_data) {
+      errors.push({ field: 'message_data.template_data', message: 'Template data is required for template messages' });
+    }
+  }
+
+  // Validate contacts or contact_filters
+  if (!data.contacts && !data.contact_filters) {
+    errors.push({ field: 'contacts/contact_filters', message: 'Either contacts or contact_filters is required' });
+  }
+
+  // Validate options if provided
+  if (data.options) {
+    const { batch_size, delay_between_messages, scheduled_at } = data.options;
+    
+    if (batch_size && (batch_size < 1 || batch_size > 100)) {
+      errors.push({ field: 'options.batch_size', message: 'Batch size must be between 1 and 100' });
+    }
+
+    if (delay_between_messages && (delay_between_messages < 100 || delay_between_messages > 10000)) {
+      errors.push({ field: 'options.delay_between_messages', message: 'Delay must be between 100 and 10000 ms' });
+    }
+
+    if (scheduled_at) {
+      const scheduledTime = new Date(scheduled_at);
+      if (isNaN(scheduledTime.getTime()) || scheduledTime <= new Date()) {
+        errors.push({ field: 'options.scheduled_at', message: 'Scheduled time must be a valid future date' });
+      }
+    }
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+};
+
 module.exports = {
   handleValidationErrors,
   validateRegistration,
@@ -371,5 +438,6 @@ module.exports = {
   validateSearch,
   validateFileUpload,
   validatePhoneNumber,
-  validateWebhook
+  validateWebhook,
+  validateBroadcastRequest
 }; 

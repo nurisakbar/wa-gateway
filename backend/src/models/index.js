@@ -5,6 +5,7 @@ const User = require('./User');
 const Device = require('./Device');
 const Message = require('./Message');
 const Contact = require('./Contact');
+const Template = require('./Template');
 
 // Define associations
 User.hasMany(Device, { 
@@ -51,11 +52,23 @@ Contact.belongsTo(User, {
   as: 'user'
 });
 
+User.hasMany(Template, {
+  foreignKey: 'user_id',
+  as: 'templates',
+  onDelete: 'CASCADE'
+});
+
+Template.belongsTo(User, {
+  foreignKey: 'user_id',
+  as: 'user'
+});
+
 // Export models
 module.exports = {
   sequelize,
   User,
   Device,
   Message,
-  Contact
+  Contact,
+  Template
 }; 

@@ -1,382 +1,359 @@
-# WA Gateway Backend
+# WA Gateway Backend API
 
-Backend API untuk aplikasi WA Gateway menggunakan Node.js, Express.js, dan Baileys untuk integrasi WhatsApp.
+A comprehensive WhatsApp Gateway backend API built with Node.js, Express, and MySQL. This API provides a robust foundation for managing WhatsApp devices, sending messages, broadcasting, and handling real-time communications.
 
-## 🚀 Fitur
+## 🚀 Features
 
-### Authentication System
-- ✅ User registration dengan validasi
-- ✅ User login dengan JWT
-- ✅ Password hashing dengan bcrypt
-- ✅ Role-based access control
-- ✅ Account lockout protection
-- ✅ Email verification (simulasi)
-- ✅ Password reset (simulasi)
-- ✅ Profile management
+### Core Features
+- **Authentication & Authorization** - JWT-based authentication with role-based access control
+- **Device Management** - WhatsApp device connection, QR code generation, status monitoring
+- **Message Management** - Send individual and bulk messages with various media types
+- **Contact Management** - CRUD operations for contacts with tagging and import/export
+- **Broadcast System** - Mass messaging with scheduling and progress tracking
+- **Template Management** - Message templates with variable substitution and approval workflow
 
-### Security Features
-- ✅ JWT authentication
-- ✅ Rate limiting
-- ✅ Input validation
-- ✅ CORS protection
-- ✅ Helmet security headers
-- ✅ Request logging
+### Advanced Features
+- **Real-time Communication** - Socket.io integration for live updates
+- **Analytics & Reporting** - Comprehensive statistics and data visualization
+- **Notification System** - Multi-channel notifications (email, SMS, webhook)
+- **Caching System** - Redis-based caching for improved performance
+- **Background Jobs** - Queue system for asynchronous task processing
+- **File Upload** - Media file handling with validation and storage
+- **Rate Limiting** - API rate limiting and throttling
+- **API Documentation** - Swagger/OpenAPI documentation
 
-### Database
-- ✅ MySQL dengan Sequelize ORM
-- ✅ User model dengan associations
-- ✅ Device model untuk WhatsApp sessions
-- ✅ Database migration dan sync
+## 📋 Prerequisites
 
-## 📁 Struktur Project
+- Node.js (v16 or higher)
+- MySQL (v8.0 or higher)
+- Redis (v6.0 or higher)
+- npm or yarn
 
-```
-backend/
-├── src/
-│   ├── controllers/
-│   │   └── authController.js      # Authentication controller
-│   ├── models/
-│   │   ├── User.js               # User model
-│   │   ├── Device.js             # Device model
-│   │   └── index.js              # Model associations
-│   ├── routes/
-│   │   └── auth.js               # Authentication routes
-│   ├── middleware/
-│   │   ├── auth.js               # JWT authentication
-│   │   └── validation.js         # Input validation
-│   ├── config/
-│   │   └── database.js           # Database configuration
-│   └── utils/
-│       ├── logger.js             # Winston logger
-│       └── helpers.js            # Utility functions
-├── uploads/                      # File upload directory
-├── sessions/                     # WhatsApp sessions
-├── logs/                         # Application logs
-├── package.json
-├── server.js                     # Main server file
-└── env.example                   # Environment variables example
-```
+## 🛠️ Installation
 
-## 🛠️ Setup & Installation
-
-### Prerequisites
-- Node.js 16+
-- MySQL 8.0+
-- npm atau yarn
-
-### Installation
-
-1. **Clone repository dan masuk ke folder backend**
-```bash
-cd backend
-```
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd wa-gateway/backend
+   ```
 
 2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Environment Configuration**
+   ```bash
+   cp env.example .env
+   ```
+   
+   Edit `.env` file with your configuration:
+   ```env
+   # Database Configuration
+   DB_HOST=localhost
+   DB_PORT=3306
+   DB_NAME=wa_gateway
+   DB_USER=root
+   DB_PASSWORD=your_password
+
+   # JWT Configuration
+   JWT_SECRET=your-super-secret-jwt-key
+   JWT_EXPIRES_IN=24h
+
+   # Server Configuration
+   PORT=3000
+   NODE_ENV=development
+
+   # Redis Configuration
+   REDIS_HOST=localhost
+   REDIS_PORT=6379
+   REDIS_PASSWORD=
+   REDIS_DB=0
+
+   # Email Configuration
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_SECURE=false
+   SMTP_USER=your-email@gmail.com
+   SMTP_PASS=your-app-password
+   ```
+
+4. **Database Setup**
+   ```bash
+   # Create database
+   mysql -u root -p -e "CREATE DATABASE wa_gateway;"
+   
+   # Run migrations (if using Sequelize migrations)
+   npm run migrate
+   ```
+
+5. **Start the server**
+   ```bash
+   # Development
+   npm run dev
+   
+   # Production
+   npm start
+   ```
+
+## 🧪 Testing
+
+### Setup Test Environment
 ```bash
-npm install
+# Copy test environment file
+cp env.test.example .env.test
+
+# Create test database
+mysql -u root -p -e "CREATE DATABASE wa_gateway_test;"
 ```
 
-3. **Setup environment variables**
+### Run Tests
 ```bash
-# Copy environment example
-cp env.example .env
+# Run all tests
+npm test
 
-# Edit .env file sesuai konfigurasi database Anda
+# Run tests with coverage
+npm run test:coverage
+
+# Run specific test suites
+npm run test:unit          # Unit tests only
+npm run test:integration   # Integration tests only
+npm run test:auth          # Authentication tests
+npm run test:devices       # Device management tests
+npm run test:messages      # Message management tests
+npm run test:services      # Service layer tests
+
+# Watch mode for development
+npm run test:watch
 ```
 
-4. **Setup database**
-```bash
-# Buat database MySQL
-mysql -u root -p
-CREATE DATABASE wagateway;
-```
-
-5. **Jalankan server**
-```bash
-# Development mode
-npm run dev
-
-# Production mode
-npm start
-```
-
-## 🔧 Environment Variables
-
-Buat file `.env` dengan konfigurasi berikut:
-
-```env
-# Server Configuration
-NODE_ENV=development
-PORT=3000
-HOST=localhost
-
-# Database Configuration
-DB_HOST=localhost
-DB_PORT=3306
-DB_NAME=wagateway
-DB_USER=root
-DB_PASSWORD=
-DB_DIALECT=mysql
-
-# JWT Configuration
-JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
-JWT_EXPIRES_IN=24h
-JWT_REFRESH_SECRET=your-super-secret-refresh-key-change-this-in-production
-JWT_REFRESH_EXPIRES_IN=7d
-
-# Security
-BCRYPT_ROUNDS=12
-CORS_ORIGIN=http://localhost:3000,http://localhost:3001
-
-# Development
-DEBUG=true
-ENABLE_SWAGGER=true
-ENABLE_CORS=true
-```
+### Test Coverage
+The test suite includes:
+- **Unit Tests** - Individual function and service testing
+- **Integration Tests** - API endpoint and workflow testing
+- **Service Tests** - Business logic and service layer testing
+- **Authentication Tests** - JWT and authorization testing
+- **Database Tests** - Model and data persistence testing
 
 ## 📚 API Documentation
 
-### Authentication Endpoints
-
-#### Register User
-```http
-POST /api/v1/auth/register
-Content-Type: application/json
-
-{
-  "username": "johndoe",
-  "email": "john@example.com",
-  "password": "Password123",
-  "full_name": "John Doe",
-  "phone": "081234567890",
-  "role": "operator"
-}
+### Base URL
+```
+http://localhost:3000/api/v1
 ```
 
-#### Login User
-```http
-POST /api/v1/auth/login
-Content-Type: application/json
-
-{
-  "email": "john@example.com",
-  "password": "Password123"
-}
+### Authentication
+All protected endpoints require a Bearer token in the Authorization header:
+```
+Authorization: Bearer <your-jwt-token>
 ```
 
-#### Get Profile
-```http
-GET /api/v1/auth/profile
-Authorization: Bearer <token>
+### Available Endpoints
+
+#### Authentication
+- `POST /auth/register` - User registration
+- `POST /auth/login` - User login
+- `POST /auth/logout` - User logout
+- `GET /auth/me` - Get current user profile
+- `POST /auth/refresh` - Refresh JWT token
+
+#### Device Management
+- `GET /devices` - Get all devices
+- `POST /devices` - Create new device
+- `GET /devices/:id` - Get specific device
+- `PUT /devices/:id` - Update device
+- `DELETE /devices/:id` - Delete device
+- `POST /devices/:id/connect` - Connect device
+- `POST /devices/:id/disconnect` - Disconnect device
+- `GET /devices/:id/status` - Get device status
+
+#### Message Management
+- `POST /messages/send` - Send individual message
+- `POST /messages/bulk-send` - Send bulk messages
+- `GET /messages` - Get message history
+- `GET /messages/:id` - Get specific message
+- `DELETE /messages/:id` - Delete message
+- `GET /messages/statistics` - Get message statistics
+
+#### Contact Management
+- `GET /contacts` - Get all contacts
+- `POST /contacts` - Create new contact
+- `GET /contacts/:id` - Get specific contact
+- `PUT /contacts/:id` - Update contact
+- `DELETE /contacts/:id` - Delete contact
+- `POST /contacts/import` - Import contacts from CSV
+- `GET /contacts/export` - Export contacts to CSV
+
+#### Broadcast Management
+- `POST /broadcasts/send` - Send broadcast message
+- `POST /broadcasts/schedule` - Schedule broadcast
+- `GET /broadcasts/:id/status` - Get broadcast status
+- `DELETE /broadcasts/:id/cancel` - Cancel scheduled broadcast
+- `GET /broadcasts/scheduled` - Get scheduled broadcasts
+- `GET /broadcasts/contacts` - Get contacts for broadcast
+- `GET /broadcasts/stats` - Get broadcast statistics
+
+#### Template Management
+- `GET /templates` - Get all templates
+- `POST /templates` - Create new template
+- `GET /templates/:id` - Get specific template
+- `PUT /templates/:id` - Update template
+- `DELETE /templates/:id` - Delete template
+- `POST /templates/:id/approve` - Approve template
+- `POST /templates/:id/reject` - Reject template
+
+#### Analytics
+- `GET /analytics/messages` - Message statistics
+- `GET /analytics/devices` - Device statistics
+- `GET /analytics/contacts` - Contact statistics
+- `GET /analytics/users` - User activity report
+- `GET /analytics/system` - System metrics
+
+#### File Management
+- `POST /files/upload` - Upload file
+- `GET /files/:id` - Get file information
+- `DELETE /files/:id` - Delete file
+
+### Interactive API Documentation
+Access the Swagger UI at: `http://localhost:3000/api-docs`
+
+## 🔧 Development
+
+### Project Structure
 ```
-
-#### Update Profile
-```http
-PUT /api/v1/auth/profile
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "full_name": "John Updated",
-  "phone": "081234567890",
-  "bio": "My bio",
-  "address": "My address"
-}
+backend/
+├── src/
+│   ├── config/          # Configuration files
+│   ├── controllers/     # Route controllers
+│   ├── middleware/      # Custom middleware
+│   ├── models/          # Database models
+│   ├── routes/          # API routes
+│   ├── services/        # Business logic services
+│   └── utils/           # Utility functions
+├── tests/               # Test files
+│   ├── unit/           # Unit tests
+│   ├── integration/    # Integration tests
+│   └── setup.js        # Test setup
+├── uploads/            # File uploads
+├── logs/               # Application logs
+├── server.js           # Main server file
+└── package.json        # Dependencies and scripts
 ```
-
-#### Change Password
-```http
-PUT /api/v1/auth/change-password
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "currentPassword": "Password123",
-  "newPassword": "NewPassword123"
-}
-```
-
-#### Logout
-```http
-POST /api/v1/auth/logout
-Authorization: Bearer <token>
-```
-
-### Response Format
-
-Semua response menggunakan format JSON standar:
-
-```json
-{
-  "error": false,
-  "message": "Success message",
-  "data": {
-    // Response data
-  }
-}
-```
-
-### Error Response
-
-```json
-{
-  "error": true,
-  "message": "Error message",
-  "errors": [
-    {
-      "field": "email",
-      "message": "Email is required",
-      "value": ""
-    }
-  ]
-}
-```
-
-## 🔐 Authentication
-
-### JWT Token
-- Access token berlaku 24 jam
-- Refresh token berlaku 7 hari
-- Token harus disertakan di header: `Authorization: Bearer <token>`
-
-### Role Hierarchy
-1. **super_admin** - Akses penuh
-2. **admin** - Kelola user dan sistem
-3. **manager** - Kelola device dan pesan
-4. **operator** - Kirim pesan dan kelola kontak
-5. **viewer** - Hanya lihat laporan
-
-## 🗄️ Database Models
-
-### User Model
-- Authentication dan profile management
-- Role-based access control
-- Account security (lockout, verification)
-- Password hashing otomatis
-
-### Device Model
-- WhatsApp session management
-- Connection status tracking
-- QR code generation
-- Device settings dan metadata
-
-## 🚀 Development
 
 ### Available Scripts
 ```bash
-# Development mode dengan auto-reload
-npm run dev
-
-# Production mode
-npm start
-
-# Run tests
-npm test
-
-# Lint code
-npm run lint
-
-# Fix linting issues
-npm run lint:fix
+npm start              # Start production server
+npm run dev            # Start development server with nodemon
+npm test               # Run all tests
+npm run test:watch     # Run tests in watch mode
+npm run test:coverage  # Run tests with coverage report
+npm run lint           # Run ESLint
+npm run lint:fix       # Fix ESLint issues
 ```
 
-### Logging
-- Winston logger untuk semua level
-- File logging di `logs/` directory
-- Console logging untuk development
-- Request/response logging
+### Code Style
+This project uses ESLint with Airbnb configuration. Run `npm run lint` to check code style and `npm run lint:fix` to automatically fix issues.
 
-### Health Check
-```http
-GET /health
+## 🚀 Deployment
+
+### Production Setup
+1. **Environment Configuration**
+   ```bash
+   NODE_ENV=production
+   PORT=3000
+   ```
+
+2. **Database Migration**
+   ```bash
+   npm run migrate
+   ```
+
+3. **Start Production Server**
+   ```bash
+   npm start
+   ```
+
+### Docker Deployment
+```bash
+# Build Docker image
+docker build -t wa-gateway-backend .
+
+# Run container
+docker run -p 3000:3000 --env-file .env wa-gateway-backend
 ```
 
-Response:
-```json
-{
-  "status": "OK",
-  "timestamp": "2024-01-01T00:00:00.000Z",
-  "uptime": 123.456,
-  "environment": "development",
-  "version": "1.0.0"
-}
+### PM2 Deployment
+```bash
+# Install PM2
+npm install -g pm2
+
+# Start application
+pm2 start server.js --name "wa-gateway-backend"
+
+# Monitor application
+pm2 monit
+
+# View logs
+pm2 logs wa-gateway-backend
 ```
+
+## 🔒 Security
+
+### Security Features
+- JWT-based authentication
+- Password hashing with bcrypt
+- Rate limiting
+- Input validation and sanitization
+- CORS configuration
+- Helmet.js security headers
+- SQL injection prevention
+- XSS protection
+
+### Environment Variables
+Never commit sensitive information to version control. Use environment variables for:
+- Database credentials
+- JWT secrets
+- API keys
+- SMTP credentials
+- Redis passwords
 
 ## 📊 Monitoring
 
-### API Documentation (Swagger)
-Jika `ENABLE_SWAGGER=true`, dokumentasi tersedia di:
-```
-http://localhost:3000/api-docs
-```
+### Logging
+The application uses Winston for logging with different levels:
+- `error` - Application errors
+- `warn` - Warning messages
+- `info` - General information
+- `debug` - Debug information
 
-### Logs
-- Error logs: `logs/error.log`
-- Combined logs: `logs/combined.log`
-- Console output untuk development
-
-## 🔒 Security Features
-
-- **Rate Limiting**: 100 requests per 15 menit per IP
-- **Speed Limiting**: Delay setelah 50 requests
-- **Input Validation**: Express-validator untuk semua input
-- **CORS**: Configurable origins
-- **Helmet**: Security headers
-- **JWT**: Secure token-based authentication
-- **Password Hashing**: bcrypt dengan 12 rounds
-- **Account Lockout**: 5 failed attempts = 15 menit lock
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-1. **Database Connection Failed**
-   - Pastikan MySQL berjalan
-   - Cek konfigurasi database di `.env`
-   - Pastikan database `wagateway` sudah dibuat
-
-2. **Port Already in Use**
-   - Ganti port di `.env` file
-   - Atau kill process yang menggunakan port 3000
-
-3. **JWT Secret Not Set**
-   - Pastikan `JWT_SECRET` dan `JWT_REFRESH_SECRET` sudah diset di `.env`
-
-4. **CORS Issues**
-   - Cek `CORS_ORIGIN` di `.env`
-   - Pastikan frontend URL sudah ditambahkan
-
-### Debug Mode
-Set `DEBUG=true` di `.env` untuk mendapatkan log detail.
-
-## 📝 Next Steps
-
-### Phase 2: Core API Development
-- [ ] Device management API
-- [ ] Message sending API
-- [ ] Contact management API
-- [ ] File upload API
-- [ ] WhatsApp integration dengan Baileys
-
-### Phase 3: Advanced Features
-- [ ] Auto-reply system
-- [ ] Message templates
-- [ ] Broadcast messages
-- [ ] Webhook system
-- [ ] Analytics API
+### Health Checks
+- `GET /health` - Basic health check
+- `GET /health/detailed` - Detailed system health
 
 ## 🤝 Contributing
 
-1. Fork repository
-2. Create feature branch
-3. Commit changes
-4. Push to branch
-5. Create Pull Request
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests for new functionality
+5. Ensure all tests pass
+6. Submit a pull request
 
 ## 📄 License
 
-MIT License - lihat file LICENSE untuk detail.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
----
+## 🆘 Support
 
-**WA Gateway Backend** - Dibuat dengan ❤️ untuk bisnis modern 
+For support and questions:
+- Create an issue in the repository
+- Check the API documentation
+- Review the test files for usage examples
+
+## 🔄 Changelog
+
+### Version 1.0.0
+- Initial release
+- Complete API implementation
+- Comprehensive test suite
+- Documentation and deployment guides 

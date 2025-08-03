@@ -105,6 +105,7 @@ const contactRoutes = require('./src/routes/contacts');
 const fileRoutes = require('./src/routes/files');
 const webhookRoutes = require('./src/routes/webhooks');
 const socketRoutes = require('./src/routes/sockets');
+const broadcastRoutes = require('./src/routes/broadcasts');
 
 // API routes
 app.use(`${API_PREFIX}/${API_VERSION}/auth`, authRoutes);
@@ -114,32 +115,48 @@ app.use(`${API_PREFIX}/${API_VERSION}/contacts`, contactRoutes);
 app.use(`${API_PREFIX}/${API_VERSION}/files`, fileRoutes);
 app.use(`${API_PREFIX}/${API_VERSION}/webhooks`, webhookRoutes);
 app.use(`${API_PREFIX}/${API_VERSION}/sockets`, socketRoutes);
+app.use(`${API_PREFIX}/${API_VERSION}/broadcasts`, broadcastRoutes);
+
+// Initialize services
+const notificationService = require('./src/services/notificationService');
+const cacheService = require('./src/services/cacheService');
+const queueService = require('./src/services/queueService');
+
+// Initialize queues
+queueService.createQueue('email', { concurrency: 2, maxRetries: 3 });
+queueService.createQueue('broadcast', { concurrency: 1, maxRetries: 2 });
+queueService.createQueue('file-processing', { concurrency: 3, maxRetries: 2 });
+
+// Register queue handlers
+queueService.registerHandler('email', async (data) => {
+  return await notificationService.sendNotification(data);
+});
+
+queueService.registerHandler('broadcast', async (data) => {
+  const broadcastService = require('./src/services/broadcastService');
+  return await broadcastService.executeBroadcast(
+    data.broadcastId,
+    data.deviceId,
+    data.contacts,
+    data.messageData,
+    data.options
+  );
+});
+
+queueService.registerHandler('file-processing', async (data) => {
+  const fileUploadService = require('./src/services/fileUploadService');
+  return await fileUploadService.processFile(data);
+});
 
 // Swagger documentation (if enabled)
 if (process.env.ENABLE_SWAGGER === 'true') {
-  const swaggerJsdoc = require('swagger-jsdoc');
   const swaggerUi = require('swagger-ui-express');
+  const specs = require('./src/config/swagger');
 
-  const options = {
-    definition: {
-      openapi: '3.0.0',
-      info: {
-        title: process.env.SWAGGER_TITLE || 'WA Gateway API',
-        version: process.env.SWAGGER_VERSION || '1.0.0',
-        description: process.env.SWAGGER_DESCRIPTION || 'WhatsApp Gateway API Documentation',
-      },
-      servers: [
-        {
-          url: `http://localhost:${PORT}${API_PREFIX}/${API_VERSION}`,
-          description: 'Development server',
-        },
-      ],
-    },
-    apis: ['./src/routes/*.js', './src/models/*.js'], // Path to the API docs
-  };
-
-  const specs = swaggerJsdoc(options);
-  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'WA Gateway API Documentation'
+  }));
 }
 
 // 404 handler
