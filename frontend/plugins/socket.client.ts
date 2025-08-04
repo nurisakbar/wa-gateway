@@ -10,7 +10,7 @@ export default defineNuxtPlugin(() => {
   const connect = () => {
     if (socket.value?.connected) return
 
-    socket.value = io(config.public.wsUrl || 'ws://localhost:3001', {
+    socket.value = io(config.public.socketUrl || 'http://localhost:3000', {
       transports: ['websocket', 'polling'],
       autoConnect: true,
       reconnection: true,
