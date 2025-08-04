@@ -1,6 +1,6 @@
 const request = require('supertest');
 const app = require('../../server');
-const { User, Contact } = require('../src/models');
+const { User, Contact } = require('../../src/models');
 
 describe('Contact Management API', () => {
   let authToken;

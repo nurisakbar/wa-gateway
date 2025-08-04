@@ -18,25 +18,25 @@ export default defineNuxtPlugin((nuxtApp) => {
 
   // Provide toast functions globally
   nuxtApp.provide('toast', {
-    success: (message: string, options?: any) => {
+    success: (message, options) => {
       return toast.success(message, { ...toastOptions, ...options })
     },
-    error: (message: string, options?: any) => {
+    error: (message, options) => {
       return toast.error(message, { ...toastOptions, ...options })
     },
-    warning: (message: string, options?: any) => {
+    warning: (message, options) => {
       return toast.warning(message, { ...toastOptions, ...options })
     },
-    info: (message: string, options?: any) => {
+    info: (message, options) => {
       return toast.info(message, { ...toastOptions, ...options })
     },
-    loading: (message: string, options?: any) => {
+    loading: (message, options) => {
       return toast.loading(message, { ...toastOptions, ...options })
     },
-    dismiss: (toastId: string | number) => {
+    dismiss: (toastId) => {
       return toast.dismiss(toastId)
     },
-    update: (toastId: string | number, options: any) => {
+    update: (toastId, options) => {
       return toast.update(toastId, options)
     }
   })

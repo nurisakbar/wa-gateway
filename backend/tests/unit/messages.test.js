@@ -1,6 +1,6 @@
 const request = require('supertest');
 const app = require('../../server');
-const { User, Device, Message } = require('../src/models');
+const { User, Device, Message } = require('../../src/models');
 
 describe('Message Management API', () => {
   let authToken;

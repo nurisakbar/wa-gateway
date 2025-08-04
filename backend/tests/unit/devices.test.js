@@ -1,6 +1,6 @@
 const request = require('supertest');
 const app = require('../../server');
-const { User, Device } = require('../src/models');
+const { User, Device } = require('../../src/models');
 
 describe('Device Management API', () => {
   let authToken;

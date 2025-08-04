@@ -1,6 +1,6 @@
 const request = require('supertest');
 const app = require('../../server');
-const { User, Device, Contact, Message } = require('../src/models');
+const { User, Device, Contact, Message } = require('../../src/models');
 
 describe('Broadcast Management API', () => {
   let authToken;

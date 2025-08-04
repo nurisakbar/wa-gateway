@@ -1,10 +1,10 @@
-const BroadcastService = require('../src/services/broadcastService');
-const TemplateService = require('../src/services/templateService');
-const AnalyticsService = require('../src/services/analyticsService');
-const NotificationService = require('../src/services/notificationService');
-const CacheService = require('../src/services/cacheService');
-const QueueService = require('../src/services/queueService');
-const { User, Device, Message, Contact, Template } = require('../src/models');
+const BroadcastService = require('../../src/services/broadcastService');
+const TemplateService = require('../../src/services/templateService');
+const AnalyticsService = require('../../src/services/analyticsService');
+const NotificationService = require('../../src/services/notificationService');
+const CacheService = require('../../src/services/cacheService');
+const QueueService = require('../../src/services/queueService');
+const { User, Device, Message, Contact, Template } = require('../../src/models');
 
 describe('Service Layer Tests', () => {
   let testUser;
@@ -18,13 +18,13 @@ describe('Service Layer Tests', () => {
   let queueService;
 
   beforeAll(async () => {
-    // Initialize services
-    broadcastService = new BroadcastService();
-    templateService = new TemplateService();
-    analyticsService = new AnalyticsService();
-    notificationService = new NotificationService();
-    cacheService = new CacheService();
-    queueService = new QueueService();
+    // Use service instances (they are singletons)
+    broadcastService = BroadcastService;
+    templateService = TemplateService;
+    analyticsService = AnalyticsService;
+    notificationService = NotificationService;
+    cacheService = CacheService;
+    queueService = QueueService;
 
     // Create test user
     testUser = await User.create({

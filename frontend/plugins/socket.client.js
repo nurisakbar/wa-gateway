@@ -1,8 +1,8 @@
-import { io, Socket } from 'socket.io-client'
+import { io } from 'socket.io-client'
 
 export default defineNuxtPlugin(() => {
   const config = useRuntimeConfig()
-  const socket = ref<Socket | null>(null)
+  const socket = ref(null)
   const isConnected = ref(false)
   const reconnectAttempts = ref(0)
   const maxReconnectAttempts = 5
@@ -127,7 +127,7 @@ export default defineNuxtPlugin(() => {
     }
   }
 
-  const emit = (event: string, data: any) => {
+  const emit = (event, data) => {
     if (socket.value?.connected) {
       socket.value.emit(event, data)
     } else {
@@ -135,13 +135,13 @@ export default defineNuxtPlugin(() => {
     }
   }
 
-  const on = (event: string, callback: (data: any) => void) => {
+  const on = (event, callback) => {
     if (socket.value) {
       socket.value.on(event, callback)
     }
   }
 
-  const off = (event: string, callback?: (data: any) => void) => {
+  const off = (event, callback) => {
     if (socket.value) {
       if (callback) {
         socket.value.off(event, callback)

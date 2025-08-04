@@ -1,6 +1,6 @@
 const request = require('supertest');
 const app = require('../../server');
-const { User, Device, Message, Contact } = require('../src/models');
+const { User, Device, Message, Contact } = require('../../src/models');
 
 describe('API Integration Tests', () => {
   let authToken;
