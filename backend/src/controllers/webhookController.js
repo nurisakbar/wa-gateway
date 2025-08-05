@@ -1,399 +1,351 @@
-const { v4: uuidv4 } = require('uuid');
-const { logError, logInfo } = require('../utils/logger');
+const { Webhook } = require('../models');
 const webhookService = require('../services/webhookService');
+const { logError, logInfo } = require('../utils/logger');
 
-class WebhookController {
-  // Get all webhooks
-  async getAllWebhooks(req, res) {
-    try {
-      const webhooks = webhookService.getAllWebhooks();
+// Get all webhooks for user
+const getUserWebhooks = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const webhooks = await Webhook.findAll({
+      where: { user_id: userId },
+      order: [['created_at', 'DESC']]
+    });
 
-      res.json({
-        success: true,
-        data: webhooks
-      });
+    logInfo(`Retrieved ${webhooks.length} webhooks for user: ${userId}`, 'WEBHOOK');
 
-    } catch (error) {
-      logError(error, 'Error getting all webhooks');
-      res.status(500).json({
+    res.json({
+      success: true,
+      data: webhooks
+    });
+
+  } catch (error) {
+    logError(error, 'Get Webhooks Error');
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve webhooks',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Create new webhook
+const createWebhook = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { name, url, events, secret, retry_count, timeout } = req.body;
+
+    // Validate input
+    if (!name || !url || !events || !Array.isArray(events) || events.length === 0) {
+      return res.status(400).json({
         success: false,
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        message: 'Name, URL, and events array are required'
       });
     }
-  }
 
-  // Get webhook by ID
-  async getWebhook(req, res) {
+    // Validate URL
     try {
-      const { webhookId } = req.params;
-      const webhook = webhookService.getWebhook(webhookId);
-
-      if (!webhook) {
-        return res.status(404).json({
-          success: false,
-          message: 'Webhook not found'
-        });
-      }
-
-      res.json({
-        success: true,
-        data: webhook
-      });
-
-    } catch (error) {
-      logError(error, 'Error getting webhook');
-      res.status(500).json({
+      new URL(url);
+    } catch {
+      return res.status(400).json({
         success: false,
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        message: 'Invalid URL format'
       });
     }
-  }
 
-  // Create webhook
-  async createWebhook(req, res) {
-    try {
-      const { name, url, events, secret } = req.body;
+    // Validate events
+    const validEvents = [
+      'message.received',
+      'message.sent',
+      'message.delivered',
+      'message.read',
+      'device.connected',
+      'device.disconnected',
+      'device.qr_generated',
+      'contact.created',
+      'contact.updated',
+      'contact.deleted',
+      'api_key.created',
+      'api_key.updated',
+      'api_key.deleted'
+    ];
 
-      // Validate webhook configuration
-      const validation = webhookService.validateWebhookConfig({
-        name,
-        url,
-        events,
-        secret
+    const invalidEvents = events.filter(event => !validEvents.includes(event));
+    if (invalidEvents.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid events: ${invalidEvents.join(', ')}`
       });
+    }
 
-      if (!validation.valid) {
+    // Check if name already exists for this user
+    const existingWebhook = await Webhook.findOne({
+      where: { user_id: userId, name: name.trim() }
+    });
+
+    if (existingWebhook) {
+      return res.status(400).json({
+        success: false,
+        message: 'Webhook with this name already exists'
+      });
+    }
+
+    // Create webhook
+    const webhook = await Webhook.create({
+      user_id: userId,
+      name: name.trim(),
+      url: url.trim(),
+      events: events,
+      secret: secret || null,
+      retry_count: retry_count || 3,
+      timeout: timeout || 10000
+    });
+
+    logInfo(`Created new webhook: ${webhook.name} for user: ${userId}`, 'WEBHOOK');
+
+    res.status(201).json({
+      success: true,
+      message: 'Webhook created successfully',
+      data: webhook
+    });
+
+  } catch (error) {
+    logError(error, 'Create Webhook Error');
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create webhook',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Update webhook
+const updateWebhook = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+    const { name, url, events, secret, retry_count, timeout, is_active } = req.body;
+
+    // Find webhook
+    const webhook = await Webhook.findOne({
+      where: { id, user_id: userId }
+    });
+
+    if (!webhook) {
+      return res.status(404).json({
+        success: false,
+        message: 'Webhook not found'
+      });
+    }
+
+    // Update fields
+    const updateData = {};
+    
+    if (name !== undefined) {
+      if (!name || name.trim().length === 0) {
         return res.status(400).json({
           success: false,
-          message: 'Invalid webhook configuration',
-          errors: validation.errors
+          message: 'Webhook name cannot be empty'
         });
       }
-
-      const webhookId = uuidv4();
-      const config = {
-        name,
-        url,
-        events,
-        secret: secret || null,
-        userId: req.user.id
-      };
-
-      webhookService.registerWebhook(webhookId, config);
-
-      const webhook = webhookService.getWebhook(webhookId);
-
-      logInfo(`Webhook created: ${webhookId} by user: ${req.user.id}`);
-
-      res.status(201).json({
-        success: true,
-        message: 'Webhook created successfully',
-        data: webhook
-      });
-
-    } catch (error) {
-      logError(error, 'Error creating webhook');
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
-      });
-    }
-  }
-
-  // Update webhook
-  async updateWebhook(req, res) {
-    try {
-      const { webhookId } = req.params;
-      const updates = req.body;
-
-      const webhook = webhookService.getWebhook(webhookId);
-      if (!webhook) {
-        return res.status(404).json({
-          success: false,
-          message: 'Webhook not found'
-        });
-      }
-
-      // Validate updates if URL or events are being changed
-      if (updates.url || updates.events) {
-        const validation = webhookService.validateWebhookConfig({
-          ...webhook,
-          ...updates
-        });
-
-        if (!validation.valid) {
-          return res.status(400).json({
-            success: false,
-            message: 'Invalid webhook configuration',
-            errors: validation.errors
-          });
+      
+      // Check if name already exists (excluding current webhook)
+      const existingWebhook = await Webhook.findOne({
+        where: { 
+          user_id: userId, 
+          name: name.trim(),
+          id: { [require('sequelize').Op.ne]: id }
         }
-      }
+      });
 
-      const updated = webhookService.updateWebhook(webhookId, updates);
-
-      if (!updated) {
+      if (existingWebhook) {
         return res.status(400).json({
           success: false,
-          message: 'Failed to update webhook'
+          message: 'Webhook with this name already exists'
         });
       }
-
-      const updatedWebhook = webhookService.getWebhook(webhookId);
-
-      logInfo(`Webhook updated: ${webhookId} by user: ${req.user.id}`);
-
-      res.json({
-        success: true,
-        message: 'Webhook updated successfully',
-        data: updatedWebhook
-      });
-
-    } catch (error) {
-      logError(error, 'Error updating webhook');
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
-      });
+      
+      updateData.name = name.trim();
     }
-  }
 
-  // Delete webhook
-  async deleteWebhook(req, res) {
-    try {
-      const { webhookId } = req.params;
-      const deleted = webhookService.unregisterWebhook(webhookId);
-
-      if (!deleted) {
-        return res.status(404).json({
-          success: false,
-          message: 'Webhook not found'
-        });
-      }
-
-      logInfo(`Webhook deleted: ${webhookId} by user: ${req.user.id}`);
-
-      res.json({
-        success: true,
-        message: 'Webhook deleted successfully'
-      });
-
-    } catch (error) {
-      logError(error, 'Error deleting webhook');
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
-      });
-    }
-  }
-
-  // Test webhook
-  async testWebhook(req, res) {
-    try {
-      const { webhookId } = req.params;
-      const result = await webhookService.testWebhook(webhookId);
-
-      if (!result.success) {
+    if (url !== undefined) {
+      try {
+        new URL(url);
+        updateData.url = url.trim();
+      } catch {
         return res.status(400).json({
           success: false,
-          message: 'Webhook test failed',
-          error: result.error
+          message: 'Invalid URL format'
         });
       }
-
-      logInfo(`Webhook tested: ${webhookId} by user: ${req.user.id}`);
-
-      res.json({
-        success: true,
-        message: 'Webhook test completed successfully',
-        data: result
-      });
-
-    } catch (error) {
-      logError(error, 'Error testing webhook');
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
-      });
     }
-  }
 
-  // Get webhook statistics
-  async getWebhookStats(req, res) {
-    try {
-      const stats = webhookService.getWebhookStats();
-
-      res.json({
-        success: true,
-        data: stats
-      });
-
-    } catch (error) {
-      logError(error, 'Error getting webhook statistics');
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
-      });
-    }
-  }
-
-  // Reactivate webhook
-  async reactivateWebhook(req, res) {
-    try {
-      const { webhookId } = req.params;
-      const reactivated = webhookService.reactivateWebhook(webhookId);
-
-      if (!reactivated) {
-        return res.status(404).json({
+    if (events !== undefined) {
+      if (!Array.isArray(events) || events.length === 0) {
+        return res.status(400).json({
           success: false,
-          message: 'Webhook not found'
+          message: 'Events must be a non-empty array'
         });
       }
 
-      logInfo(`Webhook reactivated: ${webhookId} by user: ${req.user.id}`);
-
-      res.json({
-        success: true,
-        message: 'Webhook reactivated successfully'
-      });
-
-    } catch (error) {
-      logError(error, 'Error reactivating webhook');
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
-      });
-    }
-  }
-
-  // Clean up inactive webhooks
-  async cleanupInactiveWebhooks(req, res) {
-    try {
-      const { maxFailures = 10 } = req.query;
-      const cleanedCount = webhookService.cleanupInactiveWebhooks(parseInt(maxFailures));
-
-      logInfo(`Webhook cleanup completed: ${cleanedCount} webhooks deactivated by user: ${req.user.id}`);
-
-      res.json({
-        success: true,
-        message: `Cleanup completed. ${cleanedCount} webhooks were deactivated.`,
-        data: { deactivatedCount: cleanedCount }
-      });
-
-    } catch (error) {
-      logError(error, 'Error during webhook cleanup');
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
-      });
-    }
-  }
-
-  // Get available events
-  async getAvailableEvents(req, res) {
-    try {
-      const events = [
-        {
-          name: 'message.received',
-          description: 'Triggered when a new message is received',
-          category: 'message'
-        },
-        {
-          name: 'message.sent',
-          description: 'Triggered when a message is sent successfully',
-          category: 'message'
-        },
-        {
-          name: 'message.delivered',
-          description: 'Triggered when a message is delivered to recipient',
-          category: 'message'
-        },
-        {
-          name: 'message.read',
-          description: 'Triggered when a message is read by recipient',
-          category: 'message'
-        },
-        {
-          name: 'device.connected',
-          description: 'Triggered when a WhatsApp device connects',
-          category: 'device'
-        },
-        {
-          name: 'device.disconnected',
-          description: 'Triggered when a WhatsApp device disconnects',
-          category: 'device'
-        },
-        {
-          name: 'device.qr_generated',
-          description: 'Triggered when a new QR code is generated',
-          category: 'device'
-        },
-        {
-          name: 'contact.created',
-          description: 'Triggered when a new contact is created',
-          category: 'contact'
-        },
-        {
-          name: 'contact.updated',
-          description: 'Triggered when a contact is updated',
-          category: 'contact'
-        },
-        {
-          name: 'contact.deleted',
-          description: 'Triggered when a contact is deleted',
-          category: 'contact'
-        },
-        {
-          name: 'test',
-          description: 'Test event for webhook validation',
-          category: 'system'
-        }
+      const validEvents = [
+        'message.received',
+        'message.sent',
+        'message.delivered',
+        'message.read',
+        'device.connected',
+        'device.disconnected',
+        'device.qr_generated',
+        'contact.created',
+        'contact.updated',
+        'contact.deleted',
+        'api_key.created',
+        'api_key.updated',
+        'api_key.deleted'
       ];
 
-      res.json({
-        success: true,
-        data: events
-      });
+      const invalidEvents = events.filter(event => !validEvents.includes(event));
+      if (invalidEvents.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid events: ${invalidEvents.join(', ')}`
+        });
+      }
 
-    } catch (error) {
-      logError(error, 'Error getting available events');
-      res.status(500).json({
+      updateData.events = events;
+    }
+
+    if (secret !== undefined) updateData.secret = secret || null;
+    if (retry_count !== undefined) updateData.retry_count = retry_count;
+    if (timeout !== undefined) updateData.timeout = timeout;
+    if (is_active !== undefined) updateData.is_active = is_active;
+
+    // Update webhook
+    await webhook.update(updateData);
+
+    logInfo(`Updated webhook: ${webhook.name} for user: ${userId}`, 'WEBHOOK');
+
+    res.json({
+      success: true,
+      message: 'Webhook updated successfully',
+      data: webhook
+    });
+
+  } catch (error) {
+    logError(error, 'Update Webhook Error');
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update webhook',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Delete webhook
+const deleteWebhook = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+
+    // Find webhook
+    const webhook = await Webhook.findOne({
+      where: { id, user_id: userId }
+    });
+
+    if (!webhook) {
+      return res.status(404).json({
         success: false,
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        message: 'Webhook not found'
       });
     }
+
+    // Delete webhook
+    await webhook.destroy();
+
+    logInfo(`Deleted webhook: ${webhook.name} for user: ${userId}`, 'WEBHOOK');
+
+    res.json({
+      success: true,
+      message: 'Webhook deleted successfully'
+    });
+
+  } catch (error) {
+    logError(error, 'Delete Webhook Error');
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete webhook',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
+};
 
-  // Validate webhook configuration
-  async validateWebhookConfig(req, res) {
-    try {
-      const config = req.body;
-      const validation = webhookService.validateWebhookConfig(config);
+// Test webhook
+const testWebhook = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
 
-      res.json({
-        success: true,
-        data: validation
-      });
+    // Find webhook
+    const webhook = await Webhook.findOne({
+      where: { id, user_id: userId }
+    });
 
-    } catch (error) {
-      logError(error, 'Error validating webhook configuration');
-      res.status(500).json({
+    if (!webhook) {
+      return res.status(404).json({
         success: false,
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        message: 'Webhook not found'
       });
     }
-  }
-}
 
-module.exports = new WebhookController(); 
+    // Test webhook
+    const testResult = await webhookService.testWebhook(webhook);
+
+    logInfo(`Tested webhook: ${webhook.name} for user: ${userId}`, 'WEBHOOK');
+
+    res.json({
+      success: true,
+      message: 'Webhook test completed',
+      data: testResult
+    });
+
+  } catch (error) {
+    logError(error, 'Test Webhook Error');
+    res.status(500).json({
+      success: false,
+      message: 'Failed to test webhook',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Get webhook statistics
+const getWebhookStats = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+
+    const stats = await webhookService.getWebhookStats(userId, id);
+
+    res.json({
+      success: true,
+      data: stats
+    });
+
+  } catch (error) {
+    logError(error, 'Get Webhook Stats Error');
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get webhook statistics',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+module.exports = {
+  getUserWebhooks,
+  createWebhook,
+  updateWebhook,
+  deleteWebhook,
+  testWebhook,
+  getWebhookStats
+}; 

@@ -6,20 +6,58 @@ export const useAuth = () => {
   const login = async (credentials: { email: string; password: string }) => {
     isLoading.value = true
     try {
-      const response = await $fetch('/api/v1/auth/login', {
+      console.log('Login attempt with:', credentials.email)
+      
+      const config = useRuntimeConfig()
+      const response = await $fetch(`${config.public.apiBase}/auth/login`, {
         method: 'POST',
         body: credentials
       })
       
-      user.value = response.user
+      console.log('Login response:', response)
+      
+      // Check if response has error
+      if (response.error) {
+        console.log('Login error from backend:', response.message)
+        throw new Error(response.message)
+      }
+      
+      // Extract user data and token from response
+      const userData = response.data?.user || response.user
+      const token = response.data?.token || response.token
+      
+      console.log('User data:', userData)
+      console.log('Token:', token ? 'Token received' : 'No token')
+      
+      user.value = userData
       isAuthenticated.value = true
       
       // Store token
-      localStorage.setItem('token', response.token)
+      localStorage.setItem('auth_token', token)
       
-      return response
+      // Connect socket after successful login
+      const { $socket } = useNuxtApp()
+      if ($socket && $socket.connect) {
+        $socket.connect()
+      }
+      
+      const result = {
+        success: true,
+        message: response.message || 'Login successful'
+      }
+      
+      console.log('Returning result:', result)
+      return result
     } catch (error) {
-      throw error
+      console.error('Login catch error:', error)
+      
+      const errorResult = {
+        success: false,
+        error: error.data?.message || error.message || 'Login failed'
+      }
+      
+      console.log('Returning error result:', errorResult)
+      return errorResult
     } finally {
       isLoading.value = false
     }
@@ -28,19 +66,31 @@ export const useAuth = () => {
   const logout = () => {
     user.value = null
     isAuthenticated.value = false
-    localStorage.removeItem('token')
+    localStorage.removeItem('auth_token')
+    
+    // Disconnect socket on logout
+    const { $socket } = useNuxtApp()
+    if ($socket && $socket.disconnect) {
+      $socket.disconnect()
+    }
+    
     navigateTo('/login')
   }
 
   const checkAuth = async () => {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('auth_token')
     if (!token) {
       isAuthenticated.value = false
       return false
     }
 
     try {
-      const response = await $fetch('/api/v1/auth/me')
+      const config = useRuntimeConfig()
+      const response = await $fetch(`${config.public.apiBase}/auth/profile`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
       user.value = response.user
       isAuthenticated.value = true
       return true

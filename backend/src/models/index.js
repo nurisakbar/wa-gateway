@@ -6,6 +6,12 @@ const Device = require('./Device');
 const Message = require('./Message');
 const Contact = require('./Contact');
 const Template = require('./Template');
+const ApiKey = require('./ApiKey');
+const ApiUsage = require('./ApiUsage');
+const Webhook = require('./Webhook');
+const SubscriptionPlan = require('./SubscriptionPlan');
+const UserSubscription = require('./UserSubscription');
+const Invoice = require('./Invoice');
 
 // Define associations
 User.hasMany(Device, { 
@@ -63,6 +69,97 @@ Template.belongsTo(User, {
   as: 'user'
 });
 
+// API Key associations
+User.hasMany(ApiKey, {
+  foreignKey: 'user_id',
+  as: 'apiKeys',
+  onDelete: 'CASCADE'
+});
+
+ApiKey.belongsTo(User, {
+  foreignKey: 'user_id',
+  as: 'user'
+});
+
+// API Usage associations
+ApiKey.hasMany(ApiUsage, {
+  foreignKey: 'api_key_id',
+  as: 'usage',
+  onDelete: 'CASCADE'
+});
+
+ApiUsage.belongsTo(ApiKey, {
+  foreignKey: 'api_key_id',
+  as: 'apiKey'
+});
+
+User.hasMany(ApiUsage, {
+  foreignKey: 'user_id',
+  as: 'apiUsage',
+  onDelete: 'CASCADE'
+});
+
+ApiUsage.belongsTo(User, {
+  foreignKey: 'user_id',
+  as: 'user'
+});
+
+// Webhook associations
+User.hasMany(Webhook, {
+  foreignKey: 'user_id',
+  as: 'webhooks',
+  onDelete: 'CASCADE'
+});
+
+Webhook.belongsTo(User, {
+  foreignKey: 'user_id',
+  as: 'user'
+});
+
+// Subscription associations
+User.hasMany(UserSubscription, {
+  foreignKey: 'user_id',
+  as: 'subscriptions',
+  onDelete: 'CASCADE'
+});
+
+UserSubscription.belongsTo(User, {
+  foreignKey: 'user_id',
+  as: 'user'
+});
+
+UserSubscription.belongsTo(SubscriptionPlan, {
+  foreignKey: 'plan_id',
+  as: 'plan'
+});
+
+SubscriptionPlan.hasMany(UserSubscription, {
+  foreignKey: 'plan_id',
+  as: 'userSubscriptions'
+});
+
+// Invoice associations
+User.hasMany(Invoice, {
+  foreignKey: 'user_id',
+  as: 'invoices',
+  onDelete: 'CASCADE'
+});
+
+Invoice.belongsTo(User, {
+  foreignKey: 'user_id',
+  as: 'user'
+});
+
+Invoice.belongsTo(UserSubscription, {
+  foreignKey: 'subscription_id',
+  as: 'subscription'
+});
+
+UserSubscription.hasMany(Invoice, {
+  foreignKey: 'subscription_id',
+  as: 'invoices'
+});
+
 // Export models
 module.exports = {
   sequelize,
@@ -70,5 +167,11 @@ module.exports = {
   Device,
   Message,
   Contact,
-  Template
+  Template,
+  ApiKey,
+  ApiUsage,
+  Webhook,
+  SubscriptionPlan,
+  UserSubscription,
+  Invoice
 }; 

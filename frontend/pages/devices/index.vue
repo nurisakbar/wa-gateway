@@ -1,29 +1,5 @@
 <template>
   <div class="devices-page">
-    <!-- Header -->
-    <div class="page-header bg-white shadow-sm border-bottom">
-      <div class="container-fluid">
-        <div class="row align-items-center py-3">
-          <div class="col">
-            <h1 class="h3 mb-0 text-primary">
-              <i class="bi bi-phone me-2"></i>
-              Device Management
-            </h1>
-          </div>
-          <div class="col-auto">
-            <button
-              class="btn btn-primary"
-              @click="showAddModal = true"
-              :disabled="deviceStore.isLoading"
-            >
-              <i class="bi bi-plus me-1"></i>
-              Add Device
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- Main Content -->
     <div class="container-fluid py-4">
       <!-- Statistics Cards -->
@@ -61,7 +37,7 @@
                 <i class="bi bi-exclamation-triangle text-warning fs-4"></i>
               </div>
               <div>
-                <div class="stat-number">{{ deviceStore.getDevices.filter(d => d.status === 'connecting').length }}</div>
+                <div class="stat-number">{{ deviceStore.getDevices.filter(d => d && d.status === 'connecting').length }}</div>
                 <div class="stat-label">Connecting</div>
               </div>
             </div>
@@ -74,7 +50,7 @@
                 <i class="bi bi-x-circle text-danger fs-4"></i>
               </div>
               <div>
-                <div class="stat-number">{{ deviceStore.getDevices.filter(d => d.status === 'disconnected').length }}</div>
+                <div class="stat-number">{{ deviceStore.getDevices.filter(d => d && d.status === 'disconnected').length }}</div>
                 <div class="stat-label">Disconnected</div>
               </div>
             </div>
@@ -91,12 +67,20 @@
           </h5>
           <div class="d-flex gap-2">
             <button
-              class="btn btn-outline-primary btn-sm"
+              class="btn btn-primary btn-sm d-flex align-items-center"
               @click="refreshDevices"
               :disabled="deviceStore.isLoading"
             >
               <i class="bi bi-arrow-clockwise me-1"></i>
-              Refresh
+              <span>Refresh</span>
+            </button>
+            <button
+              class="btn btn-success btn-sm d-flex align-items-center"
+              @click="showAddModal = true"
+              :disabled="deviceStore.isLoading"
+            >
+              <i class="bi bi-plus-circle me-1"></i>
+              <span>Add Device</span>
             </button>
           </div>
         </div>
@@ -109,9 +93,9 @@
             <i class="bi bi-phone text-muted fs-1 mb-3"></i>
             <h6 class="text-muted">No devices found</h6>
             <p class="text-muted">Add your first WhatsApp device to get started</p>
-            <button class="btn btn-primary" @click="showAddModal = true">
-              <i class="bi bi-plus me-1"></i>
-              Add Device
+            <button class="btn btn-primary d-flex align-items-center" @click="showAddModal = true">
+              <i class="bi bi-plus-circle me-1"></i>
+              <span>Add Device</span>
             </button>
           </div>
           <div v-else class="table-responsive">
@@ -129,58 +113,89 @@
                 <tr v-for="device in deviceStore.getDevices" :key="device.id">
                   <td>
                     <div class="d-flex align-items-center">
-                      <div class="whatsapp-status me-3" :class="device.status"></div>
+                      <div class="whatsapp-status me-3" :class="device && device.status ? device.status : 'disconnected'"></div>
                       <div>
-                        <h6 class="mb-1">{{ device.name }}</h6>
-                        <small class="text-muted">{{ device.description || 'No description' }}</small>
+                        <h6 class="mb-1">{{ device && device.name ? device.name : 'Unknown Device' }}</h6>
+                        <small class="text-muted">{{ device && device.description ? device.description : 'No description' }}</small>
                       </div>
                     </div>
                   </td>
                   <td>
-                    <span class="text-muted">{{ device.phone_number || 'Not set' }}</span>
+                    <span class="text-muted">{{ device && device.phone_number ? device.phone_number : 'Not set' }}</span>
                   </td>
                   <td>
-                    <span class="badge" :class="getStatusBadgeClass(device.status)">
-                      {{ device.status }}
+                    <span class="badge fw-medium" :class="getStatusBadgeClass(device && device.status ? device.status : 'disconnected')">
+                      <i v-if="device && device.status === 'connected'" class="bi bi-check-circle me-1"></i>
+                      <i v-else-if="device && device.status === 'connecting'" class="bi bi-arrow-clockwise me-1"></i>
+                      <i v-else-if="device && device.status === 'disconnected'" class="bi bi-x-circle me-1"></i>
+                      <i v-else-if="device && device.status === 'error'" class="bi bi-exclamation-triangle me-1"></i>
+                      {{ getStatusText(device && device.status ? device.status : 'disconnected') }}
                     </span>
                   </td>
                   <td>
-                    <small class="text-muted">{{ formatDate(device.last_activity) }}</small>
+                    <small class="text-muted">{{ device && device.last_activity ? formatDate(device.last_activity) : 'Never' }}</small>
                   </td>
                   <td>
-                    <div class="btn-group btn-group-sm">
+                    <div class="d-flex gap-2">
+                      <!-- Connect Button -->
                       <button
-                        v-if="device.status === 'disconnected'"
-                        class="btn btn-outline-success"
+                        v-if="device && device.status === 'disconnected'"
+                        class="btn btn-success btn-sm d-flex align-items-center"
                         @click="connectDevice(device)"
                         :disabled="deviceStore.isLoading"
-                        title="Connect Device"
+                        title="Connect WhatsApp Device"
                       >
-                        <i class="bi bi-wifi"></i>
+                        <div v-if="deviceStore.isLoading" class="spinner-border spinner-border-sm me-1" role="status">
+                          <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <i v-else class="bi bi-wifi me-1"></i>
+                        <span>{{ deviceStore.isLoading ? 'Connecting...' : 'Connect' }}</span>
                       </button>
+                      
+                      <!-- Disconnect Button -->
                       <button
-                        v-if="device.status === 'connected'"
-                        class="btn btn-outline-warning"
+                        v-if="device && device.status === 'connected'"
+                        class="btn btn-warning btn-sm d-flex align-items-center"
                         @click="disconnectDevice(device)"
                         :disabled="deviceStore.isLoading"
-                        title="Disconnect Device"
+                        title="Disconnect WhatsApp Device"
                       >
-                        <i class="bi bi-wifi-off"></i>
+                        <i class="bi bi-wifi-off me-1"></i>
+                        <span>Disconnect</span>
                       </button>
+                      
+                      <!-- Connecting Status -->
                       <button
-                        class="btn btn-outline-primary"
+                        v-if="device && device.status === 'connecting'"
+                        class="btn btn-info btn-sm d-flex align-items-center"
+                        disabled
+                        title="Connecting to WhatsApp..."
+                      >
+                        <div class="spinner-border spinner-border-sm me-1" role="status">
+                          <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <span>Connecting...</span>
+                      </button>
+                      
+                      <!-- Edit Button -->
+                      <button
+                        class="btn btn-primary btn-sm d-flex align-items-center"
                         @click="editDevice(device)"
-                        title="Edit Device"
+                        title="Edit Device Settings"
                       >
-                        <i class="bi bi-pencil"></i>
+                        <i class="bi bi-pencil-square me-1"></i>
+                        <span>Edit</span>
                       </button>
+                      
+                      <!-- Delete Button -->
                       <button
-                        class="btn btn-outline-danger"
+                        class="btn btn-danger btn-sm d-flex align-items-center"
                         @click="deleteDevice(device)"
                         :disabled="deviceStore.isLoading"
                         title="Delete Device"
                       >
-                        <i class="bi bi-trash"></i>
+                        <i class="bi bi-trash me-1"></i>
+                        <span>Delete</span>
                       </button>
                     </div>
                   </td>
@@ -265,11 +280,14 @@
               </button>
               <button
                 type="submit"
-                class="btn btn-primary"
+                class="btn btn-primary d-flex align-items-center"
                 :disabled="deviceStore.isLoading"
               >
-                <span v-if="deviceStore.isLoading" class="loading-spinner me-2"></span>
-                {{ showEditModal ? 'Update Device' : 'Add Device' }}
+                <div v-if="deviceStore.isLoading" class="spinner-border spinner-border-sm me-2" role="status">
+                  <span class="visually-hidden">Loading...</span>
+                </div>
+                <i v-else class="bi bi-check-circle me-1"></i>
+                <span>{{ showEditModal ? 'Update Device' : 'Add Device' }}</span>
               </button>
             </div>
           </form>
@@ -328,7 +346,7 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 definePageMeta({
   layout: 'dashboard',
   middleware: 'auth'
@@ -356,7 +374,14 @@ const errors = ref({
 
 // Load devices on mount
 onMounted(async () => {
-  await deviceStore.fetchDevices()
+  console.log('Loading devices on mount...')
+  try {
+    const result = await deviceStore.fetchDevices()
+    console.log('Fetch devices result:', result)
+    console.log('Current devices in store:', deviceStore.getDevices)
+  } catch (error) {
+    console.error('Error loading devices:', error)
+  }
 })
 
 // Refresh devices
@@ -366,23 +391,141 @@ const refreshDevices = async () => {
 }
 
 // Connect device
-const connectDevice = async (device: any) => {
+const connectDevice = async (device) => {
+  console.log('=== CONNECT DEVICE CALLED ===')
+  console.log('Device:', device)
+  console.log('Device ID:', device?.id)
+  console.log('DeviceStore loading:', deviceStore.isLoading)
+  
+  // Prevent multiple clicks
+  if (deviceStore.isLoading) {
+    console.log('Device connection already in progress')
+    return
+  }
+  
   try {
+    console.log('Starting device connection for:', device.id)
+    $toast.info('Initializing device connection...')
+    
+    console.log('Calling deviceStore.connectDevice...')
     const result = await deviceStore.connectDevice(device.id)
+    console.log('Connect device result:', result)
+    
     if (result.success) {
-      qrCode.value = result.qrCode
-      showQRModal.value = true
-      $toast.success('QR code generated successfully')
+      if (result.qrCode) {
+        console.log('QR code received directly')
+        qrCode.value = result.qrCode
+        showQRModal.value = true
+        $toast.success('QR code generated successfully')
+      } else {
+        console.log('No QR code, starting polling...')
+        $toast.info(result.message || 'Connection initiated, QR code will be available shortly')
+        // Poll for QR code
+        await pollForQRCode(device.id)
+      }
     } else {
+      console.log('Connect device failed:', result.error)
       $toast.error(result.error || 'Failed to connect device')
     }
   } catch (error) {
+    console.error('Connect device error:', error)
     $toast.error('Failed to connect device')
   }
 }
 
+// Poll for QR code
+let pollingInProgress = false
+
+const pollForQRCode = async (deviceId) => {
+  // Prevent multiple polling
+  if (pollingInProgress) {
+    console.log('QR polling already in progress')
+    return
+  }
+  
+  pollingInProgress = true
+  const maxAttempts = 15 // Increase attempts
+  let attempts = 0
+  
+  $toast.info('Waiting for QR code generation...')
+  
+  const poll = async () => {
+    if (attempts >= maxAttempts) {
+      $toast.error('QR code not available after multiple attempts. Please try connecting again.')
+      pollingInProgress = false
+      return
+    }
+    
+    try {
+      console.log(`Polling for QR code, attempt ${attempts + 1}/${maxAttempts}`)
+      const config = useRuntimeConfig()
+      const token = localStorage.getItem('auth_token')
+      
+      let response
+      try {
+        const { $api } = useNuxtApp()
+        response = await $api.get(`/devices/${deviceId}/qr`)
+      } catch (apiError) {
+        response = await $fetch(`${config.public.apiBase}/devices/${deviceId}/qr`, {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        })
+      }
+      
+      console.log('QR response:', response.data)
+      
+      // Handle different response scenarios
+      if (response.data.success && response.data.data.qr_code) {
+        // QR code is available
+        qrCode.value = response.data.data.qr_code
+        showQRModal.value = true
+        $toast.success('QR code generated successfully')
+        pollingInProgress = false
+        return
+      } else if (response.status === 202) {
+        // QR code is being generated, retry after suggested delay
+        console.log(`QR code being generated, retry after ${response.data.data.retry_after || 3} seconds`)
+        if (attempts === 5) {
+          $toast.info('QR code is being generated, please wait...')
+        } else if (attempts === 10) {
+          $toast.warn('QR code generation taking longer than expected...')
+        }
+        attempts++
+        setTimeout(poll, (response.data.data.retry_after || 3) * 1000)
+        return
+      } else if (response.status === 400 && response.data.data?.connected) {
+        // Device is already connected
+        $toast.success('Device is already connected!')
+        pollingInProgress = false
+        return
+      } else if (response.status === 400 && response.data.data?.needs_connection_init) {
+        // Need to initialize connection first
+        $toast.error('Please click Connect button first to initialize the device')
+        pollingInProgress = false
+        return
+      } else {
+        // QR code not ready yet
+        console.log(`QR code not ready yet, attempt ${attempts + 1}/${maxAttempts}`)
+        if (attempts === 5) {
+          $toast.info('Still waiting for QR code...')
+        } else if (attempts === 10) {
+          $toast.warn('QR code taking longer than expected...')
+        }
+      }
+      
+      attempts++
+      setTimeout(poll, 3000) // Poll every 3 seconds (increased interval)
+    } catch (error) {
+      console.error('Poll QR code error:', error)
+      attempts++
+      setTimeout(poll, 3000)
+    }
+  }
+  
+  poll()
+}
+
 // Disconnect device
-const disconnectDevice = async (device: any) => {
+const disconnectDevice = async (device) => {
   try {
     const result = await deviceStore.disconnectDevice(device.id)
     if (result.success) {
@@ -396,10 +539,15 @@ const disconnectDevice = async (device: any) => {
 }
 
 // Edit device
-const editDevice = (device: any) => {
+const editDevice = (device) => {
+  if (!device || !device.id) {
+    $toast.error('Invalid device data')
+    return
+  }
+  
   selectedDevice.value = device
   deviceForm.value = {
-    name: device.name,
+    name: device.name || '',
     description: device.description || '',
     phone_number: device.phone_number || ''
   }
@@ -423,7 +571,7 @@ const saveDevice = async () => {
   }
 
   try {
-    if (showEditModal.value && selectedDevice.value) {
+    if (showEditModal.value && selectedDevice.value && selectedDevice.value.id) {
       // Update device
       const result = await deviceStore.updateDevice(selectedDevice.value.id, deviceForm.value)
       if (result.success) {
@@ -432,7 +580,7 @@ const saveDevice = async () => {
       } else {
         $toast.error(result.error || 'Failed to update device')
       }
-    } else {
+    } else if (showAddModal.value) {
       // Create device
       const result = await deviceStore.createDevice(deviceForm.value)
       if (result.success) {
@@ -441,15 +589,24 @@ const saveDevice = async () => {
       } else {
         $toast.error(result.error || 'Failed to create device')
       }
+    } else {
+      $toast.error('Invalid operation')
     }
   } catch (error) {
+    console.error('Save device error:', error)
     $toast.error('Failed to save device')
   }
 }
 
 // Delete device
-const deleteDevice = async (device: any) => {
-  if (confirm(`Are you sure you want to delete "${device.name}"?`)) {
+const deleteDevice = async (device) => {
+  if (!device || !device.id) {
+    $toast.error('Invalid device data')
+    return
+  }
+  
+  const deviceName = device.name || 'Unknown Device'
+  if (confirm(`Are you sure you want to delete "${deviceName}"?`)) {
     try {
       const result = await deviceStore.deleteDevice(device.id)
       if (result.success) {
@@ -458,6 +615,7 @@ const deleteDevice = async (device: any) => {
         $toast.error(result.error || 'Failed to delete device')
       }
     } catch (error) {
+      console.error('Delete device error:', error)
       $toast.error('Failed to delete device')
     }
   }
@@ -479,22 +637,32 @@ const closeQRModal = () => {
 }
 
 // Utility functions
-const getStatusBadgeClass = (status: string) => {
+const getStatusBadgeClass = (status) => {
   const classes = {
-    connected: 'bg-success',
-    connecting: 'bg-warning',
-    disconnected: 'bg-secondary',
-    error: 'bg-danger'
+    connected: 'bg-success text-white',
+    connecting: 'bg-warning text-dark',
+    disconnected: 'bg-secondary text-white',
+    error: 'bg-danger text-white'
   }
-  return classes[status as keyof typeof classes] || 'bg-secondary'
+  return classes[status] || 'bg-secondary text-white'
 }
 
-const formatDate = (dateString: string) => {
+const getStatusText = (status) => {
+  const texts = {
+    connected: 'Connected',
+    connecting: 'Connecting...',
+    disconnected: 'Disconnected',
+    error: 'Error'
+  }
+  return texts[status] || status
+}
+
+const formatDate = (dateString) => {
   if (!dateString) return 'Never'
   return new Date(dateString).toLocaleDateString()
 }
 
-const isValidPhoneNumber = (phone: string) => {
+const isValidPhoneNumber = (phone) => {
   const phoneRegex = /^\+?[1-9]\d{1,14}$/
   return phoneRegex.test(phone.replace(/\s/g, ''))
 }
@@ -515,6 +683,82 @@ const isValidPhoneNumber = (phone: string) => {
 .stat-card {
   background: var(--white-color);
   padding: 1.5rem;
+  border-radius: var(--border-radius-lg);
+}
+
+/* Button improvements */
+.btn {
+  transition: all 0.2s ease-in-out;
+  font-weight: 500;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+/* Status badge improvements */
+.badge {
+  font-size: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+/* Table improvements */
+.table th {
+  font-weight: 600;
+  color: #495057;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.table td {
+  vertical-align: middle;
+  padding: 1rem 0.75rem;
+}
+
+/* Device status indicator */
+.whatsapp-status {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.whatsapp-status.connected {
+  background-color: #28a745;
+  box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.2);
+}
+
+.whatsapp-status.connecting {
+  background-color: #ffc107;
+  box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.2);
+  animation: pulse 1.5s infinite;
+}
+
+.whatsapp-status.disconnected {
+  background-color: #6c757d;
+  box-shadow: 0 0 0 2px rgba(108, 117, 125, 0.2);
+}
+
+.whatsapp-status.error {
+  background-color: #dc3545;
+  box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.2);
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+.whatsapp-card {
+  background: var(--white-color);
   border-radius: var(--border-radius-lg);
   box-shadow: var(--box-shadow);
   border-left: 4px solid var(--primary-color);

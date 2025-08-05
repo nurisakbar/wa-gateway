@@ -1,43 +1,28 @@
 const express = require('express');
 const router = express.Router();
+const { authenticateToken } = require('../middleware/auth');
+const { validateIdUUID } = require('../middleware/validation');
 const webhookController = require('../controllers/webhookController');
-const { authenticateToken, requireSuperAdmin } = require('../middleware/auth');
-const { validateWebhook } = require('../middleware/validation');
 
-// Apply authentication middleware to all routes
+// All routes require authentication
 router.use(authenticateToken);
 
-// Get available events
-router.get('/events', webhookController.getAvailableEvents);
+// Get all webhooks for user
+router.get('/', webhookController.getUserWebhooks);
 
-// Get webhook statistics
-router.get('/stats', webhookController.getWebhookStats);
+// Create new webhook
+router.post('/', webhookController.createWebhook);
 
-// Get all webhooks
-router.get('/', webhookController.getAllWebhooks);
-
-// Create webhook
-router.post('/', validateWebhook, webhookController.createWebhook);
-
-// Validate webhook configuration
-router.post('/validate', webhookController.validateWebhookConfig);
-
-// Get webhook by ID
-router.get('/:webhookId', webhookController.getWebhook);
+// Get specific webhook
+router.get('/:id', validateIdUUID, webhookController.getWebhookStats);
 
 // Update webhook
-router.put('/:webhookId', validateWebhook, webhookController.updateWebhook);
+router.put('/:id', validateIdUUID, webhookController.updateWebhook);
 
 // Delete webhook
-router.delete('/:webhookId', webhookController.deleteWebhook);
+router.delete('/:id', validateIdUUID, webhookController.deleteWebhook);
 
 // Test webhook
-router.post('/:webhookId/test', webhookController.testWebhook);
-
-// Reactivate webhook
-router.patch('/:webhookId/reactivate', webhookController.reactivateWebhook);
-
-// Clean up inactive webhooks (super admin only)
-router.post('/cleanup', requireSuperAdmin, webhookController.cleanupInactiveWebhooks);
+router.post('/:id/test', validateIdUUID, webhookController.testWebhook);
 
 module.exports = router; 

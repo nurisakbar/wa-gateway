@@ -44,15 +44,27 @@ const register = async (req, res) => {
 
     const user = await User.create(userData);
 
+    // For development, auto-activate user
+    if (process.env.NODE_ENV === 'development') {
+      await user.update({
+        status: 'active',
+        email_verified_at: new Date()
+      });
+    }
+
     // Generate tokens
     const token = generateToken(user);
     const refreshToken = generateRefreshToken(user);
 
     logInfo(`New user registered: ${user.email}`, { userId: user.id });
 
+    const message = process.env.NODE_ENV === 'development' 
+      ? 'User registered successfully. Account auto-activated for development.'
+      : 'User registered successfully. Please verify your email to activate your account.';
+
     res.status(201).json({
       error: false,
-      message: 'User registered successfully. Please verify your email to activate your account.',
+      message: message,
       data: {
         user: user.toJSON(),
         token,

@@ -447,7 +447,7 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 definePageMeta({
   layout: 'dashboard',
   middleware: 'auth'
@@ -544,7 +544,7 @@ const clearFilters = () => {
 }
 
 // Edit contact
-const editContact = (contact: any) => {
+const editContact = (contact) => {
   selectedContact.value = contact
   contactForm.value = {
     name: contact.name,
@@ -617,7 +617,7 @@ const saveContact = async () => {
 }
 
 // Delete contact
-const deleteContact = async (contact: any) => {
+const deleteContact = async (contact) => {
   if (confirm(`Are you sure you want to delete "${contact.name}"?`)) {
     try {
       const result = await contactStore.deleteContact(contact.id)
@@ -633,7 +633,7 @@ const deleteContact = async (contact: any) => {
 }
 
 // Send message (placeholder)
-const sendMessage = (contact: any) => {
+const sendMessage = (contact) => {
   // Navigate to message page with contact pre-filled
   navigateTo(`/messages?contact=${contact.id}`)
 }
@@ -666,13 +666,13 @@ const exportContacts = async () => {
 }
 
 // Handle file upload
-const handleFileUpload = (event: any) => {
+const handleFileUpload = (event) => {
   const file = event.target.files[0]
   if (!file) return
 
   const reader = new FileReader()
   reader.onload = (e) => {
-    const csv = e.target?.result as string
+          const csv = e.target?.result
     const lines = csv.split('\n')
     const headers = lines[0].split(',')
     
@@ -721,12 +721,12 @@ const closeImportModal = () => {
 }
 
 // Utility functions
-const isValidPhoneNumber = (phone: string) => {
+const isValidPhoneNumber = (phone) => {
   const phoneRegex = /^\+?[1-9]\d{1,14}$/
   return phoneRegex.test(phone.replace(/\s/g, ''))
 }
 
-const isValidEmail = (email: string) => {
+const isValidEmail = (email) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   return emailRegex.test(email)
 }

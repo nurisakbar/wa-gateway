@@ -31,36 +31,64 @@ class WhatsAppService {
       // Check if device exists in database
       const device = await Device.findByPk(deviceId);
       if (!device) {
+        logError(`Device not found in database: ${deviceId}`);
         throw new Error('Device not found');
       }
 
+      logInfo(`Device found in database: ${deviceId}, current status: ${device.status}`);
+
       // Check if device belongs to user
       if (device.user_id !== userId) {
+        logError(`Device ${deviceId} does not belong to user ${userId}`);
         throw new Error('Device does not belong to user');
       }
 
       // Update device status to connecting
+      logInfo(`Updating device status to 'connecting': ${deviceId}`);
       await device.updateStatus('connecting');
+      logInfo(`Device status updated successfully: ${deviceId}`);
 
       const sessionId = device.session_id || generateUUID();
       const sessionPath = path.join(this.sessionsPath, sessionId);
+      
+      logInfo(`Using session ID: ${sessionId}, session path: ${sessionPath}`);
 
       // Create session directory if it doesn't exist
       if (!fs.existsSync(sessionPath)) {
+        logInfo(`Creating session directory: ${sessionPath}`);
         fs.mkdirSync(sessionPath, { recursive: true });
       }
 
       // Load or create auth state
+      logInfo(`Loading auth state for session: ${sessionId}`);
       const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
+      logInfo(`Auth state loaded successfully for session: ${sessionId}`);
 
       // Create WhatsApp socket
+      logInfo(`Creating WhatsApp socket for device: ${deviceId}`);
       const sock = makeWASocket({
         auth: state,
         printQRInTerminal: false,
         logger: {
-          level: 'silent' // Suppress Baileys logs
+          level: 'silent', // Suppress Baileys logs
+          child: () => ({
+            level: 'silent',
+            trace: () => {},
+            debug: () => {},
+            info: () => {},
+            warn: () => {},
+            error: () => {},
+            fatal: () => {}
+          }),
+          trace: () => {},
+          debug: () => {},
+          info: () => {},
+          warn: () => {},
+          error: () => {},
+          fatal: () => {}
         }
       });
+      logInfo(`WhatsApp socket created successfully for device: ${deviceId}`);
 
       // Store connection info
       const connectionInfo = {
@@ -76,16 +104,21 @@ class WhatsAppService {
       };
 
       this.connections.set(deviceId, connectionInfo);
+      logInfo(`Connection info stored for device: ${deviceId}`);
 
       // Set up event handlers
+      logInfo(`Setting up event handlers for device: ${deviceId}`);
       this.setupEventHandlers(connectionInfo);
+      logInfo(`Event handlers set up successfully for device: ${deviceId}`);
 
       // Update device with session ID if not set
       if (!device.session_id) {
+        logInfo(`Updating device with session ID: ${sessionId}`);
         await device.update({ session_id: sessionId });
+        logInfo(`Device updated with session ID successfully: ${deviceId}`);
       }
 
-      logInfo(`WhatsApp connection initialized for device: ${deviceId}`);
+      logInfo(`WhatsApp connection initialized successfully for device: ${deviceId}`);
       return { success: true, sessionId };
 
     } catch (error) {
@@ -105,35 +138,11 @@ class WhatsAppService {
         const { connection, lastDisconnect, qr } = update;
 
         if (qr) {
-          // Generate QR code
-          const qrCode = await qrcode.toDataURL(qr);
-          connectionInfo.qrCode = qrCode;
-          await this.updateDeviceQR(deviceId, qrCode);
-          
-          // Get device info for socket notification
-          const device = await Device.findByPk(deviceId);
-          if (device) {
-            await socketService.handleDeviceConnection({
-              userId: device.user_id,
-              deviceId,
-              status: 'qr_ready',
-              qrCode
-            });
-          }
-          
-          logInfo(`QR code generated for device: ${deviceId}`);
-        }
-
-        if (connection === 'close') {
-          const shouldReconnect = (lastDisconnect?.error instanceof Boom) && 
-            lastDisconnect.error.output?.statusCode !== DisconnectReason.loggedOut;
-
-          if (shouldReconnect) {
-            logWarn(`Connection closed for device: ${deviceId}, attempting to reconnect...`);
-            await this.reconnectDevice(deviceId);
-          } else {
-            logInfo(`Connection closed for device: ${deviceId}, not reconnecting`);
-            await this.updateDeviceStatus(deviceId, 'disconnected');
+          try {
+            // Generate QR code
+            const qrCode = await qrcode.toDataURL(qr);
+            connectionInfo.qrCode = qrCode;
+            await this.updateDeviceQR(deviceId, qrCode);
             
             // Get device info for socket notification
             const device = await Device.findByPk(deviceId);
@@ -141,30 +150,66 @@ class WhatsAppService {
               await socketService.handleDeviceConnection({
                 userId: device.user_id,
                 deviceId,
-                status: 'disconnected'
+                status: 'qr_ready',
+                qrCode
               });
             }
             
-            this.connections.delete(deviceId);
+            logInfo(`QR code generated for device: ${deviceId}`);
+          } catch (qrError) {
+            logError(qrError, `Error generating QR code for device: ${deviceId}`);
+          }
+        }
+
+        if (connection === 'close') {
+          try {
+            const shouldReconnect = (lastDisconnect?.error instanceof Boom) && 
+              lastDisconnect.error.output?.statusCode !== DisconnectReason.loggedOut;
+
+            if (shouldReconnect) {
+              logWarn(`Connection closed for device: ${deviceId}, attempting to reconnect...`);
+              await this.reconnectDevice(deviceId);
+            } else {
+              logInfo(`Connection closed for device: ${deviceId}, not reconnecting`);
+              await this.updateDeviceStatus(deviceId, 'disconnected');
+              
+              // Get device info for socket notification
+              const device = await Device.findByPk(deviceId);
+              if (device) {
+                await socketService.handleDeviceConnection({
+                  userId: device.user_id,
+                  deviceId,
+                  status: 'disconnected'
+                });
+              }
+              
+              this.connections.delete(deviceId);
+            }
+          } catch (closeError) {
+            logError(closeError, `Error handling connection close for device: ${deviceId}`);
           }
         }
 
         if (connection === 'open') {
-          connectionInfo.isConnected = true;
-          connectionInfo.qrCode = null;
-          await this.updateDeviceStatus(deviceId, 'connected');
-          
-          // Get device info for socket notification
-          const device = await Device.findByPk(deviceId);
-          if (device) {
-            await socketService.handleDeviceConnection({
-              userId: device.user_id,
-              deviceId,
-              status: 'connected'
-            });
+          try {
+            connectionInfo.isConnected = true;
+            connectionInfo.qrCode = null;
+            await this.updateDeviceStatus(deviceId, 'connected');
+            
+            // Get device info for socket notification
+            const device = await Device.findByPk(deviceId);
+            if (device) {
+              await socketService.handleDeviceConnection({
+                userId: device.user_id,
+                deviceId,
+                status: 'connected'
+              });
+            }
+            
+            logInfo(`WhatsApp connected for device: ${deviceId}`);
+          } catch (openError) {
+            logError(openError, `Error handling connection open for device: ${deviceId}`);
           }
-          
-          logInfo(`WhatsApp connected for device: ${deviceId}`);
         }
 
       } catch (error) {

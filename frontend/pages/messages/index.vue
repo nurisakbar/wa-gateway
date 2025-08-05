@@ -436,7 +436,7 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 definePageMeta({
   layout: 'dashboard',
   middleware: 'auth'
@@ -504,7 +504,7 @@ onMounted(async () => {
   // Check for contact parameter in URL
   const route = useRoute()
   if (route.query.contact) {
-    const contact = contactStore.getContactById(route.query.contact as string)
+          const contact = contactStore.getContactById(route.query.contact)
     if (contact) {
       selectContact(contact)
     }
@@ -512,14 +512,14 @@ onMounted(async () => {
 })
 
 // Select contact
-const selectContact = async (contact: any) => {
+const selectContact = async (contact) => {
   selectedContact.value = contact
   await loadMessages(contact.phone_number)
   scrollToBottom()
 }
 
 // Load messages
-const loadMessages = async (phoneNumber: string) => {
+const loadMessages = async (phoneNumber) => {
   try {
     const result = await messageStore.fetchMessages({ to_number: phoneNumber })
     if (result.success) {
@@ -660,28 +660,28 @@ const scrollToBottom = () => {
   })
 }
 
-const formatTime = (timestamp: string) => {
+const formatTime = (timestamp) => {
   return new Date(timestamp).toLocaleTimeString([], { 
     hour: '2-digit', 
     minute: '2-digit' 
   })
 }
 
-const formatFileSize = (bytes: number) => {
+const formatFileSize = (bytes) => {
   if (!bytes) return ''
   const sizes = ['Bytes', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(1024))
   return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i]
 }
 
-const getStatusIcon = (status: string) => {
+const getStatusIcon = (status) => {
   const icons = {
     sent: 'bi bi-check',
     delivered: 'bi bi-check-double',
     read: 'bi bi-check-double text-primary',
     failed: 'bi bi-x-circle text-danger'
   }
-  return icons[status as keyof typeof icons] || 'bi bi-clock'
+      return icons[status] || 'bi bi-clock'
 }
 
 // Watch for new messages
@@ -690,14 +690,14 @@ onMounted(() => {
   const socket = $socket.get()
 
   if (socket) {
-    socket.on('message_received', (data: any) => {
+    socket.on('message_received', (data) => {
       if (selectedContact.value && data.from_number === selectedContact.value.phone_number) {
         loadMessages(selectedContact.value.phone_number)
         scrollToBottom()
       }
     })
 
-    socket.on('message_sent', (data: any) => {
+    socket.on('message_sent', (data) => {
       if (selectedContact.value && data.to_number === selectedContact.value.phone_number) {
         loadMessages(selectedContact.value.phone_number)
         scrollToBottom()

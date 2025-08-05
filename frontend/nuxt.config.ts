@@ -16,18 +16,28 @@ export default defineNuxtConfig({
   // Runtime config
   runtimeConfig: {
     public: {
-      apiBase: 'http://localhost:3000/api/v1',
-      socketUrl: 'http://localhost:3000',
+      apiBase: 'http://localhost:3001/api/v1',
+      socketUrl: 'http://localhost:3001',
       appName: 'WA Gateway',
       appVersion: '1.0.0'
     }
   },
 
-  // TypeScript configuration - disabled to avoid vue-tsc issues
+  // TypeScript configuration - completely disabled
   typescript: {
     strict: false,
     typeCheck: false,
     shim: false
+  },
+
+  // Vite configuration
+  vite: {
+    esbuild: {
+      target: 'esnext'
+    },
+    optimizeDeps: {
+      include: ['vue', 'vue-router', 'pinia']
+    }
   },
 
   // Pinia configuration

@@ -1,6 +1,6 @@
 const { Device, User } = require('../models');
 const whatsappService = require('../services/whatsappService');
-const { logError, logInfo } = require('../utils/logger');
+const { logError, logInfo, logWarn } = require('../utils/logger');
 const { generateUUID } = require('../utils/helpers');
 
 class DeviceController {
@@ -263,21 +263,29 @@ class DeviceController {
       const { deviceId } = req.params;
       const userId = req.user.id;
 
+      logInfo(`Connect device request: ${deviceId} by user: ${userId}`);
+
       // Find device
       const device = await Device.findOne({
         where: { id: deviceId, user_id: userId }
       });
 
       if (!device) {
+        logWarn(`Device not found: ${deviceId}`);
         return res.status(404).json({
           success: false,
           message: 'Device not found'
         });
       }
 
+      logInfo(`Device found: ${deviceId}, current status: ${device.status}`);
+
       // Check if device is already connected
       const connectionStatus = await whatsappService.getConnectionStatus(deviceId);
+      logInfo(`Connection status for device ${deviceId}:`, connectionStatus);
+      
       if (connectionStatus.connected) {
+        logInfo(`Device ${deviceId} is already connected`);
         return res.status(400).json({
           success: false,
           message: 'Device is already connected'
@@ -285,9 +293,10 @@ class DeviceController {
       }
 
       // Initialize WhatsApp connection
+      logInfo(`Initializing WhatsApp connection for device: ${deviceId}`);
       const result = await whatsappService.initializeConnection(deviceId, userId);
 
-      logInfo(`Device connection initiated: ${deviceId} by user: ${userId}`);
+      logInfo(`Device connection initiated successfully: ${deviceId} by user: ${userId}, session: ${result.sessionId}`);
 
       res.json({
         success: true,
@@ -354,12 +363,15 @@ class DeviceController {
       const { deviceId } = req.params;
       const userId = req.user.id;
 
+      logInfo(`Getting QR code for device: ${deviceId}, user: ${userId}`);
+
       // Find device
       const device = await Device.findOne({
         where: { id: deviceId, user_id: userId }
       });
 
       if (!device) {
+        logWarn(`Device not found: ${deviceId}`);
         return res.status(404).json({
           success: false,
           message: 'Device not found'
@@ -368,26 +380,66 @@ class DeviceController {
 
       // Get connection status
       const connectionStatus = await whatsappService.getConnectionStatus(deviceId);
+      logInfo(`Connection status for device ${deviceId}:`, connectionStatus);
 
+      // Check if device is already connected
       if (connectionStatus.connected) {
+        logInfo(`Device ${deviceId} is already connected`);
         return res.status(400).json({
           success: false,
-          message: 'Device is already connected'
+          message: 'Device is already connected. No QR code needed.',
+          data: {
+            status: 'connected',
+            connected: true
+          }
         });
       }
 
-      if (!connectionStatus.qrCode) {
-        return res.status(400).json({
-          success: false,
-          message: 'QR code not available. Please try connecting the device first.'
+      // Check if QR code is available in memory
+      if (connectionStatus.qrCode) {
+        logInfo(`QR code available in memory for device: ${deviceId}`);
+        return res.json({
+          success: true,
+          data: {
+            qr_code: connectionStatus.qrCode,
+            status: connectionStatus.status || 'connecting'
+          }
         });
       }
 
-      res.json({
-        success: true,
+      // Check if QR code is stored in database
+      if (device.qr_code) {
+        logInfo(`QR code available in database for device: ${deviceId}`);
+        return res.json({
+          success: true,
+          data: {
+            qr_code: device.qr_code,
+            status: device.status || 'connecting'
+          }
+        });
+      }
+
+      // If no QR code available, check if device is in connecting state
+      if (device.status === 'connecting' || connectionStatus.status === 'connecting') {
+        logInfo(`Device ${deviceId} is connecting but QR code not ready yet`);
+        return res.status(202).json({
+          success: false,
+          message: 'QR code is being generated. Please wait a moment and try again.',
+          data: {
+            status: 'connecting',
+            retry_after: 3 // seconds
+          }
+        });
+      }
+
+      // Device is not connecting and no QR code available
+      logWarn(`No QR code available for device: ${deviceId}, status: ${device.status}`);
+      return res.status(400).json({
+        success: false,
+        message: 'QR code not available. Please try connecting the device first.',
         data: {
-          qr_code: connectionStatus.qrCode,
-          status: connectionStatus.status
+          status: device.status || 'disconnected',
+          needs_connection_init: true
         }
       });
 

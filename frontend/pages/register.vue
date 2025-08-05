@@ -15,19 +15,36 @@
             <div class="card-body p-4">
               <form @submit.prevent="handleRegister" novalidate>
                 <div class="mb-3">
-                  <label for="name" class="form-label">Full Name</label>
+                  <label for="username" class="form-label">Username</label>
                   <input
                     type="text"
                     class="form-control"
-                    :class="{ 'is-invalid': errors.name }"
-                    id="name"
-                    v-model="form.name"
+                    :class="{ 'is-invalid': errors.username }"
+                    id="username"
+                    v-model="form.username"
+                    placeholder="Enter your username"
+                    required
+                    :disabled="isLoading"
+                  />
+                  <div class="invalid-feedback" v-if="errors.username">
+                    {{ errors.username }}
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <label for="full_name" class="form-label">Full Name</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    :class="{ 'is-invalid': errors.full_name }"
+                    id="full_name"
+                    v-model="form.full_name"
                     placeholder="Enter your full name"
                     required
                     :disabled="isLoading"
                   />
-                  <div class="invalid-feedback" v-if="errors.name">
-                    {{ errors.name }}
+                  <div class="invalid-feedback" v-if="errors.full_name">
+                    {{ errors.full_name }}
                   </div>
                 </div>
 
@@ -45,6 +62,22 @@
                   />
                   <div class="invalid-feedback" v-if="errors.email">
                     {{ errors.email }}
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <label for="phone" class="form-label">Phone Number (Optional)</label>
+                  <input
+                    type="tel"
+                    class="form-control"
+                    :class="{ 'is-invalid': errors.phone }"
+                    id="phone"
+                    v-model="form.phone"
+                    placeholder="Enter your phone number"
+                    :disabled="isLoading"
+                  />
+                  <div class="invalid-feedback" v-if="errors.phone">
+                    {{ errors.phone }}
                   </div>
                 </div>
 
@@ -152,7 +185,8 @@ import { ref, reactive } from 'vue'
 
 // Page metadata
 definePageMeta({
-  layout: 'auth'
+  layout: 'auth',
+  middleware: 'guest'
 })
 
 // Reactive data
@@ -161,18 +195,22 @@ const showPassword = ref(false)
 const showConfirmPassword = ref(false)
 
 const form = reactive({
-  name: '',
+  username: '',
+  full_name: '',
   email: '',
   password: '',
   confirmPassword: '',
+  phone: '',
   terms: false
 })
 
 const errors = reactive({
-  name: '',
+  username: '',
+  full_name: '',
   email: '',
   password: '',
   confirmPassword: '',
+  phone: '',
   terms: ''
 })
 
@@ -185,12 +223,24 @@ const validateForm = () => {
     errors[key] = ''
   })
   
-  // Name validation
-  if (!form.name.trim()) {
-    errors.name = 'Name is required'
+  // Username validation
+  if (!form.username.trim()) {
+    errors.username = 'Username is required'
     isValid = false
-  } else if (form.name.trim().length < 2) {
-    errors.name = 'Name must be at least 2 characters'
+  } else if (form.username.trim().length < 3) {
+    errors.username = 'Username must be at least 3 characters'
+    isValid = false
+  } else if (!/^[a-zA-Z0-9_]+$/.test(form.username)) {
+    errors.username = 'Username can only contain letters, numbers, and underscores'
+    isValid = false
+  }
+  
+  // Full name validation
+  if (!form.full_name.trim()) {
+    errors.full_name = 'Full name is required'
+    isValid = false
+  } else if (form.full_name.trim().length < 2) {
+    errors.full_name = 'Full name must be at least 2 characters'
     isValid = false
   }
   
@@ -234,34 +284,68 @@ const validateForm = () => {
 }
 
 const handleRegister = async () => {
+  console.log('handleRegister called')
+  
   if (!validateForm()) {
+    console.log('Form validation failed')
     return
   }
+  
+  console.log('Form data:', {
+    username: form.username.trim(),
+    full_name: form.full_name.trim(),
+    email: form.email.trim().toLowerCase(),
+    password: form.password,
+    phone: form.phone.trim() || undefined
+  })
   
   isLoading.value = true
   
   try {
-    const response = await $fetch('/api/v1/auth/register', {
+    const config = useRuntimeConfig()
+    const response = await $fetch(`${config.public.apiBase}/auth/register`, {
       method: 'POST',
       body: {
-        name: form.name.trim(),
+        username: form.username.trim(),
+        full_name: form.full_name.trim(),
         email: form.email.trim().toLowerCase(),
-        password: form.password
+        password: form.password,
+        phone: form.phone.trim() || undefined
       }
     })
     
-    // Show success message
-    alert('Account created successfully! Please check your email for verification.')
+    // Show success message using toast
+    const { $toast } = useNuxtApp()
+    $toast.success('Account created successfully! Please check your email for verification.')
     
     // Redirect to login
     navigateTo('/login')
   } catch (error) {
     console.error('Registration error:', error)
     
-    if (error.data?.message) {
-      alert(error.data.message)
+    const { $toast } = useNuxtApp()
+    
+    // Handle validation errors from backend
+    if (error.data?.errors && Array.isArray(error.data.errors)) {
+      // Clear previous errors
+      Object.keys(errors).forEach(key => {
+        errors[key] = ''
+      })
+      
+      // Set validation errors
+      error.data.errors.forEach(err => {
+        if (errors[err.field]) {
+          errors[err.field] = err.message
+        }
+      })
+      
+      $toast.error('Please fix the validation errors')
+    } else if (error.data?.message) {
+      $toast.error(error.data.message)
+    } else if (error.message) {
+      $toast.error(error.message)
     } else {
-      alert('Failed to create account. Please try again.')
+      $toast.error('Failed to create account. Please try again.')
     }
   } finally {
     isLoading.value = false

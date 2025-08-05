@@ -24,7 +24,7 @@
                     v-model="form.email"
                     placeholder="Enter your email"
                     required
-                    :disabled="authStore.isLoading"
+                    :disabled="isLoading"
                   />
                   <div class="invalid-feedback" v-if="errors.email">
                     {{ errors.email }}
@@ -42,13 +42,13 @@
                       v-model="form.password"
                       placeholder="Enter your password"
                       required
-                      :disabled="authStore.isLoading"
+                      :disabled="isLoading"
                     />
                     <button
                       class="btn btn-outline-secondary"
                       type="button"
                       @click="showPassword = !showPassword"
-                      :disabled="authStore.isLoading"
+                      :disabled="isLoading"
                     >
                       <i :class="showPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
                     </button>
@@ -74,10 +74,10 @@
                   <button
                     type="submit"
                     class="btn btn-primary btn-lg"
-                    :disabled="authStore.isLoading"
+                    :disabled="isLoading"
                   >
-                    <span v-if="authStore.isLoading" class="loading-spinner me-2"></span>
-                    {{ authStore.isLoading ? 'Signing in...' : 'Sign In' }}
+                    <span v-if="isLoading" class="loading-spinner me-2"></span>
+                    {{ isLoading ? 'Signing in...' : 'Sign In' }}
                   </button>
                 </div>
 
@@ -102,13 +102,13 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 definePageMeta({
   layout: 'auth',
   middleware: 'guest'
 })
 
-const authStore = useAuthStore()
+const { login, isLoading } = useAuth()
 const { $toast } = useNuxtApp()
 
 const form = ref({
@@ -158,16 +158,21 @@ const handleLogin = async () => {
     return
   }
 
-  const result = await authStore.login({
-    email: form.value.email,
-    password: form.value.password
-  })
+  try {
+    const result = await login({
+      email: form.value.email,
+      password: form.value.password
+    })
 
-  if (result.success) {
-    $toast.success('Welcome back!')
-    navigateTo('/dashboard')
-  } else {
-    $toast.error(result.error || 'Login failed')
+    if (result.success) {
+      $toast.success(result.message || 'Welcome back!')
+      navigateTo('/dashboard')
+    } else {
+      $toast.error(result.error || 'Login failed')
+    }
+  } catch (error) {
+    console.error('Login error:', error)
+    $toast.error('Login failed. Please try again.')
   }
 }
 

@@ -10,13 +10,29 @@ export default defineNuxtPlugin(() => {
   const connect = () => {
     if (socket.value?.connected) return
 
-    socket.value = io(config.public.socketUrl || 'http://localhost:3000', {
+    // Use configured socket URL or fallback to backend port
+    const socketUrl = config.public.socketUrl || 'http://localhost:3001'
+    
+    // Get auth token from localStorage or cookie
+    const token = localStorage.getItem('auth_token') || useCookie('auth_token').value
+    
+    console.log('Connecting to socket:', socketUrl)
+    
+    socket.value = io(socketUrl, {
       transports: ['websocket', 'polling'],
       autoConnect: true,
       reconnection: true,
       reconnectionAttempts: maxReconnectAttempts,
       reconnectionDelay: 1000,
-      timeout: 20000
+      timeout: 20000,
+      // Add path to avoid router conflicts
+      path: '/socket.io/',
+      // Add auth token if available
+      auth: token ? { token } : {},
+      // Add headers for token
+      extraHeaders: token ? {
+        'Authorization': `Bearer ${token}`
+      } : {}
     })
 
     // Connection events
@@ -35,6 +51,19 @@ export default defineNuxtPlugin(() => {
       console.error('Socket connection error:', error)
       isConnected.value = false
       reconnectAttempts.value++
+      
+      // Don't show error if backend is not running
+      if (error.message.includes('ECONNREFUSED')) {
+        console.log('Backend server not running, socket connection will retry...')
+      }
+      
+      // Handle authentication errors
+      if (error.message.includes('Authentication token required') || 
+          error.message.includes('Authentication failed')) {
+        console.log('Socket authentication failed, user may not be logged in')
+        // Don't retry if authentication failed
+        reconnectAttempts.value = maxReconnectAttempts
+      }
     })
 
     socket.value.on('reconnect', (attemptNumber) => {
@@ -151,8 +180,11 @@ export default defineNuxtPlugin(() => {
     }
   }
 
-  // Auto-connect on plugin initialization
-  connect()
+  // Auto-connect only if user is authenticated
+  const token = localStorage.getItem('auth_token') || useCookie('auth_token').value
+  if (token) {
+    connect()
+  }
 
   // Cleanup on app unmount
   if (process.client) {

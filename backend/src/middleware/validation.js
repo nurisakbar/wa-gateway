@@ -247,12 +247,45 @@ const validateContactUpdate = [
 ];
 
 /**
- * UUID parameter validation
+ * UUID parameter validation for deviceId
  */
 const validateUUID = [
+  param('deviceId')
+    .isUUID()
+    .withMessage('Invalid ID format'),
+  
+  handleValidationErrors
+];
+
+/**
+ * UUID parameter validation for generic id
+ */
+const validateIdUUID = [
   param('id')
     .isUUID()
     .withMessage('Invalid ID format'),
+  
+  handleValidationErrors
+];
+
+/**
+ * UUID parameter validation for messageId
+ */
+const validateMessageUUID = [
+  param('messageId')
+    .isUUID()
+    .withMessage('Invalid message ID format'),
+  
+  handleValidationErrors
+];
+
+/**
+ * UUID parameter validation for contactId
+ */
+const validateContactUUID = [
+  param('contactId')
+    .isUUID()
+    .withMessage('Invalid contact ID format'),
   
   handleValidationErrors
 ];
@@ -434,6 +467,9 @@ module.exports = {
   validateContactCreation,
   validateContactUpdate,
   validateUUID,
+  validateIdUUID,
+  validateMessageUUID,
+  validateContactUUID,
   validatePagination,
   validateSearch,
   validateFileUpload,

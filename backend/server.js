@@ -106,6 +106,14 @@ const fileRoutes = require('./src/routes/files');
 const webhookRoutes = require('./src/routes/webhooks');
 const socketRoutes = require('./src/routes/sockets');
 const broadcastRoutes = require('./src/routes/broadcasts');
+const analyticsRoutes = require('./src/routes/analytics');
+const apiKeyRoutes = require('./src/routes/apiKeys');
+const whatsappRoutes = require('./src/routes/whatsapp');
+const subscriptionRoutes = require('./src/routes/subscriptions');
+const invoiceRoutes = require('./src/routes/invoices');
+
+// Import middleware
+const { trackApiUsage } = require('./src/middleware/usageTracker');
 
 // API routes
 app.use(`${API_PREFIX}/${API_VERSION}/auth`, authRoutes);
@@ -116,6 +124,11 @@ app.use(`${API_PREFIX}/${API_VERSION}/files`, fileRoutes);
 app.use(`${API_PREFIX}/${API_VERSION}/webhooks`, webhookRoutes);
 app.use(`${API_PREFIX}/${API_VERSION}/sockets`, socketRoutes);
 app.use(`${API_PREFIX}/${API_VERSION}/broadcasts`, broadcastRoutes);
+app.use(`${API_PREFIX}/${API_VERSION}/analytics`, trackApiUsage, analyticsRoutes);
+app.use(`${API_PREFIX}/${API_VERSION}/api-keys`, apiKeyRoutes);
+app.use(`${API_PREFIX}/${API_VERSION}/whatsapp`, trackApiUsage, whatsappRoutes);
+app.use(`${API_PREFIX}/${API_VERSION}/subscriptions`, subscriptionRoutes);
+app.use(`${API_PREFIX}/${API_VERSION}/invoices`, invoiceRoutes);
 
 // Initialize services
 const notificationService = require('./src/services/notificationService');

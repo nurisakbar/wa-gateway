@@ -29,15 +29,15 @@ export const useDeviceStore = defineStore('devices', {
   }),
 
   getters: {
-    getDevices: (state) => state.devices,
+    getDevices: (state) => state.devices || [],
     getSelectedDevice: (state) => state.selectedDevice,
     isLoading: (state) => state.loading,
     getError: (state) => state.error,
-    getConnectedDevices: (state) => state.devices.filter(d => d.status === 'connected'),
-    getActiveDevices: (state) => state.devices.filter(d => d.is_active),
-    getDeviceById: (state) => (id: string) => state.devices.find(d => d.id === id),
-    getDeviceCount: (state) => state.devices.length,
-    getConnectedCount: (state) => state.devices.filter(d => d.status === 'connected').length
+    getConnectedDevices: (state) => (state.devices || []).filter(d => d && d.status === 'connected'),
+    getActiveDevices: (state) => (state.devices || []).filter(d => d && d.is_active),
+    getDeviceById: (state) => (id: string) => (state.devices || []).find(d => d && d.id === id),
+    getDeviceCount: (state) => (state.devices || []).length,
+    getConnectedCount: (state) => (state.devices || []).filter(d => d && d.status === 'connected').length
   },
 
   actions: {
@@ -45,16 +45,75 @@ export const useDeviceStore = defineStore('devices', {
       this.loading = true
       this.error = null
       try {
-        const { $api } = useNuxtApp()
-        const response = await $api.get('/devices')
+        console.log('Fetching devices...')
+        const config = useRuntimeConfig()
+        const token = localStorage.getItem('auth_token')
         
-        if (response.data.success) {
-          this.devices = response.data.data.devices
+        console.log('Auth token:', token ? 'Present' : 'Missing')
+        console.log('API Base URL:', config.public.apiBase)
+        
+        // Try using $api first, fallback to $fetch
+        let response
+        try {
+          const { $api } = useNuxtApp()
+          console.log('Using $api...')
+          response = await $api.get('/devices')
+          console.log('$api response:', response)
+        } catch (apiError) {
+          console.log('$api failed, trying $fetch...', apiError)
+          response = await $fetch(`${config.public.apiBase}/devices`, {
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+          })
+          console.log('$fetch response:', response)
+        }
+        
+        console.log('Final response structure:', response)
+        console.log('Response.data:', response.data)
+        console.log('Response.data.data:', response.data?.data)
+        console.log('Response.data.data.data:', response.data?.data?.data)
+        
+        if (response.data?.success) {
+          // Handle different response structures
+          let devicesArray = []
+          
+          // Backend returns: { success: true, data: devicesArray, pagination: {...} }
+          if (response.data.data && Array.isArray(response.data.data)) {
+            devicesArray = response.data.data
+          } 
+          // Handle nested structure if exists: { success: true, data: { data: devicesArray } }
+          else if (response.data.data?.data && Array.isArray(response.data.data.data)) {
+            devicesArray = response.data.data.data
+          }
+          // Handle single device: { success: true, data: singleDevice }
+          else if (response.data.data && !Array.isArray(response.data.data)) {
+            devicesArray = [response.data.data]
+          }
+          // Empty response
+          else {
+            devicesArray = []
+          }
+          
+          this.devices = devicesArray
+          console.log('Devices loaded:', this.devices)
+          console.log('Devices count:', this.devices.length)
+          console.log('First device sample:', this.devices[0])
           return { success: true, devices: this.devices }
+        } else {
+          console.log('API returned success: false or no success field')
+          console.log('Response.data:', response.data)
+          this.devices = []
+          return { success: false, error: response.data?.message || 'API returned success: false' }
         }
       } catch (error: any) {
         console.error('Fetch devices error:', error)
-        this.error = error.response?.data?.message || 'Failed to fetch devices'
+        console.error('Error details:', {
+          message: error.message,
+          response: error.response?.data,
+          data: error.data
+        })
+        this.error = error.response?.data?.message || error.data?.message || 'Failed to fetch devices'
+        // Initialize with empty array on error
+        this.devices = []
         return { success: false, error: this.error }
       } finally {
         this.loading = false
@@ -69,17 +128,60 @@ export const useDeviceStore = defineStore('devices', {
       this.loading = true
       this.error = null
       try {
-        const { $api } = useNuxtApp()
-        const response = await $api.post('/devices', deviceData)
+        console.log('Creating device with data:', deviceData)
+        const config = useRuntimeConfig()
+        
+        // Try using $api first, fallback to $fetch
+        let response
+        try {
+          const { $api } = useNuxtApp()
+          response = await $api.post('/devices', deviceData)
+        } catch (apiError) {
+          console.log('$api failed, trying $fetch...')
+          const token = localStorage.getItem('auth_token')
+          response = await $fetch(`${config.public.apiBase}/devices`, {
+            method: 'POST',
+            body: deviceData,
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+          })
+        }
+        
+        console.log('Create device response:', response)
         
         if (response.data.success) {
-          const newDevice = response.data.data.device
-          this.devices.push(newDevice)
-          return { success: true, device: newDevice }
+          // Handle different response structures
+          let newDevice = null
+          
+          // Backend returns: { success: true, data: device }
+          if (response.data.data && !Array.isArray(response.data.data)) {
+            newDevice = response.data.data
+          }
+          // Handle nested structure if exists: { success: true, data: { device: device } }
+          else if (response.data.data?.device) {
+            newDevice = response.data.data.device
+          }
+          // Handle array response: { success: true, data: [device] }
+          else if (response.data.data && Array.isArray(response.data.data) && response.data.data.length > 0) {
+            newDevice = response.data.data[0]
+          }
+          
+          console.log('New device created:', newDevice)
+          
+          // Ensure device has required fields
+          if (newDevice && newDevice.id) {
+            this.devices.push(newDevice)
+            return { success: true, device: newDevice }
+          } else {
+            console.error('Invalid device data received:', newDevice)
+            return { success: false, error: 'Invalid device data received' }
+          }
+        } else {
+          console.error('API returned success: false')
+          return { success: false, error: response.data.message || 'Failed to create device' }
         }
       } catch (error: any) {
         console.error('Create device error:', error)
-        this.error = error.response?.data?.message || 'Failed to create device'
+        this.error = error.response?.data?.message || error.data?.message || 'Failed to create device'
         return { success: false, error: this.error }
       } finally {
         this.loading = false
@@ -90,20 +192,60 @@ export const useDeviceStore = defineStore('devices', {
       this.loading = true
       this.error = null
       try {
-        const { $api } = useNuxtApp()
-        const response = await $api.put(`/devices/${deviceId}`, deviceData)
+        console.log('Updating device:', deviceId, 'with data:', deviceData)
+        const config = useRuntimeConfig()
         
-        if (response.data.success) {
-          const updatedDevice = response.data.data.device
-          const index = this.devices.findIndex(d => d.id === deviceId)
-          if (index !== -1) {
-            this.devices[index] = updatedDevice
+        // Try using $api first, fallback to $fetch
+        let response
+        try {
+          const { $api } = useNuxtApp()
+          response = await $api.put(`/devices/${deviceId}`, deviceData)
+        } catch (apiError) {
+          console.log('$api failed, trying $fetch...', apiError)
+          const token = localStorage.getItem('auth_token')
+          response = await $fetch(`${config.public.apiBase}/devices/${deviceId}`, {
+            method: 'PUT',
+            body: deviceData,
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+          })
+        }
+        
+        console.log('Update device response:', response)
+        
+        if (response.data?.success) {
+          // Handle different response structures
+          let updatedDevice = null
+          
+          // Backend returns: { success: true, data: device }
+          if (response.data.data && !Array.isArray(response.data.data)) {
+            updatedDevice = response.data.data
           }
-          return { success: true, device: updatedDevice }
+          // Handle nested structure if exists: { success: true, data: { device: device } }
+          else if (response.data.data?.device) {
+            updatedDevice = response.data.data.device
+          }
+          // Handle array response: { success: true, data: [device] }
+          else if (response.data.data && Array.isArray(response.data.data) && response.data.data.length > 0) {
+            updatedDevice = response.data.data[0]
+          }
+          
+          if (updatedDevice && updatedDevice.id) {
+            const index = this.devices.findIndex(d => d && d.id === deviceId)
+            if (index !== -1) {
+              this.devices[index] = updatedDevice
+            }
+            return { success: true, device: updatedDevice }
+          } else {
+            console.error('Invalid updated device data:', response.data)
+            return { success: false, error: 'Invalid response from server' }
+          }
+        } else {
+          console.error('API returned success: false')
+          return { success: false, error: response.data?.message || 'Failed to update device' }
         }
       } catch (error: any) {
         console.error('Update device error:', error)
-        this.error = error.response?.data?.message || 'Failed to update device'
+        this.error = error.response?.data?.message || error.data?.message || 'Failed to update device'
         return { success: false, error: this.error }
       } finally {
         this.loading = false
@@ -114,19 +256,38 @@ export const useDeviceStore = defineStore('devices', {
       this.loading = true
       this.error = null
       try {
-        const { $api } = useNuxtApp()
-        const response = await $api.delete(`/devices/${deviceId}`)
+        console.log('Deleting device:', deviceId)
+        const config = useRuntimeConfig()
         
-        if (response.data.success) {
-          this.devices = this.devices.filter(d => d.id !== deviceId)
+        // Try using $api first, fallback to $fetch
+        let response
+        try {
+          const { $api } = useNuxtApp()
+          response = await $api.delete(`/devices/${deviceId}`)
+        } catch (apiError) {
+          console.log('$api failed, trying $fetch...', apiError)
+          const token = localStorage.getItem('auth_token')
+          response = await $fetch(`${config.public.apiBase}/devices/${deviceId}`, {
+            method: 'DELETE',
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+          })
+        }
+        
+        console.log('Delete device response:', response)
+        
+        if (response.data?.success) {
+          this.devices = this.devices.filter(d => d && d.id !== deviceId)
           if (this.selectedDevice?.id === deviceId) {
             this.selectedDevice = null
           }
           return { success: true }
+        } else {
+          console.error('API returned success: false')
+          return { success: false, error: response.data?.message || 'Failed to delete device' }
         }
       } catch (error: any) {
         console.error('Delete device error:', error)
-        this.error = error.response?.data?.message || 'Failed to delete device'
+        this.error = error.response?.data?.message || error.data?.message || 'Failed to delete device'
         return { success: false, error: this.error }
       } finally {
         this.loading = false
@@ -134,22 +295,133 @@ export const useDeviceStore = defineStore('devices', {
     },
 
     async connectDevice(deviceId: string) {
+      console.log('=== STORE CONNECT DEVICE CALLED ===')
+      console.log('Device ID:', deviceId)
+      console.log('Current loading state:', this.loading)
+      
+      // Prevent multiple simultaneous requests
+      if (this.loading) {
+        console.log('Connect device already in progress, skipping...')
+        return { success: false, error: 'Connection already in progress' }
+      }
+      
       this.loading = true
       this.error = null
       try {
-        const { $api } = useNuxtApp()
-        const response = await $api.post(`/devices/${deviceId}/connect`)
+        console.log('Connecting device:', deviceId)
+        const config = useRuntimeConfig()
+        console.log('API Base URL:', config.public.apiBase)
+        
+        // Step 1: Initialize connection
+        let response
+        try {
+          console.log('Trying $api first...')
+          const { $api } = useNuxtApp()
+          response = await $api.post(`/devices/${deviceId}/connect`)
+          console.log('$api response:', response)
+        } catch (apiError) {
+          console.log('$api failed, trying $fetch...', apiError)
+          const token = localStorage.getItem('auth_token')
+          console.log('Auth token:', token ? 'Present' : 'Missing')
+          response = await $fetch(`${config.public.apiBase}/devices/${deviceId}/connect`, {
+            method: 'POST',
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+          })
+          console.log('$fetch response:', response)
+        }
+        
+        console.log('Connect device response:', response)
         
         if (response.data.success) {
           const device = this.devices.find(d => d.id === deviceId)
           if (device) {
             device.status = 'connecting'
           }
-          return { success: true, qrCode: response.data.data.qr_code }
+          
+          // Step 2: Wait longer for QR code to be generated (Baileys takes time)
+          console.log('Waiting for QR code generation...')
+          await new Promise(resolve => setTimeout(resolve, 5000))
+          
+          // Step 3: Try to get QR code with retries
+          let qrResponse = null
+          let qrCodeAvailable = false
+          
+          for (let attempt = 1; attempt <= 3; attempt++) {
+            try {
+              console.log(`QR code attempt ${attempt}/3...`)
+              const { $api } = useNuxtApp()
+              qrResponse = await $api.get(`/devices/${deviceId}/qr`)
+              
+              console.log('QR response:', qrResponse.data)
+              
+              // Handle different response scenarios
+              if (qrResponse.data.success && qrResponse.data.data.qr_code) {
+                console.log('QR code available!')
+                qrCodeAvailable = true
+                break
+              } else if (qrResponse.status === 202) {
+                // QR code is being generated, wait and retry
+                console.log(`QR code being generated, retry after ${qrResponse.data.data.retry_after || 3} seconds`)
+                if (attempt < 3) {
+                  await new Promise(resolve => setTimeout(resolve, (qrResponse.data.data.retry_after || 3) * 1000))
+                }
+              } else if (qrResponse.status === 400 && qrResponse.data.data?.connected) {
+                // Device is already connected
+                console.log('Device is already connected!')
+                return { success: true, qrCode: null, message: 'Device is already connected!' }
+              } else {
+                console.log(`QR code not ready yet, attempt ${attempt}/3`)
+                if (attempt < 3) {
+                  await new Promise(resolve => setTimeout(resolve, 3000)) // Wait 3 seconds between attempts
+                }
+              }
+            } catch (qrApiError) {
+              console.log(`QR API attempt ${attempt} failed, trying $fetch...`)
+              try {
+                const token = localStorage.getItem('auth_token')
+                qrResponse = await $fetch(`${config.public.apiBase}/devices/${deviceId}/qr`, {
+                  headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                })
+                
+                console.log('QR fetch response:', qrResponse)
+                
+                if (qrResponse.data.success && qrResponse.data.data.qr_code) {
+                  console.log('QR code available via $fetch!')
+                  qrCodeAvailable = true
+                  break
+                } else if (qrResponse.status === 202) {
+                  // QR code is being generated, wait and retry
+                  console.log(`QR code being generated (fetch), retry after ${qrResponse.data.data.retry_after || 3} seconds`)
+                  if (attempt < 3) {
+                    await new Promise(resolve => setTimeout(resolve, (qrResponse.data.data.retry_after || 3) * 1000))
+                  }
+                } else if (qrResponse.status === 400 && qrResponse.data.data?.connected) {
+                  // Device is already connected
+                  console.log('Device is already connected! (fetch)')
+                  return { success: true, qrCode: null, message: 'Device is already connected!' }
+                }
+              } catch (fetchError) {
+                console.log(`QR fetch attempt ${attempt} failed:`, fetchError)
+                if (attempt < 3) {
+                  await new Promise(resolve => setTimeout(resolve, 3000))
+                }
+              }
+            }
+          }
+          
+          console.log('Final QR code response:', qrResponse)
+          
+          if (qrCodeAvailable && qrResponse.data.success && qrResponse.data.data.qr_code) {
+            return { success: true, qrCode: qrResponse.data.data.qr_code }
+          } else {
+            return { success: true, qrCode: null, message: 'Connection initiated, QR code will be available shortly. Please wait and try again.' }
+          }
+        } else {
+          return { success: false, error: response.data.message || 'Failed to connect device' }
         }
       } catch (error: any) {
         console.error('Connect device error:', error)
-        this.error = error.response?.data?.message || 'Failed to connect device'
+        this.error = error.response?.data?.message || error.data?.message || 'Failed to connect device'
         return { success: false, error: this.error }
       } finally {
         this.loading = false
@@ -160,8 +432,24 @@ export const useDeviceStore = defineStore('devices', {
       this.loading = true
       this.error = null
       try {
-        const { $api } = useNuxtApp()
-        const response = await $api.post(`/devices/${deviceId}/disconnect`)
+        console.log('Disconnecting device:', deviceId)
+        const config = useRuntimeConfig()
+        
+        // Try using $api first, fallback to $fetch
+        let response
+        try {
+          const { $api } = useNuxtApp()
+          response = await $api.post(`/devices/${deviceId}/disconnect`)
+        } catch (apiError) {
+          console.log('$api failed, trying $fetch...')
+          const token = localStorage.getItem('auth_token')
+          response = await $fetch(`${config.public.apiBase}/devices/${deviceId}/disconnect`, {
+            method: 'POST',
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+          })
+        }
+        
+        console.log('Disconnect device response:', response)
         
         if (response.data.success) {
           const device = this.devices.find(d => d.id === deviceId)
@@ -169,10 +457,12 @@ export const useDeviceStore = defineStore('devices', {
             device.status = 'disconnected'
           }
           return { success: true }
+        } else {
+          return { success: false, error: response.data.message || 'Failed to disconnect device' }
         }
       } catch (error: any) {
         console.error('Disconnect device error:', error)
-        this.error = error.response?.data?.message || 'Failed to disconnect device'
+        this.error = error.response?.data?.message || error.data?.message || 'Failed to disconnect device'
         return { success: false, error: this.error }
       } finally {
         this.loading = false

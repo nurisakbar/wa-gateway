@@ -1,177 +1,127 @@
 const axios = require('axios');
 const crypto = require('crypto');
+const { Webhook } = require('../models');
 const { logError, logInfo } = require('../utils/logger');
 
 class WebhookService {
   constructor() {
-    this.webhooks = new Map();
-    this.retryAttempts = parseInt(process.env.WEBHOOK_RETRY_ATTEMPTS) || 3;
-    this.retryDelay = parseInt(process.env.WEBHOOK_RETRY_DELAY) || 5000; // 5 seconds
-    this.timeout = parseInt(process.env.WEBHOOK_TIMEOUT) || 10000; // 10 seconds
+    this.queue = [];
+    this.isProcessing = false;
   }
 
-  // Register a webhook
-  registerWebhook(webhookId, config) {
-    this.webhooks.set(webhookId, {
-      ...config,
-      id: webhookId,
-      isActive: true,
-      lastTriggered: null,
-      failureCount: 0,
-      createdAt: new Date()
-    });
-
-    logInfo(`Webhook registered: ${webhookId} for events: ${config.events.join(', ')}`);
-  }
-
-  // Unregister a webhook
-  unregisterWebhook(webhookId) {
-    const webhook = this.webhooks.get(webhookId);
-    if (webhook) {
-      this.webhooks.delete(webhookId);
-      logInfo(`Webhook unregistered: ${webhookId}`);
-      return true;
-    }
-    return false;
-  }
-
-  // Get webhook by ID
-  getWebhook(webhookId) {
-    return this.webhooks.get(webhookId);
-  }
-
-  // Get all webhooks
-  getAllWebhooks() {
-    return Array.from(this.webhooks.values());
-  }
-
-  // Get webhooks for specific event
-  getWebhooksForEvent(event) {
-    return Array.from(this.webhooks.values()).filter(webhook => 
-      webhook.isActive && webhook.events.includes(event)
-    );
-  }
-
-  // Trigger webhook
-  async triggerWebhook(webhookId, event, data) {
-    const webhook = this.webhooks.get(webhookId);
-    if (!webhook || !webhook.isActive) {
-      return { success: false, error: 'Webhook not found or inactive' };
-    }
-
-    if (!webhook.events.includes(event)) {
-      return { success: false, error: 'Event not subscribed to this webhook' };
-    }
-
-    const payload = this.buildPayload(event, data);
-    const signature = this.generateSignature(payload, webhook.secret);
-
-    const headers = {
-      'Content-Type': 'application/json',
-      'User-Agent': 'WA-Gateway-Webhook/1.0',
-      'X-Webhook-Event': event,
-      'X-Webhook-Signature': signature,
-      'X-Webhook-Timestamp': Date.now().toString()
-    };
-
+  // Add webhook to queue
+  async queueWebhook(userId, event, data) {
     try {
-      const response = await this.sendWebhookRequest(webhook.url, payload, headers);
+      // Get active webhooks for this user and event
+      const webhooks = await Webhook.getActiveWebhooks(userId, [event]);
       
-      // Update webhook stats
-      webhook.lastTriggered = new Date();
-      webhook.failureCount = 0;
+      if (webhooks.length === 0) {
+        return;
+      }
 
-      logInfo(`Webhook triggered successfully: ${webhookId} for event: ${event}`);
-      return { success: true, response };
+      // Add to queue for each webhook
+      for (const webhook of webhooks) {
+        this.queue.push({
+          webhook,
+          event,
+          data,
+          attempts: 0,
+          maxAttempts: webhook.retry_count
+        });
+      }
+
+      // Start processing if not already running
+      if (!this.isProcessing) {
+        this.processQueue();
+      }
+
+      logInfo(`Queued webhook for event: ${event}`, 'WEBHOOK_SERVICE');
 
     } catch (error) {
-      // Update failure count
-      webhook.failureCount++;
+      logError(error, 'Webhook Queue Error');
+    }
+  }
+
+  // Process webhook queue
+  async processQueue() {
+    if (this.isProcessing || this.queue.length === 0) {
+      return;
+    }
+
+    this.isProcessing = true;
+
+    while (this.queue.length > 0) {
+      const webhookItem = this.queue.shift();
       
-      logError(error, `Webhook trigger failed: ${webhookId} for event: ${event}`);
-      return { success: false, error: error.message };
+      try {
+        await this.deliverWebhook(webhookItem);
+      } catch (error) {
+        logError(error, 'Webhook Processing Error');
+        
+        // Re-queue if we haven't exceeded max attempts
+        if (webhookItem.attempts < webhookItem.maxAttempts) {
+          webhookItem.attempts++;
+          this.queue.push(webhookItem);
+        } else {
+          // Mark webhook as failed
+          await this.markWebhookFailed(webhookItem.webhook, error.message);
+        }
+      }
+
+      // Small delay between deliveries
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
+
+    this.isProcessing = false;
   }
 
-  // Trigger webhooks for an event
-  async triggerWebhooksForEvent(event, data) {
-    const webhooks = this.getWebhooksForEvent(event);
-    const results = [];
+  // Deliver webhook to endpoint
+  async deliverWebhook(webhookItem) {
+    const { webhook, event, data, attempts } = webhookItem;
 
-    for (const webhook of webhooks) {
-      const result = await this.triggerWebhook(webhook.id, event, data);
-      results.push({
-        webhookId: webhook.id,
-        url: webhook.url,
-        ...result
-      });
-    }
-
-    logInfo(`Triggered ${webhooks.length} webhooks for event: ${event}`);
-    return results;
-  }
-
-  // Send webhook request with retry logic
-  async sendWebhookRequest(url, payload, headers, attempt = 1) {
     try {
-      const response = await axios.post(url, payload, {
+      // Prepare payload
+      const payload = {
+        event: event,
+        timestamp: new Date().toISOString(),
+        data: data,
+        webhook_id: webhook.id
+      };
+
+      // Add signature if secret is configured
+      const headers = {
+        'Content-Type': 'application/json',
+        'User-Agent': 'WA-Gateway-Webhook/1.0'
+      };
+
+      if (webhook.secret) {
+        const signature = this.generateSignature(payload, webhook.secret);
+        headers['X-Webhook-Signature'] = signature;
+      }
+
+      // Send webhook
+      const response = await axios.post(webhook.url, payload, {
         headers,
-        timeout: this.timeout,
-        validateStatus: () => true // Don't throw on HTTP error status
+        timeout: webhook.timeout,
+        validateStatus: () => true // Don't throw on any status code
       });
 
-      // Check if response is successful (2xx status)
+      // Check if delivery was successful
       if (response.status >= 200 && response.status < 300) {
-        return response;
+        await this.markWebhookSuccess(webhook);
+        logInfo(`Webhook delivered successfully: ${webhook.url}`, 'WEBHOOK_SERVICE');
+      } else {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-
-      // If not successful and we have retry attempts left
-      if (attempt < this.retryAttempts) {
-        logInfo(`Webhook request failed (attempt ${attempt}/${this.retryAttempts}), retrying in ${this.retryDelay}ms`);
-        await this.delay(this.retryDelay);
-        return this.sendWebhookRequest(url, payload, headers, attempt + 1);
-      }
-
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
 
     } catch (error) {
-      // If it's a network error and we have retry attempts left
-      if (attempt < this.retryAttempts && this.isRetryableError(error)) {
-        logInfo(`Webhook request failed (attempt ${attempt}/${this.retryAttempts}), retrying in ${this.retryDelay}ms`);
-        await this.delay(this.retryDelay);
-        return this.sendWebhookRequest(url, payload, headers, attempt + 1);
-      }
-
+      logError(`Webhook delivery failed (attempt ${attempts + 1}): ${error.message}`, 'WEBHOOK_SERVICE');
       throw error;
     }
   }
 
-  // Check if error is retryable
-  isRetryableError(error) {
-    return (
-      error.code === 'ECONNRESET' ||
-      error.code === 'ECONNREFUSED' ||
-      error.code === 'ENOTFOUND' ||
-      error.code === 'ETIMEDOUT' ||
-      error.code === 'ECONNABORTED' ||
-      (error.response && error.response.status >= 500)
-    );
-  }
-
-  // Build webhook payload
-  buildPayload(event, data) {
-    return {
-      event,
-      timestamp: new Date().toISOString(),
-      data,
-      webhook_id: data.webhookId || null
-    };
-  }
-
   // Generate webhook signature
   generateSignature(payload, secret) {
-    if (!secret) return null;
-    
     const payloadString = JSON.stringify(payload);
     return crypto
       .createHmac('sha256', secret)
@@ -179,164 +129,102 @@ class WebhookService {
       .digest('hex');
   }
 
-  // Verify webhook signature
-  verifySignature(payload, signature, secret) {
-    if (!secret || !signature) return false;
-    
-    const expectedSignature = this.generateSignature(payload, secret);
-    return crypto.timingSafeEqual(
-      Buffer.from(signature, 'hex'),
-      Buffer.from(expectedSignature, 'hex')
-    );
-  }
-
-  // Delay function for retry logic
-  delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
-
-  // Test webhook
-  async testWebhook(webhookId) {
-    const webhook = this.webhooks.get(webhookId);
-    if (!webhook) {
-      return { success: false, error: 'Webhook not found' };
-    }
-
-    const testData = {
-      test: true,
-      message: 'This is a test webhook from WA Gateway',
-      timestamp: new Date().toISOString()
-    };
-
-    return await this.triggerWebhook(webhookId, 'test', testData);
-  }
-
-  // Get webhook statistics
-  getWebhookStats() {
-    const webhooks = Array.from(this.webhooks.values());
-    
-    return {
-      total: webhooks.length,
-      active: webhooks.filter(w => w.isActive).length,
-      inactive: webhooks.filter(w => !w.isActive).length,
-      byEvent: this.getEventStats(webhooks),
-      recentFailures: webhooks.filter(w => w.failureCount > 0).length
-    };
-  }
-
-  // Get event statistics
-  getEventStats(webhooks) {
-    const eventStats = {};
-    
-    webhooks.forEach(webhook => {
-      webhook.events.forEach(event => {
-        if (!eventStats[event]) {
-          eventStats[event] = 0;
-        }
-        eventStats[event]++;
-      });
-    });
-
-    return eventStats;
-  }
-
-  // Clean up inactive webhooks
-  cleanupInactiveWebhooks(maxFailures = 10) {
-    const inactiveWebhooks = Array.from(this.webhooks.values())
-      .filter(webhook => webhook.failureCount >= maxFailures);
-
-    inactiveWebhooks.forEach(webhook => {
-      webhook.isActive = false;
-      logInfo(`Webhook deactivated due to failures: ${webhook.id}`);
-    });
-
-    return inactiveWebhooks.length;
-  }
-
-  // Reactivate webhook
-  reactivateWebhook(webhookId) {
-    const webhook = this.webhooks.get(webhookId);
-    if (webhook) {
-      webhook.isActive = true;
-      webhook.failureCount = 0;
-      logInfo(`Webhook reactivated: ${webhookId}`);
-      return true;
-    }
-    return false;
-  }
-
-  // Update webhook configuration
-  updateWebhook(webhookId, updates) {
-    const webhook = this.webhooks.get(webhookId);
-    if (!webhook) {
-      return false;
-    }
-
-    // Update allowed fields
-    const allowedFields = ['url', 'events', 'secret', 'isActive'];
-    allowedFields.forEach(field => {
-      if (updates[field] !== undefined) {
-        webhook[field] = updates[field];
-      }
-    });
-
-    webhook.updatedAt = new Date();
-    logInfo(`Webhook updated: ${webhookId}`);
-    return true;
-  }
-
-  // Validate webhook configuration
-  validateWebhookConfig(config) {
-    const errors = [];
-
-    if (!config.url) {
-      errors.push('URL is required');
-    } else if (!this.isValidUrl(config.url)) {
-      errors.push('Invalid URL format');
-    }
-
-    if (!config.events || !Array.isArray(config.events) || config.events.length === 0) {
-      errors.push('At least one event must be specified');
-    } else {
-      const validEvents = [
-        'message.received',
-        'message.sent',
-        'message.delivered',
-        'message.read',
-        'device.connected',
-        'device.disconnected',
-        'device.qr_generated',
-        'contact.created',
-        'contact.updated',
-        'contact.deleted',
-        'test'
-      ];
-
-      const invalidEvents = config.events.filter(event => !validEvents.includes(event));
-      if (invalidEvents.length > 0) {
-        errors.push(`Invalid events: ${invalidEvents.join(', ')}`);
-      }
-    }
-
-    if (config.secret && config.secret.length < 10) {
-      errors.push('Secret must be at least 10 characters long');
-    }
-
-    return {
-      valid: errors.length === 0,
-      errors
-    };
-  }
-
-  // Validate URL format
-  isValidUrl(string) {
+  // Mark webhook as successful
+  async markWebhookSuccess(webhook) {
     try {
-      new URL(string);
-      return true;
-    } catch (_) {
-      return false;
+      await webhook.update({
+        last_delivery_at: new Date(),
+        last_error_at: null,
+        last_error_message: null
+      });
+    } catch (error) {
+      logError(error, 'Mark Webhook Success Error');
+    }
+  }
+
+  // Mark webhook as failed
+  async markWebhookFailed(webhook, errorMessage) {
+    try {
+      await webhook.update({
+        last_error_at: new Date(),
+        last_error_message: errorMessage
+      });
+    } catch (error) {
+      logError(error, 'Mark Webhook Failed Error');
+    }
+  }
+
+  // Test webhook endpoint
+  async testWebhook(webhook) {
+    try {
+      const testPayload = {
+        event: 'webhook.test',
+        timestamp: new Date().toISOString(),
+        data: {
+          message: 'This is a test webhook from WA Gateway',
+          webhook_id: webhook.id
+        }
+      };
+
+      const headers = {
+        'Content-Type': 'application/json',
+        'User-Agent': 'WA-Gateway-Webhook/1.0'
+      };
+
+      if (webhook.secret) {
+        const signature = this.generateSignature(testPayload, webhook.secret);
+        headers['X-Webhook-Signature'] = signature;
+      }
+
+      const response = await axios.post(webhook.url, testPayload, {
+        headers,
+        timeout: webhook.timeout,
+        validateStatus: () => true
+      });
+
+      return {
+        success: response.status >= 200 && response.status < 300,
+        status: response.status,
+        statusText: response.statusText,
+        responseTime: response.headers['x-response-time'] || 'unknown'
+      };
+
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        status: error.response?.status || 'unknown',
+        statusText: error.response?.statusText || 'unknown'
+      };
+    }
+  }
+
+  // Get webhook delivery statistics
+  async getWebhookStats(userId, webhookId = null) {
+    try {
+      const where = { user_id: userId };
+      if (webhookId) {
+        where.id = webhookId;
+      }
+
+      const webhooks = await Webhook.findAll({ where });
+
+      const stats = {
+        total_webhooks: webhooks.length,
+        active_webhooks: webhooks.filter(w => w.is_active).length,
+        failed_webhooks: webhooks.filter(w => w.last_error_at && (!w.last_delivery_at || w.last_error_at > w.last_delivery_at)).length,
+        last_24h_deliveries: 0, // Would need additional tracking table for this
+        average_response_time: 0 // Would need additional tracking table for this
+      };
+
+      return stats;
+
+    } catch (error) {
+      logError(error, 'Get Webhook Stats Error');
+      throw error;
     }
   }
 }
 
+// Export singleton instance
 module.exports = new WebhookService(); 

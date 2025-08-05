@@ -5,6 +5,7 @@ const { authenticateToken, requireOperator } = require('../middleware/auth');
 const { 
   validateMessageSending, 
   validateUUID, 
+  validateMessageUUID,
   validatePagination,
   validatePhoneNumber
 } = require('../middleware/validation');
@@ -19,13 +20,13 @@ router.get('/', validatePagination, messageController.getUserMessages);
 router.get('/unread', messageController.getUnreadCount);
 
 // Get message by ID
-router.get('/:messageId', validateUUID, messageController.getMessage);
+router.get('/:messageId', validateMessageUUID, messageController.getMessage);
 
 // Delete message
-router.delete('/:messageId', validateUUID, messageController.deleteMessage);
+router.delete('/:messageId', validateMessageUUID, messageController.deleteMessage);
 
 // Mark message as read
-router.patch('/:messageId/read', validateUUID, messageController.markMessageAsRead);
+router.patch('/:messageId/read', validateMessageUUID, messageController.markMessageAsRead);
 
 // Device-specific message routes
 router.get('/device/:deviceId', validateUUID, validatePagination, messageController.getDeviceMessages);

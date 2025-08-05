@@ -6,6 +6,7 @@ const {
   validateContactCreation, 
   validateContactUpdate, 
   validateUUID, 
+  validateContactUUID,
   validatePagination 
 } = require('../middleware/validation');
 
@@ -25,27 +26,27 @@ router.post('/import', contactController.importContacts);
 router.post('/', validateContactCreation, contactController.createContact);
 
 // Get a specific contact
-router.get('/:contactId', validateUUID, contactController.getContact);
+router.get('/:contactId', validateContactUUID, contactController.getContact);
 
 // Update contact
-router.put('/:contactId', validateUUID, validateContactUpdate, contactController.updateContact);
+router.put('/:contactId', validateContactUUID, validateContactUpdate, contactController.updateContact);
 
 // Delete contact
-router.delete('/:contactId', validateUUID, contactController.deleteContact);
+router.delete('/:contactId', validateContactUUID, contactController.deleteContact);
 
 // Toggle favorite status
-router.patch('/:contactId/favorite', validateUUID, contactController.toggleFavorite);
+router.patch('/:contactId/favorite', validateContactUUID, contactController.toggleFavorite);
 
 // Toggle blocked status
-router.patch('/:contactId/blocked', validateUUID, contactController.toggleBlocked);
+router.patch('/:contactId/blocked', validateContactUUID, contactController.toggleBlocked);
 
 // Add tag to contact
-router.post('/:contactId/tags', validateUUID, contactController.addTag);
+router.post('/:contactId/tags', validateContactUUID, contactController.addTag);
 
 // Remove tag from contact
-router.delete('/:contactId/tags/:tag', validateUUID, contactController.removeTag);
+router.delete('/:contactId/tags/:tag', validateContactUUID, contactController.removeTag);
 
 // Get contact conversation history
-router.get('/:contactId/history', validateUUID, validatePagination, contactController.getContactHistory);
+router.get('/:contactId/history', validateContactUUID, validatePagination, contactController.getContactHistory);
 
 module.exports = router; 

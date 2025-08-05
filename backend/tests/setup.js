@@ -20,6 +20,30 @@ const testDbConfig = {
 // Create test database connection
 const testSequelize = new Sequelize(testDbConfig);
 
+// Mock the database configuration to use SQLite for tests
+jest.mock('../src/config/database', () => {
+  const { Sequelize } = require('sequelize');
+  const testSequelize = new Sequelize({
+    database: ':memory:',
+    dialect: 'sqlite',
+    logging: false,
+    storage: ':memory:',
+    define: {
+      timestamps: true,
+      underscored: true,
+      freezeTableName: true
+    }
+  });
+  
+  return {
+    sequelize: testSequelize,
+    Sequelize,
+    testConnection: jest.fn().mockResolvedValue(true),
+    syncDatabase: jest.fn().mockResolvedValue(true),
+    closeConnection: jest.fn().mockResolvedValue(true)
+  };
+});
+
 // Global test setup
 beforeAll(async () => {
   try {
