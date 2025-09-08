@@ -214,12 +214,17 @@ const getProfile = async (req, res) => {
   try {
     const user = await User.findByPk(req.user.id);
     
+    if (!user) {
+      return res.status(404).json({
+        error: true,
+        message: 'User not found'
+      });
+    }
+    
     res.json({
-      error: false,
+      success: true,
       message: 'Profile retrieved successfully',
-      data: {
-        user: user.toJSON()
-      }
+      data: user.toJSON()
     });
 
   } catch (error) {

@@ -258,7 +258,7 @@ class SocketService {
     });
 
     // Trigger webhooks
-    await webhookService.triggerWebhooksForEvent('message.received', {
+    await webhookService.queueWebhook(userId, 'message.received', {
       userId,
       deviceId,
       message
@@ -284,7 +284,7 @@ class SocketService {
     });
 
     // Trigger webhooks
-    await webhookService.triggerWebhooksForEvent('message.sent', {
+    await webhookService.queueWebhook(userId, 'message.sent', {
       userId,
       deviceId,
       message
@@ -312,17 +312,17 @@ class SocketService {
 
     // Trigger webhooks based on status
     if (status === 'connected') {
-      await webhookService.triggerWebhooksForEvent('device.connected', {
+      await webhookService.queueWebhook(userId, 'device.connected', {
         userId,
         deviceId
       });
     } else if (status === 'disconnected') {
-      await webhookService.triggerWebhooksForEvent('device.disconnected', {
+      await webhookService.queueWebhook(userId, 'device.disconnected', {
         userId,
         deviceId
       });
     } else if (status === 'qr_ready' && qrCode) {
-      await webhookService.triggerWebhooksForEvent('device.qr_generated', {
+      await webhookService.queueWebhook(userId, 'device.qr_generated', {
         userId,
         deviceId,
         qrCode
@@ -343,7 +343,7 @@ class SocketService {
     });
 
     // Trigger webhooks
-    await webhookService.triggerWebhooksForEvent(`contact.${event}`, {
+    await webhookService.queueWebhook(userId, `contact.${event}`, {
       userId,
       contact
     });

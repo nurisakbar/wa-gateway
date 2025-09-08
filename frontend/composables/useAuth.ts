@@ -74,7 +74,10 @@ export const useAuth = () => {
       $socket.disconnect()
     }
     
-    navigateTo('/login')
+    // Force redirect to login using window.location
+    if (process.client) {
+      window.location.href = '/login'
+    }
   }
 
   const checkAuth = async () => {
@@ -91,7 +94,7 @@ export const useAuth = () => {
           'Authorization': `Bearer ${token}`
         }
       })
-      user.value = response.user
+      user.value = response.data?.user || response.user
       isAuthenticated.value = true
       return true
     } catch (error) {
@@ -101,7 +104,7 @@ export const useAuth = () => {
   }
 
   return {
-    user: readonly(user),
+    user,
     isAuthenticated: readonly(isAuthenticated),
     isLoading: readonly(isLoading),
     login,

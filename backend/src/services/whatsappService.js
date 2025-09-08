@@ -6,7 +6,7 @@ const path = require('path');
 const { logError, logInfo, logWarn } = require('../utils/logger');
 const { Device } = require('../models');
 const { generateUUID } = require('../utils/helpers');
-const messageService = require('./messageService');
+// Lazy load messageService to avoid circular dependency
 const socketService = require('./socketService');
 
 class WhatsAppService {
@@ -251,6 +251,8 @@ class WhatsAppService {
       });
 
       // Process message through message service
+      // Lazy load messageService to avoid circular dependency
+      const messageService = require('./messageService');
       const processedMessage = await messageService.handleIncomingMessage(deviceId, message);
 
       // Get device info for socket notification
@@ -311,7 +313,7 @@ class WhatsAppService {
   }
 
   // Send media message
-  async sendMediaMessage(deviceId, to, mediaPath, caption = '', options = {}) {
+  async sendMediaMessage(deviceId, to, mediaPathOrBuffer, caption = '', options = {}) {
     try {
       const connection = this.connections.get(deviceId);
       if (!connection || !connection.isConnected) {
@@ -320,27 +322,93 @@ class WhatsAppService {
 
       const { sock } = connection;
 
-      // Check if file exists
-      if (!fs.existsSync(mediaPath)) {
-        throw new Error('Media file not found');
-      }
-
-      // Read file
-      const mediaBuffer = fs.readFileSync(mediaPath);
-      const mimeType = this.getMimeType(mediaPath);
-
-      // Prepare media message
-      const mediaMessage = {
-        [this.getMediaType(mimeType)]: mediaBuffer,
-        caption: caption,
-        ...options
-      };
-
       // Format phone number
       const formattedNumber = this.formatPhoneNumber(to);
 
+      let messageData;
+
+      // Handle buffer (from URL download)
+      if (Buffer.isBuffer(mediaPathOrBuffer)) {
+        const mimeType = options.mimeType || 'image/jpeg';
+        
+        // Determine message type based on MIME type
+        if (mimeType.startsWith('image/')) {
+          messageData = {
+            image: mediaPathOrBuffer,
+            caption: caption,
+            mimetype: mimeType,
+            ...options
+          };
+        } else if (mimeType.startsWith('video/')) {
+          messageData = {
+            video: mediaPathOrBuffer,
+            caption: caption,
+            mimetype: mimeType,
+            ...options
+          };
+        } else if (mimeType.startsWith('audio/')) {
+          messageData = {
+            audio: mediaPathOrBuffer,
+            mimetype: mimeType,
+            ...options
+          };
+        } else {
+          // For documents (PDF, DOC, etc.)
+          const fileName = options.fileName || 'document';
+          messageData = {
+            document: mediaPathOrBuffer,
+            caption: caption,
+            mimetype: mimeType,
+            fileName: fileName,
+            ...options
+          };
+        }
+      } else {
+        // Handle file path
+        const fs = require('fs');
+        const path = require('path');
+        
+        if (!fs.existsSync(mediaPathOrBuffer)) {
+          throw new Error(`Media file not found: ${mediaPathOrBuffer}`);
+        }
+
+        const fileExtension = path.extname(mediaPathOrBuffer).toLowerCase();
+        const mimeType = options.mimeType || this.getMimeTypeFromExtension(fileExtension);
+
+        if (['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(fileExtension)) {
+          messageData = {
+            image: fs.readFileSync(mediaPathOrBuffer),
+            caption: caption,
+            mimetype: mimeType,
+            ...options
+          };
+        } else if (['.mp4', '.avi', '.mov', '.mkv'].includes(fileExtension)) {
+          messageData = {
+            video: fs.readFileSync(mediaPathOrBuffer),
+            caption: caption,
+            mimetype: mimeType,
+            ...options
+          };
+        } else if (['.mp3', '.wav', '.ogg', '.m4a'].includes(fileExtension)) {
+          messageData = {
+            audio: fs.readFileSync(mediaPathOrBuffer),
+            mimetype: mimeType,
+            ...options
+          };
+        } else {
+          // Default to document
+          messageData = {
+            document: fs.readFileSync(mediaPathOrBuffer),
+            caption: caption,
+            mimetype: mimeType,
+            fileName: path.basename(mediaPathOrBuffer),
+            ...options
+          };
+        }
+      }
+
       // Send media message
-      const result = await sock.sendMessage(`${formattedNumber}@s.whatsapp.net`, mediaMessage);
+      const result = await sock.sendMessage(`${formattedNumber}@s.whatsapp.net`, messageData);
 
       // Update last activity
       connection.lastActivity = new Date();
@@ -348,7 +416,7 @@ class WhatsAppService {
       logInfo(`Media message sent successfully from device: ${deviceId}`, {
         to: formattedNumber,
         messageId: result.key.id,
-        mediaType: this.getMediaType(mimeType)
+        mediaType: messageData.image ? 'image' : messageData.video ? 'video' : messageData.audio ? 'audio' : 'document'
       });
 
       return {
@@ -361,6 +429,31 @@ class WhatsAppService {
       logError(error, `Error sending media message from device: ${deviceId}`);
       throw error;
     }
+  }
+
+  // Helper method to get MIME type from file extension
+  getMimeTypeFromExtension(extension) {
+    const mimeTypes = {
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif',
+      '.webp': 'image/webp',
+      '.mp4': 'video/mp4',
+      '.avi': 'video/x-msvideo',
+      '.mov': 'video/quicktime',
+      '.mkv': 'video/x-matroska',
+      '.mp3': 'audio/mpeg',
+      '.wav': 'audio/wav',
+      '.ogg': 'audio/ogg',
+      '.m4a': 'audio/mp4',
+      '.pdf': 'application/pdf',
+      '.doc': 'application/msword',
+      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      '.txt': 'text/plain'
+    };
+    
+    return mimeTypes[extension.toLowerCase()] || 'application/octet-stream';
   }
 
   // Get connection status
@@ -388,9 +481,26 @@ class WhatsAppService {
 
       const { sock } = connection;
 
-      // Close connection
-      await sock.logout();
-      sock.end();
+      // Close connection gracefully
+      try {
+        await sock.logout();
+        sock.end();
+      } catch (logoutError) {
+        // Handle case where connection is already closed
+        if (logoutError.message === 'Connection Closed' || 
+            logoutError.output?.statusCode === 428 ||
+            logoutError.message?.includes('Connection Closed')) {
+          logInfo(`Device connection already closed: ${deviceId}`);
+          // Force end the socket if logout fails
+          try {
+            sock.end();
+          } catch (endError) {
+            // Ignore end errors
+          }
+        } else {
+          throw logoutError;
+        }
+      }
 
       // Remove from connections map
       this.connections.delete(deviceId);
@@ -415,8 +525,15 @@ class WhatsAppService {
         throw new Error('Device connection not found');
       }
 
-      // Disconnect first
-      await this.disconnectDevice(deviceId);
+      // Disconnect first (handle gracefully if already disconnected)
+      try {
+        await this.disconnectDevice(deviceId);
+      } catch (disconnectError) {
+        // If disconnect fails, still try to reconnect
+        logInfo(`Disconnect failed during reconnect, continuing: ${deviceId}`);
+        // Clean up connection from map if it exists
+        this.connections.delete(deviceId);
+      }
 
       // Reinitialize connection
       await this.initializeConnection(deviceId, connection.userId);

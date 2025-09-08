@@ -469,6 +469,90 @@ class MessageController {
       });
     }
   }
+
+  // Generic send message (redirects to appropriate specific method)
+  async sendMessage(req, res) {
+    try {
+      const { device_id, to_number, content, type = 'text', media_url, filename, ...options } = req.body;
+
+      if (!device_id || !to_number) {
+        return res.status(400).json({
+          success: false,
+          message: 'Device ID and phone number are required'
+        });
+      }
+      
+      // For media messages, content is optional
+      if (type === 'text' && !content) {
+        return res.status(400).json({
+          success: false,
+          message: 'Content is required for text messages'
+        });
+      }
+
+      let result;
+
+      // Route to appropriate send method based on type
+      switch (type.toLowerCase()) {
+        case 'text':
+        default:
+          result = await messageService.sendTextMessage(device_id, to_number, content, options);
+          break;
+        
+        case 'media':
+        case 'image':
+        case 'video':
+        case 'audio':
+        case 'document':
+          if (!media_url) {
+            return res.status(400).json({
+              success: false,
+              message: 'Media URL is required for media messages'
+            });
+          }
+          result = await messageService.sendMediaMessage(device_id, to_number, media_url, content, options);
+          break;
+        
+        case 'location':
+          const { latitude, longitude, name, address } = options;
+          if (!latitude || !longitude) {
+            return res.status(400).json({
+              success: false,
+              message: 'Latitude and longitude are required for location messages'
+            });
+          }
+          result = await messageService.sendLocationMessage(device_id, to_number, latitude, longitude, name, address, options);
+          break;
+        
+        case 'contact':
+          const contact_data = options.contact_data;
+          if (!contact_data) {
+            return res.status(400).json({
+              success: false,
+              message: 'Contact data is required for contact messages'
+            });
+          }
+          result = await messageService.sendContactMessage(device_id, to_number, contact_data, options);
+          break;
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Message sent successfully',
+        data: {
+          message: result
+        }
+      });
+
+    } catch (error) {
+      logError('Error sending message:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: error.message
+      });
+    }
+  }
 }
 
 module.exports = new MessageController(); 

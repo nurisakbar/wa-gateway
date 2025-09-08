@@ -417,7 +417,8 @@
 
 <script setup>
 definePageMeta({
-  layout: 'dashboard'
+  layout: 'dashboard',
+  middleware: 'auth'
 })
 
 const { $toast } = useNuxtApp()
@@ -450,9 +451,18 @@ const form = ref({
 const fetchApiKeys = async () => {
   loading.value = true
   try {
-    const response = await $fetch('/api/v1/api-keys')
+    const config = useRuntimeConfig()
+    const token = localStorage.getItem('auth_token') || useCookie('auth_token').value
+    
+    const response = await $fetch(`${config.public.apiBase}/api-keys`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    
     if (response.success) {
-      apiKeys.value = response.data
+      apiKeys.value = response.data.apiKeys || []
     }
   } catch (error) {
     console.error('Error fetching API keys:', error)
@@ -466,8 +476,15 @@ const fetchApiKeys = async () => {
 const createApiKey = async () => {
   submitting.value = true
   try {
-    const response = await $fetch('/api/v1/api-keys', {
+    const config = useRuntimeConfig()
+    const token = localStorage.getItem('auth_token') || useCookie('auth_token').value
+    
+    const response = await $fetch(`${config.public.apiBase}/api-keys`, {
       method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
       body: form.value
     })
     
@@ -492,9 +509,16 @@ const createApiKey = async () => {
 const updateApiKey = async () => {
   submitting.value = true
   try {
-    const response = await $fetch(`/api/v1/api-keys/${selectedApiKey.value.id}`, {
+    const config = useRuntimeConfig()
+    const token = localStorage.getItem('auth_token') || useCookie('auth_token').value
+    
+    const response = await $fetch(`${config.public.apiBase}/api-keys/${selectedApiKey.value.id}`, {
       method: 'PUT',
-      body: form.value
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: selectedApiKey.value
     })
     
     if (response.success) {
@@ -517,8 +541,15 @@ const deleteApiKey = async (apiKey) => {
   }
   
   try {
-    const response = await $fetch(`/api/v1/api-keys/${apiKey.id}`, {
-      method: 'DELETE'
+    const config = useRuntimeConfig()
+    const token = localStorage.getItem('auth_token') || useCookie('auth_token').value
+    
+    const response = await $fetch(`${config.public.apiBase}/api-keys/${apiKey.id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
     })
     
     if (response.success) {
@@ -538,8 +569,15 @@ const regenerateApiKey = async (apiKey) => {
   }
   
   try {
-    const response = await $fetch(`/api/v1/api-keys/${apiKey.id}/regenerate`, {
-      method: 'POST'
+    const config = useRuntimeConfig()
+    const token = localStorage.getItem('auth_token') || useCookie('auth_token').value
+    
+    const response = await $fetch(`${config.public.apiBase}/api-keys/${apiKey.id}/regenerate`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
     })
     
     if (response.success) {
@@ -559,8 +597,15 @@ const regenerateApiKey = async (apiKey) => {
 // Toggle API key status
 const toggleApiKey = async (apiKey) => {
   try {
-    const response = await $fetch(`/api/v1/api-keys/${apiKey.id}`, {
-      method: 'PUT',
+    const config = useRuntimeConfig()
+    const token = localStorage.getItem('auth_token') || useCookie('auth_token').value
+    
+    const response = await $fetch(`${config.public.apiBase}/api-keys/${apiKey.id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
       body: {
         is_active: !apiKey.is_active
       }

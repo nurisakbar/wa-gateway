@@ -9,7 +9,7 @@
           </div>
           <div v-if="!sidebarCollapsed" class="sidebar-title">
             <h5 class="mb-0 text-white">WA Gateway</h5>
-            <small class="text-muted">Dashboard</small>
+            <!-- <small class="text-muted">Dashboard</small> -->
           </div>
         </div>
       </div>
@@ -66,7 +66,7 @@
           </li>
           <li class="nav-item">
             <NuxtLink to="/webhooks" class="nav-link" active-class="active">
-              <i class="bi bi-webhook me-2"></i>
+              <i class="bi bi-plug me-2"></i>
               <span v-if="!sidebarCollapsed">Webhooks</span>
             </NuxtLink>
           </li>
@@ -78,24 +78,6 @@
           </li>
         </ul>
 
-        <!-- Divider -->
-        <hr class="border-secondary my-3">
-
-        <!-- Settings Section -->
-        <ul class="nav flex-column">
-          <li class="nav-item">
-            <NuxtLink to="/settings" class="nav-link" active-class="active">
-              <i class="bi bi-gear me-2"></i>
-              <span v-if="!sidebarCollapsed">Settings</span>
-            </NuxtLink>
-          </li>
-          <li class="nav-item">
-            <a href="#" class="nav-link text-danger" @click="handleLogout">
-              <i class="bi bi-box-arrow-right me-2"></i>
-              <span v-if="!sidebarCollapsed">Logout</span>
-            </a>
-          </li>
-        </ul>
       </div>
 
       <!-- Sidebar Toggle -->
@@ -127,17 +109,6 @@
             </div>
             
             <div class="d-flex align-items-center gap-3">
-              <!-- User Info -->
-              <div class="user-info d-flex align-items-center gap-2">
-                <div class="user-avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center">
-                  <i class="bi bi-person"></i>
-                </div>
-                <div class="user-details d-none d-md-block">
-                  <div class="user-name fw-semibold">{{ user?.full_name || user?.username || 'User' }}</div>
-                  <div class="user-email text-muted small">{{ user?.email || '' }}</div>
-                </div>
-              </div>
-              
               <!-- Notifications -->
               <div class="dropdown">
                 <button
@@ -147,17 +118,73 @@
                   aria-expanded="false"
                 >
                   <i class="bi bi-bell fs-5"></i>
-                  <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                    3
+                  <span 
+                    v-if="notificationCount > 0"
+                    class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                  >
+                    {{ notificationCount }}
                   </span>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
                   <li><h6 class="dropdown-header">Notifications</h6></li>
-                  <li><a class="dropdown-item" href="#">Device connected successfully</a></li>
-                  <li><a class="dropdown-item" href="#">New message received</a></li>
-                  <li><a class="dropdown-item" href="#">Broadcast completed</a></li>
+                  <li v-if="notifications.length === 0">
+                    <a class="dropdown-item text-muted" href="#">
+                      <i class="bi bi-check-circle me-2"></i>
+                      No new notifications
+                    </a>
+                  </li>
+                  <li v-for="notification in notifications" :key="notification.id">
+                    <a class="dropdown-item" href="#" @click="markAsRead(notification.id)">
+                      <i :class="notification.icon + ' me-2'"></i>
+                      {{ notification.message }}
+                      <small class="text-muted d-block">{{ notification.time }}</small>
+                    </a>
+                  </li>
+                  <li v-if="notifications.length > 0"><hr class="dropdown-divider"></li>
+                  <li>
+                    <a class="dropdown-item" href="#" @click="clearAllNotifications">
+                      <i class="bi bi-trash me-2"></i>
+                      Clear all notifications
+                    </a>
+                  </li>
+                </ul>
+              </div>
+              
+              <!-- User Profile Dropdown -->
+              <div class="dropdown" ref="userDropdown">
+                <button
+                  class="btn btn-link text-dark d-flex align-items-center gap-2 p-2"
+                  type="button"
+                  @click="toggleUserDropdown"
+                  style="text-decoration: none;"
+                >
+                  <div class="user-details d-none d-md-block text-start">
+                    <div class="user-name fw-semibold text-dark">{{ getUserDisplayName() }}</div>
+                    <div class="user-email text-muted small">{{ user?.email || '-' }}</div>
+                  </div>
+                  <div class="user-avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                    <i class="bi bi-person"></i>
+                  </div>
+                  <i class="bi bi-chevron-down text-muted" :class="{ 'rotate-180': showUserDropdown }"></i>
+                </button>
+                <ul 
+                  class="dropdown-menu dropdown-menu-end shadow" 
+                  :class="{ 'show': showUserDropdown }"
+                  style="position: absolute;z-index: 1000;margin-left: 65px;margin-top: 5px;"
+                >
+                  <li>
+                    <NuxtLink to="/settings" class="dropdown-item d-flex align-items-center" @click="closeUserDropdown">
+                      <i class="bi bi-gear me-2"></i>
+                      Settings
+                    </NuxtLink>
+                  </li>
                   <li><hr class="dropdown-divider"></li>
-                  <li><a class="dropdown-item" href="#">View all notifications</a></li>
+                  <li>
+                    <a href="#" class="dropdown-item d-flex align-items-center text-danger" @click="handleLogout">
+                      <i class="bi bi-box-arrow-right me-2"></i>
+                      Logout
+                    </a>
+                  </li>
                 </ul>
               </div>
             </div>
@@ -174,22 +201,101 @@
 </template>
 
 <script setup>
-const { user, logout } = useAuth()
+import { storeToRefs } from 'pinia'
+
+const authStore = useAuthStore()
+const { user } = storeToRefs(authStore)
 const { $toast } = useNuxtApp()
+
+// Initialize auth on mount
+onMounted(async () => {
+  // Initialize auth store if not already done
+  if (!user.value) {
+    authStore.initializeAuth()
+  }
+  
+  // If still no user, try to fetch from API
+  const token = localStorage.getItem('auth_token')
+  if (!user.value && token) {
+    await authStore.fetchUser()
+  }
+})
+
+// Get user display name
+const getUserDisplayName = () => {
+  if (!user.value) {
+    return 'User'
+  }
+  
+  // Priority: full_name > username > email (first part)
+  if (user.value.full_name && user.value.full_name.trim()) {
+    return user.value.full_name
+  }
+  
+  if (user.value.username && user.value.username.trim()) {
+    return user.value.username
+  }
+  
+  if (user.value.email) {
+    return user.value.email.split('@')[0]
+  }
+  
+  return 'User'
+}
 
 const sidebarCollapsed = ref(false)
 const pageTitle = ref('Dashboard')
+const showUserDropdown = ref(false)
+const userDropdown = ref(null)
+
+// Notifications
+const notifications = ref([])
+const notificationCount = computed(() => notifications.value.length)
 
 // Handle logout
-const handleLogout = () => {
+const handleLogout = async () => {
   $toast.info('Logging out...')
-  logout()
+  await authStore.logout()
 }
 
 // Toggle sidebar
 const toggleSidebar = () => {
   sidebarCollapsed.value = !sidebarCollapsed.value
 }
+
+// Toggle user dropdown
+const toggleUserDropdown = () => {
+  showUserDropdown.value = !showUserDropdown.value
+}
+
+// Close user dropdown
+const closeUserDropdown = () => {
+  showUserDropdown.value = false
+}
+
+// Notification methods
+const markAsRead = (notificationId) => {
+  notifications.value = notifications.value.filter(n => n.id !== notificationId)
+}
+
+const clearAllNotifications = () => {
+  notifications.value = []
+  $toast.success('All notifications cleared')
+}
+
+// Close dropdown when clicking outside
+onMounted(() => {
+  const handleClickOutside = (event) => {
+    if (userDropdown.value && !userDropdown.value.contains(event.target)) {
+      showUserDropdown.value = false
+    }
+  }
+  document.addEventListener('click', handleClickOutside)
+  
+  onUnmounted(() => {
+    document.removeEventListener('click', handleClickOutside)
+  })
+})
 
 // Update page title based on route
 const route = useRoute()
@@ -215,6 +321,20 @@ const route = useRoute()
 .dashboard-layout {
   display: flex;
   min-height: 100vh;
+}
+
+.rotate-180 {
+  transform: rotate(180deg);
+  transition: transform 0.2s ease;
+}
+
+.dropdown-menu {
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.dropdown-menu.show {
+  opacity: 1;
+  visibility: visible;
 }
 
 .sidebar {

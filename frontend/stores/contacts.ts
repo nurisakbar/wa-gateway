@@ -52,16 +52,23 @@ export const useContactStore = defineStore('contacts', {
       this.loading = true
       this.error = null
       try {
-        const { $api } = useNuxtApp()
-        const response = await $api.get('/contacts')
+        const config = useRuntimeConfig()
+        const token = localStorage.getItem('auth_token') || useCookie('auth_token').value
+        
+        const response = await $fetch(`${config.public.apiBase}/contacts`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
 
-        if (response.data.success) {
-          this.contacts = response.data.data.contacts
+        if (response.success) {
+          this.contacts = response.data.contacts || []
           return { success: true, contacts: this.contacts }
         }
       } catch (error: any) {
         console.error('Fetch contacts error:', error)
-        this.error = error.response?.data?.message || 'Failed to fetch contacts'
+        this.error = error.data?.message || error.message || 'Failed to fetch contacts'
         return { success: false, error: this.error }
       } finally {
         this.loading = false
@@ -78,17 +85,26 @@ export const useContactStore = defineStore('contacts', {
       this.loading = true
       this.error = null
       try {
-        const { $api } = useNuxtApp()
-        const response = await $api.post('/contacts', contactData)
+        const config = useRuntimeConfig()
+        const token = localStorage.getItem('auth_token') || useCookie('auth_token').value
+        
+        const response = await $fetch(`${config.public.apiBase}/contacts`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: contactData
+        })
 
-        if (response.data.success) {
-          const newContact = response.data.data.contact
+        if (response.success) {
+          const newContact = response.data.contact
           this.contacts.push(newContact)
           return { success: true, contact: newContact }
         }
       } catch (error: any) {
         console.error('Create contact error:', error)
-        this.error = error.response?.data?.message || 'Failed to create contact'
+        this.error = error.data?.message || error.message || 'Failed to create contact'
         return { success: false, error: this.error }
       } finally {
         this.loading = false
@@ -99,11 +115,20 @@ export const useContactStore = defineStore('contacts', {
       this.loading = true
       this.error = null
       try {
-        const { $api } = useNuxtApp()
-        const response = await $api.put(`/contacts/${contactId}`, contactData)
+        const config = useRuntimeConfig()
+        const token = localStorage.getItem('auth_token') || useCookie('auth_token').value
+        
+        const response = await $fetch(`${config.public.apiBase}/contacts/${contactId}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: contactData
+        })
 
-        if (response.data.success) {
-          const updatedContact = response.data.data.contact
+        if (response.success) {
+          const updatedContact = response.data.contact
           const index = this.contacts.findIndex(c => c.id === contactId)
           if (index !== -1) {
             this.contacts[index] = updatedContact
@@ -112,7 +137,7 @@ export const useContactStore = defineStore('contacts', {
         }
       } catch (error: any) {
         console.error('Update contact error:', error)
-        this.error = error.response?.data?.message || 'Failed to update contact'
+        this.error = error.data?.message || 'Failed to update contact'
         return { success: false, error: this.error }
       } finally {
         this.loading = false
@@ -123,10 +148,18 @@ export const useContactStore = defineStore('contacts', {
       this.loading = true
       this.error = null
       try {
-        const { $api } = useNuxtApp()
-        const response = await $api.delete(`/contacts/${contactId}`)
+        const config = useRuntimeConfig()
+        const token = localStorage.getItem('auth_token') || useCookie('auth_token').value
+        
+        const response = await $fetch(`${config.public.apiBase}/contacts/${contactId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
 
-        if (response.data.success) {
+        if (response.success) {
           this.contacts = this.contacts.filter(c => c.id !== contactId)
           if (this.selectedContact?.id === contactId) {
             this.selectedContact = null
@@ -135,7 +168,7 @@ export const useContactStore = defineStore('contacts', {
         }
       } catch (error: any) {
         console.error('Delete contact error:', error)
-        this.error = error.response?.data?.message || 'Failed to delete contact'
+        this.error = error.data?.message || 'Failed to delete contact'
         return { success: false, error: this.error }
       } finally {
         this.loading = false
@@ -146,11 +179,20 @@ export const useContactStore = defineStore('contacts', {
       this.loading = true
       this.error = null
       try {
-        const { $api } = useNuxtApp()
-        const response = await $api.post('/contacts/import', { contacts: contactsData })
+        const config = useRuntimeConfig()
+        const token = localStorage.getItem('auth_token') || useCookie('auth_token').value
+        
+        const response = await $fetch(`${config.public.apiBase}/contacts/import`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: { contacts: contactsData }
+        })
 
-        if (response.data.success) {
-          const importedContacts = response.data.data.contacts
+        if (response.success) {
+          const importedContacts = response.data.contacts
           this.contacts.push(...importedContacts)
           return { 
             success: true, 
@@ -160,7 +202,7 @@ export const useContactStore = defineStore('contacts', {
         }
       } catch (error: any) {
         console.error('Import contacts error:', error)
-        this.error = error.response?.data?.message || 'Failed to import contacts'
+        this.error = error.data?.message || 'Failed to import contacts'
         return { success: false, error: this.error }
       } finally {
         this.loading = false
@@ -169,15 +211,20 @@ export const useContactStore = defineStore('contacts', {
 
     async exportContacts() {
       try {
-        const { $api } = useNuxtApp()
-        const response = await $api.get('/contacts/export', {
-          responseType: 'blob'
+        const config = useRuntimeConfig()
+        const token = localStorage.getItem('auth_token') || useCookie('auth_token').value
+        
+        const response = await $fetch(`${config.public.apiBase}/contacts/export`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
         })
 
         return { success: true, data: response.data }
       } catch (error: any) {
         console.error('Export contacts error:', error)
-        this.error = error.response?.data?.message || 'Failed to export contacts'
+        this.error = error.data?.message || 'Failed to export contacts'
         return { success: false, error: this.error }
       }
     },
@@ -216,14 +263,23 @@ export const useContactStore = defineStore('contacts', {
       this.loading = true
       this.error = null
       try {
-        const { $api } = useNuxtApp()
-        const response = await $api.put('/contacts/bulk-update', {
-          contact_ids: contactIds,
-          update_data: updateData
+        const config = useRuntimeConfig()
+        const token = localStorage.getItem('auth_token') || useCookie('auth_token').value
+        
+        const response = await $fetch(`${config.public.apiBase}/contacts/bulk-update`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: {
+            contact_ids: contactIds,
+            update_data: updateData
+          }
         })
 
-        if (response.data.success) {
-          const updatedContacts = response.data.data.contacts
+        if (response.success) {
+          const updatedContacts = response.data.contacts
           updatedContacts.forEach(updatedContact => {
             const index = this.contacts.findIndex(c => c.id === updatedContact.id)
             if (index !== -1) {
@@ -234,7 +290,7 @@ export const useContactStore = defineStore('contacts', {
         }
       } catch (error: any) {
         console.error('Bulk update contacts error:', error)
-        this.error = error.response?.data?.message || 'Failed to bulk update contacts'
+        this.error = error.data?.message || 'Failed to bulk update contacts'
         return { success: false, error: this.error }
       } finally {
         this.loading = false
@@ -245,12 +301,19 @@ export const useContactStore = defineStore('contacts', {
       this.loading = true
       this.error = null
       try {
-        const { $api } = useNuxtApp()
-        const response = await $api.delete('/contacts/bulk-delete', {
-          data: { contact_ids: contactIds }
+        const config = useRuntimeConfig()
+        const token = localStorage.getItem('auth_token') || useCookie('auth_token').value
+        
+        const response = await $fetch(`${config.public.apiBase}/contacts/bulk-delete`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: { contact_ids: contactIds }
         })
 
-        if (response.data.success) {
+        if (response.success) {
           this.contacts = this.contacts.filter(c => !contactIds.includes(c.id))
           if (this.selectedContact && contactIds.includes(this.selectedContact.id)) {
             this.selectedContact = null
@@ -259,7 +322,7 @@ export const useContactStore = defineStore('contacts', {
         }
       } catch (error: any) {
         console.error('Bulk delete contacts error:', error)
-        this.error = error.response?.data?.message || 'Failed to bulk delete contacts'
+        this.error = error.data?.message || 'Failed to bulk delete contacts'
         return { success: false, error: this.error }
       } finally {
         this.loading = false

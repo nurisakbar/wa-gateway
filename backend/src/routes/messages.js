@@ -49,4 +49,7 @@ router.post('/device/:deviceId/location', validateUUID, messageController.sendLo
 // Send contact message from device
 router.post('/device/:deviceId/contact', validateUUID, messageController.sendContactMessage);
 
+// Generic send message endpoint (redirects to appropriate specific endpoint)
+router.post('/send', messageController.sendMessage);
+
 module.exports = router; 

@@ -1,141 +1,157 @@
 <template>
   <div class="register-container">
-    <div class="container">
-      <div class="row justify-content-center align-items-center min-vh-100">
-        <div class="col-md-6 col-lg-4">
-          <div class="whatsapp-card">
-            <div class="whatsapp-header text-center">
-              <h2 class="mb-0">
-                <i class="bi bi-whatsapp me-2"></i>
-                WA Gateway
-              </h2>
-              <p class="mb-0 opacity-75">Create your account</p>
+    <div class="container-fluid h-100">
+      <div class="row h-100">
+        <!-- Left Side - Illustration -->
+        <div class="col-lg-8 d-none d-lg-flex illustration-section">
+          <div class="illustration-content">
+            <div class="illustration-wrapper">
+              <img 
+                src="~/assets/img/login-2.png" 
+                alt="Team Collaboration" 
+                class="illustration-image"
+              />
             </div>
-            
-            <div class="card-body p-4">
-              <form @submit.prevent="handleRegister" novalidate>
-                <div class="mb-3">
-                  <label for="username" class="form-label">Username</label>
+          </div>
+        </div>
+
+        <!-- Right Side - Register Form -->
+        <div class="col-lg-4 form-section">
+          <div class="form-container">
+            <div class="form-header">
+              <div class="logo">
+                <div class="logo-icon">
+                  <i class="bi bi-whatsapp"></i>
+                </div>
+                <h1 class="logo-text">WA Gateway</h1>
+              </div>
+              <p class="form-subtitle">Create your account</p>
+            </div>
+
+            <form @submit.prevent="handleRegister" class="register-form">
+              <div class="form-group">
+                <label for="username" class="form-label">Username</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  :class="{ 'is-invalid': errors.username }"
+                  id="username"
+                  v-model="form.username"
+                  placeholder="Enter your username"
+                  required
+                  :disabled="isLoading"
+                />
+                <div class="invalid-feedback" v-if="errors.username">
+                  {{ errors.username }}
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="full_name" class="form-label">Full Name</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  :class="{ 'is-invalid': errors.full_name }"
+                  id="full_name"
+                  v-model="form.full_name"
+                  placeholder="Enter your full name"
+                  required
+                  :disabled="isLoading"
+                />
+                <div class="invalid-feedback" v-if="errors.full_name">
+                  {{ errors.full_name }}
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="email" class="form-label">Email Address</label>
+                <input
+                  type="email"
+                  class="form-control"
+                  :class="{ 'is-invalid': errors.email }"
+                  id="email"
+                  v-model="form.email"
+                  placeholder="Enter your email"
+                  required
+                  :disabled="isLoading"
+                />
+                <div class="invalid-feedback" v-if="errors.email">
+                  {{ errors.email }}
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="phone" class="form-label">Phone Number (Optional)</label>
+                <input
+                  type="tel"
+                  class="form-control"
+                  :class="{ 'is-invalid': errors.phone }"
+                  id="phone"
+                  v-model="form.phone"
+                  placeholder="Enter your phone number"
+                  :disabled="isLoading"
+                />
+                <div class="invalid-feedback" v-if="errors.phone">
+                  {{ errors.phone }}
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="password" class="form-label">Password</label>
+                <div class="password-input-group">
                   <input
-                    type="text"
+                    :type="showPassword ? 'text' : 'password'"
                     class="form-control"
-                    :class="{ 'is-invalid': errors.username }"
-                    id="username"
-                    v-model="form.username"
-                    placeholder="Enter your username"
+                    :class="{ 'is-invalid': errors.password }"
+                    id="password"
+                    v-model="form.password"
+                    placeholder="Enter your password"
                     required
                     :disabled="isLoading"
                   />
-                  <div class="invalid-feedback" v-if="errors.username">
-                    {{ errors.username }}
-                  </div>
+                  <button
+                    class="password-toggle"
+                    type="button"
+                    @click="showPassword = !showPassword"
+                    :disabled="isLoading"
+                  >
+                    <span class="eye-icon">{{ showPassword ? '🙈' : '👁️' }}</span>
+                  </button>
                 </div>
+                <div class="invalid-feedback" v-if="errors.password">
+                  {{ errors.password }}
+                </div>
+              </div>
 
-                <div class="mb-3">
-                  <label for="full_name" class="form-label">Full Name</label>
+              <div class="form-group">
+                <label for="confirmPassword" class="form-label">Confirm Password</label>
+                <div class="password-input-group">
                   <input
-                    type="text"
+                    :type="showConfirmPassword ? 'text' : 'password'"
                     class="form-control"
-                    :class="{ 'is-invalid': errors.full_name }"
-                    id="full_name"
-                    v-model="form.full_name"
-                    placeholder="Enter your full name"
+                    :class="{ 'is-invalid': errors.confirmPassword }"
+                    id="confirmPassword"
+                    v-model="form.confirmPassword"
+                    placeholder="Confirm your password"
                     required
                     :disabled="isLoading"
                   />
-                  <div class="invalid-feedback" v-if="errors.full_name">
-                    {{ errors.full_name }}
-                  </div>
-                </div>
-
-                <div class="mb-3">
-                  <label for="email" class="form-label">Email Address</label>
-                  <input
-                    type="email"
-                    class="form-control"
-                    :class="{ 'is-invalid': errors.email }"
-                    id="email"
-                    v-model="form.email"
-                    placeholder="Enter your email"
-                    required
+                  <button
+                    class="password-toggle"
+                    type="button"
+                    @click="showConfirmPassword = !showConfirmPassword"
                     :disabled="isLoading"
-                  />
-                  <div class="invalid-feedback" v-if="errors.email">
-                    {{ errors.email }}
-                  </div>
+                  >
+                    <span class="eye-icon">{{ showConfirmPassword ? '🙈' : '👁️' }}</span>
+                  </button>
                 </div>
-
-                <div class="mb-3">
-                  <label for="phone" class="form-label">Phone Number (Optional)</label>
-                  <input
-                    type="tel"
-                    class="form-control"
-                    :class="{ 'is-invalid': errors.phone }"
-                    id="phone"
-                    v-model="form.phone"
-                    placeholder="Enter your phone number"
-                    :disabled="isLoading"
-                  />
-                  <div class="invalid-feedback" v-if="errors.phone">
-                    {{ errors.phone }}
-                  </div>
+                <div class="invalid-feedback" v-if="errors.confirmPassword">
+                  {{ errors.confirmPassword }}
                 </div>
+              </div>
 
-                <div class="mb-3">
-                  <label for="password" class="form-label">Password</label>
-                  <div class="input-group">
-                    <input
-                      :type="showPassword ? 'text' : 'password'"
-                      class="form-control"
-                      :class="{ 'is-invalid': errors.password }"
-                      id="password"
-                      v-model="form.password"
-                      placeholder="Enter your password"
-                      required
-                      :disabled="isLoading"
-                    />
-                    <button
-                      class="btn btn-outline-secondary"
-                      type="button"
-                      @click="showPassword = !showPassword"
-                      :disabled="isLoading"
-                    >
-                      <i :class="showPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
-                    </button>
-                  </div>
-                  <div class="invalid-feedback" v-if="errors.password">
-                    {{ errors.password }}
-                  </div>
-                </div>
-
-                <div class="mb-3">
-                  <label for="confirmPassword" class="form-label">Confirm Password</label>
-                  <div class="input-group">
-                    <input
-                      :type="showConfirmPassword ? 'text' : 'password'"
-                      class="form-control"
-                      :class="{ 'is-invalid': errors.confirmPassword }"
-                      id="confirmPassword"
-                      v-model="form.confirmPassword"
-                      placeholder="Confirm your password"
-                      required
-                      :disabled="isLoading"
-                    />
-                    <button
-                      class="btn btn-outline-secondary"
-                      type="button"
-                      @click="showConfirmPassword = !showConfirmPassword"
-                      :disabled="isLoading"
-                    >
-                      <i :class="showConfirmPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
-                    </button>
-                  </div>
-                  <div class="invalid-feedback" v-if="errors.confirmPassword">
-                    {{ errors.confirmPassword }}
-                  </div>
-                </div>
-
-                <div class="mb-3 form-check">
+              <div class="form-group">
+                <div class="form-check">
                   <input
                     type="checkbox"
                     class="form-check-input"
@@ -151,28 +167,26 @@
                     {{ errors.terms }}
                   </div>
                 </div>
-
-                <div class="d-grid">
-                  <button
-                    type="submit"
-                    class="btn btn-primary btn-lg"
-                    :disabled="isLoading"
-                  >
-                    <span v-if="isLoading" class="loading-spinner me-2"></span>
-                    {{ isLoading ? 'Creating Account...' : 'Create Account' }}
-                  </button>
-                </div>
-              </form>
-
-              <hr class="my-4" />
-
-              <div class="text-center">
-                <p class="mb-0">Already have an account?</p>
-                <NuxtLink to="/login" class="btn btn-outline-primary">
-                  Sign In
-                </NuxtLink>
               </div>
-            </div>
+
+              <div class="form-actions">
+                <button
+                  type="submit"
+                  class="btn btn-register"
+                  :disabled="isLoading"
+                >
+                  <span v-if="isLoading" class="loading-spinner me-2"></span>
+                  {{ isLoading ? 'Creating Account...' : 'Create Account' }}
+                </button>
+                
+                <div class="text-center mt-3">
+                  <p class="mb-0">Already have an account?</p>
+                  <NuxtLink to="/login" class="btn btn-login-link">
+                    Sign In
+                  </NuxtLink>
+                </div>
+              </div>
+            </form>
           </div>
         </div>
       </div>
@@ -355,36 +369,237 @@ const handleRegister = async () => {
 
 <style scoped>
 .register-container {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Illustration Section */
+.illustration-section {
+  background: linear-gradient(135deg, #20c997 0%, #17a2b8 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.illustration-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 2rem;
+  margin-left: 200px;
+}
+
+.illustration-wrapper {
+  position: relative;
+  width: 100%;
+  /* max-width: 500px; */
+  /* height: 1000px; */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.illustration-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  object-position: center;
+  border-radius: 15px;
+  /* box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1); */
+}
+
+/* Form Section */
+.form-section {
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.form-container {
+  width: 100%;
+  max-width: 400px;
+}
+
+.form-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.logo-icon {
+  width: 42px;
+  height: 42px;
+  background: linear-gradient(135deg, #25D366, #128C7E);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.6rem;
+  flex-shrink: 0;
+}
+
+.logo-text {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #25D366;
+  margin: 0;
+  line-height: 1;
   display: flex;
   align-items: center;
 }
 
-.whatsapp-card {
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
+.form-subtitle {
+  color: #6c757d;
+  font-size: 0.95rem;
+  margin: 0;
 }
 
-.whatsapp-header {
-  background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
-  color: white;
-  padding: 2rem 1.5rem 1.5rem;
+/* Form Styles */
+.register-form {
+  width: 100%;
 }
 
-.whatsapp-header h2 {
+.form-group {
+  margin-bottom: 0.5rem;
+}
+
+.form-label {
   font-weight: 600;
+  color: #495057;
+  margin-bottom: 1px;
+  display: block;
 }
 
+.form-control {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: #25D366;
+  box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.1);
+}
+
+.form-control.is-invalid {
+  border-color: #dc3545;
+}
+
+.invalid-feedback {
+  color: #dc3545;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+  display: block;
+}
+
+/* Password Input Group */
+.password-input-group {
+  position: relative;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #6c757d;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.password-toggle:hover {
+  color: #25D366;
+  background-color: rgba(37, 211, 102, 0.1);
+}
+
+.password-toggle:focus {
+  outline: none;
+  color: #25D366;
+  background-color: rgba(37, 211, 102, 0.1);
+}
+
+.eye-icon {
+  font-size: 1.2rem;
+  display: inline-block;
+  line-height: 1;
+}
+
+/* Form Actions */
+.form-actions {
+  margin-top: 2rem;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+  width: 100%;
+}
+
+.btn-register {
+  background: linear-gradient(135deg, #25D366, #128C7E);
+  color: white;
+}
+
+.btn-register:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(37, 211, 102, 0.3);
+}
+
+.btn-login-link {
+  background: #dc3545;
+  color: white;
+  margin-top: 0.5rem;
+}
+
+.btn-login-link:hover {
+  background: #c82333;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Loading Spinner */
 .loading-spinner {
   display: inline-block;
   width: 16px;
   height: 16px;
-  border: 2px solid #ffffff;
+  border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
-  border-top-color: transparent;
+  border-top-color: #ffffff;
   animation: spin 1s ease-in-out infinite;
 }
 
@@ -392,27 +607,18 @@ const handleRegister = async () => {
   to { transform: rotate(360deg); }
 }
 
-.form-control:focus {
-  border-color: #25d366;
-  box-shadow: 0 0 0 0.2rem rgba(37, 211, 102, 0.25);
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
-  border: none;
-}
-
-.btn-primary:hover {
-  background: linear-gradient(135deg, #128c7e 0%, #075e54 100%);
-}
-
-.btn-outline-primary {
-  color: #25d366;
-  border-color: #25d366;
-}
-
-.btn-outline-primary:hover {
-  background-color: #25d366;
-  border-color: #25d366;
+/* Responsive */
+@media (max-width: 991.98px) {
+  .illustration-section {
+    display: none !important;
+  }
+  
+  .form-section {
+    padding: 1rem;
+  }
+  
+  .form-container {
+    max-width: 100%;
+  }
 }
 </style> 

@@ -24,22 +24,35 @@ const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:3000';
 
 // Security middleware
 app.use(helmet({
-  contentSecurityPolicy: {
+  contentSecurityPolicy: NODE_ENV === 'production' ? {
     directives: {
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       scriptSrc: ["'self'"],
       imgSrc: ["'self'", "data:", "https:"],
     },
-  },
+  } : false, // Disable CSP in development
+  crossOriginEmbedderPolicy: false // Disable COEP to allow CORS
 }));
 
 // CORS configuration
 app.use(cors({
-  origin: CORS_ORIGIN.split(','),
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = CORS_ORIGIN.split(',');
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-api-key'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  optionsSuccessStatus: 200 // Some legacy browsers choke on 204
 }));
 
 // Compression middleware
@@ -49,23 +62,35 @@ app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Rate limiting
+// Rate limiting - More lenient in development
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // limit each IP to 100 requests per windowMs
+  max: NODE_ENV === 'development' ? 1000 : (parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100), // More lenient in dev
   message: {
     error: 'Too many requests from this IP, please try again later.',
     retryAfter: Math.ceil((parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000) / 1000)
   },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    // Skip rate limiting for health checks and in development for localhost
+    if (req.path === '/health') return true;
+    if (NODE_ENV === 'development' && req.ip === '127.0.0.1') return true;
+    return false;
+  }
 });
 
-// Speed limiting
+// Speed limiting - More lenient in development
 const speedLimiter = slowDown({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  delayAfter: 50, // allow 50 requests per 15 minutes, then...
-  delayMs: 500 // begin adding 500ms of delay per request above 50
+  delayAfter: NODE_ENV === 'development' ? 500 : 50, // More lenient in dev
+  delayMs: () => NODE_ENV === 'development' ? 100 : 500, // Less delay in dev
+  skip: (req) => {
+    // Skip speed limiting for health checks and in development for localhost
+    if (req.path === '/health') return true;
+    if (NODE_ENV === 'development' && req.ip === '127.0.0.1') return true;
+    return false;
+  }
 });
 
 // Apply rate limiting to all routes
@@ -111,6 +136,7 @@ const apiKeyRoutes = require('./src/routes/apiKeys');
 const whatsappRoutes = require('./src/routes/whatsapp');
 const subscriptionRoutes = require('./src/routes/subscriptions');
 const invoiceRoutes = require('./src/routes/invoices');
+const templateRoutes = require('./src/routes/templates');
 
 // Import middleware
 const { trackApiUsage } = require('./src/middleware/usageTracker');
@@ -129,6 +155,7 @@ app.use(`${API_PREFIX}/${API_VERSION}/api-keys`, apiKeyRoutes);
 app.use(`${API_PREFIX}/${API_VERSION}/whatsapp`, trackApiUsage, whatsappRoutes);
 app.use(`${API_PREFIX}/${API_VERSION}/subscriptions`, subscriptionRoutes);
 app.use(`${API_PREFIX}/${API_VERSION}/invoices`, invoiceRoutes);
+app.use(`${API_PREFIX}/${API_VERSION}/templates`, templateRoutes);
 
 // Initialize services
 const notificationService = require('./src/services/notificationService');

@@ -1,12 +1,14 @@
 export default defineNuxtPlugin(() => {
-  const { checkAuth } = useAuth()
+  const authStore = useAuthStore()
   
-  // Check authentication on app start
-  checkAuth()
+  // Initialize authentication on app start
+  console.log('Auth plugin - Initializing auth store...')
+  const initialized = authStore.initializeAuth()
+  console.log('Auth plugin - Auth store initialized:', initialized)
   
   return {
     provide: {
-      auth: useAuth()
+      auth: authStore
     }
   }
 }) 

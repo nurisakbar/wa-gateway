@@ -229,7 +229,7 @@ const getUserSubscription = async (req, res) => {
       include: [
         {
           model: SubscriptionPlan,
-          as: 'SubscriptionPlan'
+          as: 'plan'
         }
       ],
       order: [['created_at', 'DESC']]
@@ -384,17 +384,10 @@ const getSubscriptionUsage = async (req, res) => {
       include: [
         {
           model: SubscriptionPlan,
-          as: 'SubscriptionPlan'
+          as: 'plan'
         }
       ]
     });
-
-    if (!subscription) {
-      return res.status(404).json({
-        success: false,
-        message: 'No active subscription found'
-      });
-    }
 
     // Get current usage (this would be implemented based on your tracking system)
     const currentUsage = {
@@ -405,7 +398,16 @@ const getSubscriptionUsage = async (req, res) => {
       storage_used_gb: 0 // Get from file storage
     };
 
-    const limits = subscription.SubscriptionPlan.limits;
+    // Default limits when no subscription
+    const defaultLimits = {
+      messages_per_month: 0,
+      api_requests_per_month: 0,
+      devices: 0,
+      webhooks: 0,
+      storage_gb: 0
+    };
+
+    const limits = subscription?.plan?.limits || defaultLimits;
 
     res.json({
       success: true,

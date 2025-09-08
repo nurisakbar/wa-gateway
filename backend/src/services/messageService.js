@@ -1,3 +1,4 @@
+const path = require('path');
 const { Message, Contact, Device, User } = require('../models');
 const whatsappService = require('./whatsappService');
 const socketService = require('./socketService');
@@ -73,6 +74,7 @@ class MessageService {
   async sendMediaMessage(deviceId, toNumber, mediaPath, caption = '', options = {}) {
     try {
       logInfo(`Sending media message from device: ${deviceId} to: ${toNumber}`);
+      logInfo(`Media path: ${mediaPath}`);
 
       // Validate device and permissions
       const device = await this.validateDevice(deviceId);
@@ -80,11 +82,42 @@ class MessageService {
       // Format phone number
       const formattedNumber = formatPhoneNumber(toNumber);
 
-      // Send media message via WhatsApp service
-      const result = await whatsappService.sendMediaMessage(deviceId, formattedNumber, mediaPath, caption, options);
+      let result;
+      let messageType = this.messageTypes.IMAGE; // Default to image
 
-      // Determine message type from file extension
-      const messageType = this.getMediaTypeFromPath(mediaPath);
+      // Handle external URLs
+      if (mediaPath.startsWith('http://') || mediaPath.startsWith('https://')) {
+        logInfo(`External URL detected: ${mediaPath}`);
+        
+        // Download the media from URL
+        const axios = require('axios');
+        const response = await axios.get(mediaPath, { responseType: 'arraybuffer' });
+        const mediaBuffer = Buffer.from(response.data);
+        
+        // Determine media type from content type or URL
+        const contentType = response.headers['content-type'] || 'image/jpeg';
+        messageType = this.getMediaTypeFromMimeType(contentType);
+        
+        // Extract filename from URL
+        const urlPath = new URL(mediaPath).pathname;
+        const fileName = urlPath.split('/').pop() || 'document';
+        
+        // Send media message via WhatsApp service
+        result = await whatsappService.sendMediaMessage(deviceId, formattedNumber, mediaBuffer, caption, {
+          ...options,
+          mimeType: contentType,
+          fileName: fileName
+        });
+      } else {
+        // Handle local file path
+        logInfo(`Local file detected: ${mediaPath}`);
+        
+        // Determine media type from file extension
+        messageType = this.getMediaTypeFromPath(mediaPath);
+        
+        // Send media message via WhatsApp service
+        result = await whatsappService.sendMediaMessage(deviceId, formattedNumber, mediaPath, caption, options);
+      }
 
       // Store message in database
       const message = await this.storeOutgoingMessage({
@@ -92,17 +125,26 @@ class MessageService {
         user_id: device.user_id,
         to_number: formattedNumber,
         message_type: messageType,
-        content: caption || `Media file: ${mediaPath}`,
+        content: caption || `Media message (${messageType})`,
         message_id: result.messageId,
         status: 'sent',
         metadata: {
           media_path: mediaPath,
+          caption: caption,
           timestamp: result.timestamp,
           ...options
         }
       });
 
       logInfo(`Media message sent successfully: ${message.id}`);
+      
+      // Notify via socket
+      await socketService.handleMessageSent({
+        userId: device.user_id,
+        deviceId,
+        message
+      });
+      
       return {
         success: true,
         message_id: result.messageId,
@@ -441,8 +483,8 @@ class MessageService {
       throw new Error('Device not found');
     }
 
-    const connectionStatus = await whatsappService.getConnectionStatus(deviceId);
-    if (!connectionStatus.connected) {
+    // For now, only check database status since WhatsApp service connections are not persistent
+    if (device.status !== 'connected') {
       throw new Error('Device is not connected');
     }
 
@@ -450,9 +492,15 @@ class MessageService {
   }
 
   async storeOutgoingMessage(data) {
+    // Get device info to get the phone number
+    const device = await Device.findByPk(data.device_id);
+    
     return await Message.create({
       ...data,
       direction: 'outgoing',
+      from_number: device?.phone_number || device?.connection_info?.phone_number || null,
+      timestamp: new Date(),
+      sent_at: new Date(),
       created_at: new Date()
     });
   }
@@ -461,6 +509,7 @@ class MessageService {
     return await Message.create({
       ...data,
       direction: 'incoming',
+      timestamp: new Date(),
       created_at: new Date()
     });
   }
@@ -572,6 +621,13 @@ class MessageService {
     if (['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(ext)) return this.messageTypes.IMAGE;
     if (['.mp4', '.avi', '.mov', '.mkv'].includes(ext)) return this.messageTypes.VIDEO;
     if (['.mp3', '.wav', '.ogg', '.m4a'].includes(ext)) return this.messageTypes.AUDIO;
+    return this.messageTypes.DOCUMENT;
+  }
+
+  getMediaTypeFromMimeType(mimeType) {
+    if (mimeType.startsWith('image/')) return this.messageTypes.IMAGE;
+    if (mimeType.startsWith('video/')) return this.messageTypes.VIDEO;
+    if (mimeType.startsWith('audio/')) return this.messageTypes.AUDIO;
     return this.messageTypes.DOCUMENT;
   }
 

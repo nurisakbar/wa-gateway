@@ -54,6 +54,11 @@ export const useAuthStore = defineStore('auth', {
           // Store in localStorage
           localStorage.setItem('auth_token', token)
           localStorage.setItem('user', JSON.stringify(user))
+          // Also persist in cookie for SSR checks
+          if (process.client) {
+            const tokenCookie = useCookie('auth_token', { maxAge: 60 * 60 * 24 })
+            tokenCookie.value = token
+          }
           
           // Initialize socket connection
           const { $socket } = useNuxtApp()
@@ -114,13 +119,20 @@ export const useAuthStore = defineStore('auth', {
         // Clear localStorage
         localStorage.removeItem('auth_token')
         localStorage.removeItem('user')
+        // Clear cookie
+        if (process.client) {
+          const tokenCookie = useCookie('auth_token')
+          tokenCookie.value = null
+        }
         
         // Disconnect socket
         const { $socket } = useNuxtApp()
         $socket.disconnect()
         
-        // Redirect to login
-        navigateTo('/login')
+        // Force redirect to login using window.location
+        if (process.client) {
+          window.location.href = '/login'
+        }
       }
     },
 
@@ -145,30 +157,44 @@ export const useAuthStore = defineStore('auth', {
     async fetchUser() {
       try {
         const { $api } = useNuxtApp()
-        const response = await $api.get('/auth/me')
+        const response = await $api.get('/auth/profile')
         
         if (response.data.success) {
           this.user = response.data.data
           localStorage.setItem('user', JSON.stringify(response.data.data))
           return true
+        } else {
+          return false
         }
       } catch (error) {
-        console.error('Fetch user error:', error)
+        console.error('fetchUser - Error:', error)
         return false
       }
     },
 
     initializeAuth() {
       // Check for stored token and user
-      const token = localStorage.getItem('auth_token')
+      const token = localStorage.getItem('auth_token') || (process.client ? useCookie('auth_token').value : null)
       const userStr = localStorage.getItem('user')
+      
+      console.log('Auth store - initializeAuth called')
+      console.log('Auth store - Token exists:', !!token)
+      console.log('Auth store - User data exists:', !!userStr)
       
       if (token && userStr) {
         try {
           const user = JSON.parse(userStr)
+          console.log('Auth store - Parsed user:', user)
+          
           this.token = token
           this.user = user
           this.isAuthenticated = true
+          
+          console.log('Auth store - Auth state set:', {
+            hasToken: !!this.token,
+            hasUser: !!this.user,
+            isAuthenticated: this.isAuthenticated
+          })
           
           // Initialize socket connection
           const { $socket } = useNuxtApp()
@@ -181,6 +207,7 @@ export const useAuthStore = defineStore('auth', {
           return false
         }
       }
+      console.log('Auth store - No token or user data found')
       return false
     },
 

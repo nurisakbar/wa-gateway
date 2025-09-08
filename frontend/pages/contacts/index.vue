@@ -1,42 +1,47 @@
 <template>
   <div class="contacts-page">
     <!-- Header -->
-    <div class="page-header bg-white shadow-sm border-bottom">
-      <div class="container-fluid">
-        <div class="row align-items-center py-3">
-          <div class="col">
-            <h1 class="h3 mb-0 text-primary">
-              <i class="bi bi-people me-2"></i>
-              Contact Management
+    <div class="page-header bg-white border-bottom">
+      <div class="container-fluid py-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <nav aria-label="breadcrumb" class="mb-1">
+              <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item">
+                  <NuxtLink to="/dashboard" class="text-decoration-none">
+                    <i class="bi bi-house-door me-1"></i>Dashboard
+                  </NuxtLink>
+                </li>
+                <li class="breadcrumb-item active" aria-current="page">Contacts</li>
+              </ol>
+            </nav>
+            <h1 class="h3 mb-0 text-dark fw-bold">
+              <i class="bi bi-people me-2 text-primary"></i>Contact Management
             </h1>
+            <p class="text-muted mb-0">Manage your contacts for easy messaging and broadcast</p>
           </div>
-          <div class="col-auto">
-            <div class="d-flex gap-2">
-              <button
-                class="btn btn-outline-primary"
-                @click="showImportModal = true"
-                :disabled="contactStore.isLoading"
-              >
-                <i class="bi bi-upload me-1"></i>
-                Import
-              </button>
-              <button
-                class="btn btn-outline-success"
-                @click="exportContacts"
-                :disabled="contactStore.isLoading"
-              >
-                <i class="bi bi-download me-1"></i>
-                Export
-              </button>
-              <button
-                class="btn btn-primary"
-                @click="showAddModal = true"
-                :disabled="contactStore.isLoading"
-              >
-                <i class="bi bi-plus me-1"></i>
-                Add Contact
-              </button>
-            </div>
+          <div class="d-flex gap-2">
+            <button
+              class="btn btn-outline-primary d-flex align-items-center"
+              @click="showImportModal = true"
+              :disabled="contactStore.isLoading"
+            >
+              <i class="bi bi-upload me-1"></i><span>Import</span>
+            </button>
+            <button
+              class="btn btn-outline-success d-flex align-items-center"
+              @click="exportContacts"
+              :disabled="contactStore.isLoading"
+            >
+              <i class="bi bi-download me-1"></i><span>Export</span>
+            </button>
+            <button
+              class="btn btn-primary d-flex align-items-center"
+              @click="showAddModal = true"
+              :disabled="contactStore.isLoading"
+            >
+              <i class="bi bi-plus-circle me-1"></i><span>Add Contact</span>
+            </button>
           </div>
         </div>
       </div>
@@ -164,77 +169,72 @@
           </div>
         </div>
         <div class="card-body p-0">
-          <div v-if="contactStore.isLoading" class="text-center py-4">
-            <div class="loading-spinner mx-auto mb-2"></div>
-            <p class="text-muted">Loading contacts...</p>
+          <!-- Loading State -->
+          <div v-if="contactStore.isLoading" class="text-center py-5">
+            <div class="loading-spinner mx-auto mb-3"></div>
+            <h6 class="text-muted mb-0">Loading contacts...</h6>
           </div>
-          <div v-else-if="filteredContacts.length === 0" class="text-center py-4">
-            <i class="bi bi-people text-muted fs-1 mb-3"></i>
-            <h6 class="text-muted">No contacts found</h6>
-            <p class="text-muted">
+          
+          <!-- Empty State -->
+          <div v-else-if="filteredContacts.length === 0" class="empty-state text-center py-5">
+            <i class="bi bi-people text-muted fs-1 mb-3 d-block"></i>
+            <h5 class="text-dark mb-2">No contacts found</h5>
+            <p class="text-muted mb-3">
               {{ contactStore.getContacts.length === 0 ? 'Add your first contact to get started' : 'No contacts match your search criteria' }}
             </p>
-            <button v-if="contactStore.getContacts.length === 0" class="btn btn-primary" @click="showAddModal = true">
-              <i class="bi bi-plus me-1"></i>
+            <button class="btn btn-primary" @click="showAddModal = true">
+              <i class="bi bi-plus-circle me-1"></i>
               Add Contact
             </button>
           </div>
-          <div v-else class="row g-3 p-3">
-            <div
-              v-for="contact in filteredContacts"
-              :key="contact.id"
-              class="col-md-6 col-lg-4 col-xl-3"
-            >
-              <div class="contact-card">
-                <div class="contact-header">
-                  <div class="contact-avatar">
-                    <i class="bi bi-person"></i>
-                  </div>
-                  <div class="contact-status" :class="{ active: contact.is_active }"></div>
-                </div>
-                <div class="contact-body">
-                  <h6 class="contact-name">{{ contact.name }}</h6>
-                  <p class="contact-phone">{{ contact.phone_number }}</p>
-                  <p v-if="contact.email" class="contact-email">{{ contact.email }}</p>
-                  <div v-if="contact.tags && contact.tags.length > 0" class="contact-tags">
-                    <span
-                      v-for="tag in contact.tags.slice(0, 3)"
-                      :key="tag"
-                      class="badge bg-light text-dark me-1"
-                    >
-                      {{ tag }}
+          
+          <!-- Contacts Table -->
+          <div v-else class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th class="border-0 py-3 px-4"><i class="bi bi-person me-2 text-muted"></i>Name</th>
+                  <th class="border-0 py-3 px-4"><i class="bi bi-telephone me-2 text-muted"></i>Phone</th>
+                  <th class="border-0 py-3 px-4"><i class="bi bi-envelope me-2 text-muted"></i>Email</th>
+                  <th class="border-0 py-3 px-4"><i class="bi bi-tags me-2 text-muted"></i>Tags</th>
+                  <th class="border-0 py-3 px-4"><i class="bi bi-circle me-2 text-muted"></i>Status</th>
+                  <th class="border-0 py-3 px-4 text-end"><i class="bi bi-gear me-2 text-muted"></i>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="contact in filteredContacts" :key="contact.id" class="align-middle">
+                  <td class="px-4 py-3 fw-semibold text-dark">{{ contact.name }}</td>
+                  <td class="px-4 py-3 text-primary">{{ contact.phone_number }}</td>
+                  <td class="px-4 py-3"><small class="text-muted">{{ contact.email || '-' }}</small></td>
+                  <td class="px-4 py-3">
+                    <span v-if="!contact.tags || contact.tags.length === 0" class="text-muted small">-</span>
+                    <div v-else>
+                      <span v-for="tag in contact.tags.slice(0,3)" :key="tag" class="badge bg-light text-dark me-1">{{ tag }}</span>
+                      <span v-if="contact.tags.length > 3" class="badge bg-secondary">+{{ contact.tags.length - 3 }}</span>
+                    </div>
+                  </td>
+                  <td class="px-4 py-3">
+                    <span class="status-badge" :class="contact.is_active ? 'bg-success text-white' : 'bg-secondary text-white'">
+                      <i class="bi" :class="contact.is_active ? 'bi-check-circle me-1' : 'bi-x-circle me-1'"></i>
+                      {{ contact.is_active ? 'Active' : 'Inactive' }}
                     </span>
-                    <span v-if="contact.tags.length > 3" class="badge bg-secondary">
-                      +{{ contact.tags.length - 3 }}
-                    </span>
-                  </div>
-                </div>
-                <div class="contact-actions">
-                  <button
-                    class="btn btn-sm btn-outline-primary"
-                    @click="editContact(contact)"
-                    title="Edit Contact"
-                  >
-                    <i class="bi bi-pencil"></i>
-                  </button>
-                  <button
-                    class="btn btn-sm btn-outline-success"
-                    @click="sendMessage(contact)"
-                    title="Send Message"
-                  >
-                    <i class="bi bi-chat-dots"></i>
-                  </button>
-                  <button
-                    class="btn btn-sm btn-outline-danger"
-                    @click="deleteContact(contact)"
-                    :disabled="contactStore.isLoading"
-                    title="Delete Contact"
-                  >
-                    <i class="bi bi-trash"></i>
-                  </button>
-                </div>
-              </div>
-            </div>
+                  </td>
+                  <td class="px-4 py-3 text-end">
+                    <div class="d-flex gap-2 justify-content-end">
+                      <button class="btn btn-sm btn-outline-primary d-flex align-items-center" @click="editContact(contact)">
+                        <i class="bi bi-pencil me-1"></i><span>Edit</span>
+                      </button>
+                      <button class="btn btn-sm btn-outline-success d-flex align-items-center" @click="sendMessage(contact)">
+                        <i class="bi bi-chat-dots me-1"></i><span>Message</span>
+                      </button>
+                      <button class="btn btn-sm btn-outline-danger d-flex align-items-center" @click="deleteContact(contact)" :disabled="contactStore.isLoading">
+                        <i class="bi bi-trash me-1"></i><span>Delete</span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -741,15 +741,15 @@ const isValidEmail = (email) => {
 .page-header {
   position: sticky;
   top: 0;
-  z-index: 1000;
+  /* z-index: 1000; */
 }
 
 .stat-card {
-  background: var(--white-color);
+  background: white;
   padding: 1.5rem;
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--box-shadow);
-  border-left: 4px solid var(--primary-color);
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .stat-icon {
@@ -760,14 +760,30 @@ const isValidEmail = (email) => {
   justify-content: center;
 }
 
-.contact-card {
-  background: var(--white-color);
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--box-shadow);
-  border: 1px solid rgba(0, 0, 0, 0.125);
-  transition: all 0.3s ease;
-  position: relative;
+/* Table improvements to match Devices */
+.table {
+  border-radius: 12px;
   overflow: hidden;
+}
+
+.table th {
+  font-weight: 600;
+  color: #495057;
+  border-bottom: 2px solid #dee2e6;
+  background: #f8f9fa;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.table td { vertical-align: middle; }
+
+.status-badge {
+  font-size: 0.75rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
 }
 
 .contact-card:hover {

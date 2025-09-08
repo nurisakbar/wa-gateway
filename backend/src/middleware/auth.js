@@ -23,6 +23,7 @@ const authenticateToken = async (req, res, next) => {
     
     // Find user
     const user = await User.findByPk(decoded.userId);
+    
     if (!user) {
       return res.status(401).json({
         error: true,

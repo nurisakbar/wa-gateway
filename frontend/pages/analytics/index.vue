@@ -263,8 +263,11 @@
 </template>
 
 <script setup>
+import { Chart } from 'chart.js'
+
 definePageMeta({
-  layout: 'dashboard'
+  layout: 'dashboard',
+  middleware: 'auth'
 })
 
 const { $toast } = useNuxtApp()
@@ -293,8 +296,13 @@ let realtimeChartInstance = null
 // Fetch analytics data
 const fetchAnalytics = async () => {
   try {
-    const response = await $fetch('/api/v1/analytics/user', {
-      query: { period: selectedPeriod.value }
+    const config = useRuntimeConfig()
+    const token = localStorage.getItem('auth_token')
+    const response = await $fetch(`${config.public.apiBase}/analytics/user`, {
+      query: { period: selectedPeriod.value },
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
     })
     
     if (response.success) {

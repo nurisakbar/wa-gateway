@@ -128,7 +128,8 @@
 
 <script setup>
 definePageMeta({
-  layout: 'dashboard'
+  layout: 'dashboard',
+  middleware: 'auth'
 })
 
 const { $toast } = useNuxtApp()
@@ -139,9 +140,18 @@ const webhooks = ref([])
 const fetchWebhooks = async () => {
   loading.value = true
   try {
-    const response = await $fetch('/api/v1/webhooks')
+    const config = useRuntimeConfig()
+    const token = localStorage.getItem('auth_token') || useCookie('auth_token').value
+    
+    const response = await $fetch(`${config.public.apiBase}/webhooks`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    
     if (response.success) {
-      webhooks.value = response.data
+      webhooks.value = response.data.webhooks || []
     }
   } catch (error) {
     console.error('Error fetching webhooks:', error)

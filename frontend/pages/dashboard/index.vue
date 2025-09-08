@@ -1,24 +1,6 @@
 <template>
   <div class="dashboard-page">
     <!-- Welcome Section -->
-    <div class="welcome-section mb-4">
-      <div class="row align-items-center">
-        <div class="col-md-8">
-          <h1 class="welcome-title">
-            Selamat datang kembali, {{ user?.full_name || user?.username || 'User' }}! 👋
-          </h1>
-          <p class="welcome-subtitle text-muted">
-            Berikut adalah ringkasan aktivitas WhatsApp Gateway Anda hari ini
-          </p>
-        </div>
-        <div class="col-md-4 text-end">
-          <button class="btn btn-outline-primary" @click="refreshData">
-            <i class="bi bi-arrow-clockwise me-2"></i>
-            Refresh Data
-          </button>
-        </div>
-      </div>
-    </div>
 
     <!-- Statistics Cards -->
     <div class="row mb-4">
@@ -288,8 +270,11 @@
 </template>
 
 <script setup>
+import { Chart } from 'chart.js'
+
 definePageMeta({
-  layout: 'dashboard'
+  layout: 'dashboard',
+  middleware: 'auth'
 })
 
 const { user } = useAuth()
@@ -317,8 +302,13 @@ let messageChartInstance = null
 // Fetch analytics data
 const fetchAnalytics = async () => {
   try {
-    const response = await $fetch('/api/v1/analytics/user', {
-      query: { period: selectedPeriod.value }
+    const config = useRuntimeConfig()
+    const token = localStorage.getItem('auth_token')
+    const response = await $fetch(`${config.public.apiBase}/analytics/user`, {
+      query: { period: selectedPeriod.value },
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
     })
     
     if (response.success) {
@@ -334,7 +324,13 @@ const fetchAnalytics = async () => {
 // Fetch real-time data
 const fetchRealtimeData = async () => {
   try {
-    const response = await $fetch('/api/v1/analytics/realtime')
+    const config = useRuntimeConfig()
+    const token = localStorage.getItem('auth_token')
+    const response = await $fetch(`${config.public.apiBase}/analytics/realtime`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
     
     if (response.success) {
       realtimeData.value = response.data

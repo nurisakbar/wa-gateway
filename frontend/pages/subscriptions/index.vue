@@ -216,7 +216,8 @@
 
 <script setup>
 definePageMeta({
-  layout: 'dashboard'
+  layout: 'dashboard',
+  middleware: 'auth'
 })
 
 const { $toast } = useNuxtApp()
@@ -231,11 +232,19 @@ const showYearly = ref(false)
 
 // Fetch subscription plans
 const fetchPlans = async () => {
-  loading.value = true
-  try {
-    const response = await $fetch('/api/v1/subscriptions/plans')
+      loading.value = true
+      try {
+        const config = useRuntimeConfig()
+        const token = localStorage.getItem('auth_token') || useCookie('auth_token').value
+        
+        const response = await $fetch(`${config.public.apiBase}/subscriptions/plans`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
     if (response.success) {
-      plans.value = response.data
+      plans.value = response.data.plans || response.data.subscription || response.data.usage || response.data
     }
   } catch (error) {
     console.error('Error fetching plans:', error)
@@ -248,8 +257,17 @@ const fetchPlans = async () => {
 // Fetch current subscription
 const fetchCurrentSubscription = async () => {
   try {
-    const response = await $fetch('/api/v1/subscriptions/my-subscription')
-    if (response.success && response.data) {
+    const config = useRuntimeConfig()
+    const token = localStorage.getItem('auth_token') || useCookie('auth_token').value
+    
+    const response = await $fetch(`${config.public.apiBase}/subscriptions/my-subscription`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    if (response.success) {
       currentSubscription.value = response.data
     }
   } catch (error) {
@@ -260,8 +278,23 @@ const fetchCurrentSubscription = async () => {
 // Fetch usage data
 const fetchUsageData = async () => {
   try {
-    const response = await $fetch('/api/v1/subscriptions/usage')
-    if (response.success && response.data) {
+    const config = useRuntimeConfig()
+    const token = localStorage.getItem('auth_token') || useCookie('auth_token').value
+    
+    const response = await $fetch(`${config.public.apiBase}/subscriptions/usage`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      onResponseError({ response }) {
+        // Suppress 404 errors for usage API - this is expected behavior
+        if (response.status === 404) {
+          return
+        }
+      }
+    })
+    
+    if (response.success) {
       const { usage, limits } = response.data
       usageData.value = {
         messages: {
@@ -282,7 +315,19 @@ const fetchUsageData = async () => {
       }
     }
   } catch (error) {
-    console.error('Error fetching usage data:', error)
+    // Handle 404 error gracefully (no active subscription)
+    if (error.status === 404 || error.statusCode === 404 || error.response?.status === 404) {
+      // Silently handle no active subscription - this is expected behavior
+      usageData.value = {
+        messages: { used: 0, limit: 0, percentage: 0 },
+        api_requests: { used: 0, limit: 0, percentage: 0 },
+        devices: { used: 0, limit: 0, percentage: 0 }
+      }
+      // Don't log anything for expected 404 responses
+      return
+    } else {
+      console.error('Error fetching usage data:', error)
+    }
   }
 }
 
@@ -290,10 +335,18 @@ const fetchUsageData = async () => {
 const subscribeToPlan = async (plan) => {
   subscribing.value = true
   try {
-    const response = await $fetch('/api/v1/subscriptions/subscribe', {
+    const config = useRuntimeConfig()
+    const token = localStorage.getItem('auth_token') || useCookie('auth_token').value
+    
+    const response = await $fetch(`${config.public.apiBase}/subscriptions/subscribe`, {
       method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
       body: {
-        plan_id: plan.id
+        plan_id: plan.id,
+        billing_cycle: 'monthly'
       }
     })
     
@@ -314,10 +367,18 @@ const subscribeToPlan = async (plan) => {
 const upgradePlan = async (plan) => {
   subscribing.value = true
   try {
-    const response = await $fetch('/api/v1/subscriptions/subscribe', {
+    const config = useRuntimeConfig()
+    const token = localStorage.getItem('auth_token') || useCookie('auth_token').value
+    
+    const response = await $fetch(`${config.public.apiBase}/subscriptions/subscribe`, {
       method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
       body: {
-        plan_id: plan.id
+        plan_id: plan.id,
+        billing_cycle: showYearly.value ? 'yearly' : 'monthly'
       }
     })
     
@@ -341,8 +402,15 @@ const cancelSubscription = async () => {
   }
   
   try {
-    const response = await $fetch('/api/v1/subscriptions/cancel', {
+    const config = useRuntimeConfig()
+    const token = localStorage.getItem('auth_token') || useCookie('auth_token').value
+    
+    const response = await $fetch(`${config.public.apiBase}/subscriptions/cancel`, {
       method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
       body: {
         cancel_at_period_end: true
       }

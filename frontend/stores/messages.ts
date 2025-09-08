@@ -69,10 +69,29 @@ export const useMessageStore = defineStore('messages', {
           if (value) params.append(key, value.toString())
         })
 
-        const response = await $api.get(`/messages?${params.toString()}`)
+        const response = await $api.get(`/whatsapp/messages?${params.toString()}`)
 
         if (response.data.success) {
-          this.messages = response.data.data.messages
+          // API may return { data: { messages: [...] }} or { data: [...] }
+          const raw = response.data.data?.messages ?? response.data.data ?? []
+          // Normalize payload to frontend Message interface
+          this.messages = (raw as any[]).map((m: any) => ({
+            id: m.id,
+            user_id: m.user_id,
+            device_id: m.device_id,
+            to_number: m.to_number,
+            from_number: m.from_number,
+            content: m.content,
+            type: (m.type || m.message_type || 'text') as any,
+            direction: m.direction === 'outgoing' ? 'outbound' : 'inbound',
+            status: m.status,
+            media_url: m.metadata?.media_path || m.media_url,
+            filename: m.metadata?.filename || m.filename,
+            file_size: m.file_size,
+            timestamp: m.timestamp || m.sent_at || m.created_at,
+            created_at: m.created_at,
+            updated_at: m.updated_at
+          }))
           return { success: true, messages: this.messages }
         }
       } catch (error: any) {

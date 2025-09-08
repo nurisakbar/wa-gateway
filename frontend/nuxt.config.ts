@@ -10,7 +10,8 @@ export default defineNuxtConfig({
 
   // CSS
   css: [
-    'bootstrap/dist/css/bootstrap.min.css'
+    'bootstrap/dist/css/bootstrap.min.css',
+    'bootstrap-icons/font/bootstrap-icons.css'
   ],
 
   // Runtime config
@@ -19,7 +20,8 @@ export default defineNuxtConfig({
       apiBase: 'http://localhost:3001/api/v1',
       socketUrl: 'http://localhost:3001',
       appName: 'WA Gateway',
-      appVersion: '1.0.0'
+      appVersion: '1.0.0',
+      apiKey: 'wg_b4df277cf780df75227236e35b048975708affe0d1dcc1eaa5a443d356fec3b9'
     }
   },
 

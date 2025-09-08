@@ -1,22 +1,26 @@
 <template>
   <div class="broadcasts-page">
     <!-- Header -->
-    <div class="page-header bg-white shadow-sm border-bottom">
-      <div class="container-fluid">
-        <div class="row align-items-center py-3">
-          <div class="col">
-            <h1 class="h3 mb-0 text-primary">
-              <i class="bi bi-megaphone me-2"></i>
-              Broadcast Management
-            </h1>
+    <div class="page-header bg-white border-bottom">
+      <div class="container-fluid py-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <nav aria-label="breadcrumb" class="mb-1">
+              <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item">
+                  <NuxtLink to="/dashboard" class="text-decoration-none">
+                    <i class="bi bi-house-door me-1"></i>Dashboard
+                  </NuxtLink>
+                </li>
+                <li class="breadcrumb-item active" aria-current="page">Broadcasts</li>
+              </ol>
+            </nav>
+            <h1 class="h3 mb-0 text-dark fw-bold"><i class="bi bi-megaphone me-2 text-primary"></i>Broadcast Management</h1>
+            <p class="text-muted mb-0">Create and schedule WhatsApp broadcasts</p>
           </div>
-          <div class="col-auto">
-            <button
-              class="btn btn-primary"
-              @click="showNewBroadcastModal = true"
-            >
-              <i class="bi bi-plus me-1"></i>
-              New Broadcast
+          <div>
+            <button class="btn btn-primary d-flex align-items-center" @click="showNewBroadcastModal = true">
+              <i class="bi bi-plus-circle me-1"></i><span>New Broadcast</span>
             </button>
           </div>
         </div>
@@ -83,20 +87,19 @@
 
       <!-- Broadcasts Table -->
       <div class="whatsapp-card">
-        <div class="card-header bg-transparent border-bottom">
-          <h5 class="card-title mb-0">
-            <i class="bi bi-list-ul me-2"></i>
-            Broadcast History
-          </h5>
+        <div class="card-header bg-transparent border-bottom d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-0"><i class="bi bi-list-ul me-2"></i>Broadcast History</h5>
+          <button class="btn btn-outline-primary btn-sm d-flex align-items-center" @click="showNewBroadcastModal = true">
+            <i class="bi bi-plus-circle me-1"></i><span>New</span>
+          </button>
         </div>
-        <div class="card-body">
-          <div class="text-center py-4">
-            <i class="bi bi-megaphone text-muted fs-1 mb-3"></i>
-            <h6 class="text-muted">No broadcasts found</h6>
-            <p class="text-muted">Create your first broadcast to get started</p>
-            <button class="btn btn-primary" @click="showNewBroadcastModal = true">
-              <i class="bi bi-plus me-1"></i>
-              New Broadcast
+        <div class="card-body p-0">
+          <div class="text-center py-5">
+            <i class="bi bi-megaphone text-muted fs-1 mb-3 d-block"></i>
+            <h5 class="text-dark mb-2">No broadcasts found</h5>
+            <p class="text-muted mb-3">Create your first broadcast to get started</p>
+            <button class="btn btn-primary d-inline-flex align-items-center" @click="showNewBroadcastModal = true">
+              <i class="bi bi-plus-circle me-1"></i><span>New Broadcast</span>
             </button>
           </div>
         </div>
@@ -302,15 +305,15 @@ const closeModal = () => {
 .page-header {
   position: sticky;
   top: 0;
-  z-index: 1000;
+  /* z-index: 1000; */
 }
 
 .stat-card {
-  background: var(--white-color);
+  background: white;
   padding: 1.5rem;
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--box-shadow);
-  border-left: 4px solid var(--primary-color);
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  border: 1px solid rgba(0,0,0,0.05);
 }
 
 .stat-icon {

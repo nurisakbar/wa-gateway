@@ -22,6 +22,12 @@ export default defineNuxtPlugin((nuxtApp) => {
       if (token) {
         config.headers.Authorization = `Bearer ${token}`
       }
+      
+      // Add API key for whatsapp endpoints
+      if (config.url && config.url.includes('/whatsapp/')) {
+        config.headers['x-api-key'] = config.public?.apiKey || 'wg_b4df277cf780df75227236e35b048975708affe0d1dcc1eaa5a443d356fec3b9'
+      }
+      
       return config
     },
     (error) => {
@@ -36,10 +42,15 @@ export default defineNuxtPlugin((nuxtApp) => {
     },
     (error) => {
       if (error.response?.status === 401) {
-        // Token expired or invalid
-        localStorage.removeItem('auth_token')
-        localStorage.removeItem('user')
-        navigateTo('/login')
+        const url = error.config?.url || ''
+        // Only force logout on auth endpoints
+        const isAuthEndpoint = url.includes('/auth/profile') || url.includes('/auth/refresh') || url.includes('/auth/logout')
+
+        if (isAuthEndpoint) {
+          localStorage.removeItem('auth_token')
+          localStorage.removeItem('user')
+          navigateTo('/login')
+        }
       }
       return Promise.reject(error)
     }

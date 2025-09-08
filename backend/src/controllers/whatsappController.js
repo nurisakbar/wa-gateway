@@ -34,30 +34,28 @@ const sendMessage = async (req, res) => {
       });
     }
 
-    // Create message record
-    const messageRecord = await Message.create({
-      user_id: userId,
-      device_id: device.id,
-      to: to,
-      content: message,
-      type: type,
-      status: 'pending',
-      direction: 'outbound'
-    });
+    // Send message via appropriate service
+    let result;
+    if (type === 'media' && req.body.media_url) {
+      // Send media message
+      const messageService = require('../services/messageService');
+      result = await messageService.sendMediaMessage(device.id, to, req.body.media_url, message);
+    } else {
+      // Send text message
+      const messageService = require('../services/messageService');
+      result = await messageService.sendTextMessage(device.id, to, message);
+    }
 
-    // TODO: Integrate with WhatsApp service to actually send message
-    // For now, simulate successful sending
-    await messageRecord.update({ status: 'sent', sent_at: new Date() });
-
-    logInfo(`Message sent via API: ${messageRecord.id} to ${to}`, 'WHATSAPP_API');
+    logInfo(`Message sent via API: ${result.database_id} to ${to}`, 'WHATSAPP_API');
 
     res.json({
       success: true,
       message: 'Message sent successfully',
       data: {
-        message_id: messageRecord.id,
-        status: messageRecord.status,
-        sent_at: messageRecord.sent_at
+        message_id: result.message_id,
+        database_id: result.database_id,
+        status: 'sent',
+        sent_at: result.timestamp
       }
     });
 
@@ -111,11 +109,11 @@ const sendTemplate = async (req, res) => {
     const messageRecord = await Message.create({
       user_id: userId,
       device_id: device.id,
-      to: to,
+      to_number: to,
       content: `Template: ${template_name}`,
-      type: 'template',
+      message_type: 'text',
       status: 'pending',
-      direction: 'outbound',
+      direction: 'outgoing',
       metadata: { template_name, variables }
     });
 
@@ -190,11 +188,11 @@ const sendBulk = async (req, res) => {
       const messageRecord = await Message.create({
         user_id: userId,
         device_id: device.id,
-        to: recipient,
+        to_number: recipient,
         content: message,
-        type: type,
+        message_type: type,
         status: 'pending',
-        direction: 'outbound'
+        direction: 'outgoing'
       });
       messageRecords.push(messageRecord);
     }
@@ -234,7 +232,7 @@ const getMessages = async (req, res) => {
 
     const where = { user_id: userId };
     if (status) where.status = status;
-    if (type) where.type = type;
+    if (type) where.message_type = type;
 
     const messages = await Message.findAndCountAll({
       where,
@@ -318,15 +316,15 @@ const getBalance = async (req, res) => {
 
     // Get message counts
     const totalMessages = await Message.count({
-      where: { user_id: userId, direction: 'outbound' }
+      where: { user_id: userId, direction: 'outgoing' }
     });
 
     const sentMessages = await Message.count({
-      where: { user_id: userId, direction: 'outbound', status: 'sent' }
+      where: { user_id: userId, direction: 'outgoing', status: 'sent' }
     });
 
     const failedMessages = await Message.count({
-      where: { user_id: userId, direction: 'outbound', status: 'failed' }
+      where: { user_id: userId, direction: 'outgoing', status: 'failed' }
     });
 
     // TODO: Get actual balance from subscription/plan
