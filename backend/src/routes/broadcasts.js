@@ -48,4 +48,16 @@ router.get('/stats',
   broadcastController.getBroadcastStats
 );
 
+// Get broadcast history
+router.get('/history', 
+  authorize(['admin', 'manager', 'operator', 'viewer']), 
+  broadcastController.getBroadcastHistory
+);
+
+// Create broadcast
+router.post('/create', 
+  authorize(['admin', 'manager', 'operator']), 
+  broadcastController.createBroadcast
+);
+
 module.exports = router; 

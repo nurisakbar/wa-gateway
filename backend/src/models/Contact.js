@@ -28,7 +28,8 @@ const Contact = sequelize.define('Contact', {
     allowNull: false,
     unique: true,
     validate: {
-      is: /^(\+62|62|0)8[1-9][0-9]{6,9}$/
+      len: [7, 20],
+      is: /^(\+\d{1,3}|\d{1,3})?\d{7,14}$/
     }
   },
   email: {

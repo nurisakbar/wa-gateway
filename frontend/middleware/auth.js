@@ -25,26 +25,11 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     return navigateTo('/dashboard')
   }
   
-  // If token exists but no user data, try to initialize auth
-  if (token && !userStr && to.path !== '/login' && to.path !== '/register') {
-    console.log('Token exists but no user data, initializing auth...')
-    try {
-      const authStore = useAuthStore()
-      const initialized = authStore.initializeAuth()
-      
-      if (!initialized) {
-        // Try to fetch user from API
-        console.log('Trying to fetch user from API...')
-        const fetched = await authStore.fetchUser()
-        if (!fetched) {
-          console.log('Failed to fetch user, redirecting to login')
-          return navigateTo('/login')
-        }
-      }
-    } catch (error) {
-      console.error('Auth initialization failed:', error)
-      return navigateTo('/login')
-    }
+  // If token exists, allow access and let the layout handle user fetching
+  // This prevents aggressive redirects during page refreshdb
+  if (token) {
+    console.log('Token found, allowing access - user data will be fetched by layout')
+    return
   }
   
   console.log('Auth middleware passed for:', to.path)

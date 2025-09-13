@@ -1,25 +1,27 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateToken, authorize } = require('../middleware/auth');
-const { validateIdUUID } = require('../middleware/validation');
+const { authenticateToken } = require('../middleware/auth');
 const subscriptionController = require('../controllers/subscriptionController');
 
-// Public routes (no authentication required)
-router.get('/plans', subscriptionController.getSubscriptionPlans);
-router.get('/plans/:id', validateIdUUID, subscriptionController.getSubscriptionPlan);
-
-// Protected routes (authentication required)
+// All routes require authentication
 router.use(authenticateToken);
 
-// User subscription routes
-router.get('/my-subscription', subscriptionController.getUserSubscription);
+// Get subscription plans
+router.get('/plans', subscriptionController.getPlans);
+
+// Get current user subscription
+router.get('/my-subscription', subscriptionController.getCurrentSubscription);
+
+// Subscribe to a plan
 router.post('/subscribe', subscriptionController.subscribeToPlan);
+
+// Upgrade subscription
+router.post('/upgrade', subscriptionController.upgradePlan);
+
+// Cancel subscription
 router.post('/cancel', subscriptionController.cancelSubscription);
-router.get('/usage', subscriptionController.getSubscriptionUsage);
 
-// Admin routes (admin role required)
-router.post('/plans', authorize(['admin']), subscriptionController.createSubscriptionPlan);
-router.put('/plans/:id', authorize(['admin']), validateIdUUID, subscriptionController.updateSubscriptionPlan);
-router.delete('/plans/:id', authorize(['admin']), validateIdUUID, subscriptionController.deleteSubscriptionPlan);
+// Get usage data
+router.get('/usage', subscriptionController.getUsage);
 
-module.exports = router; 
+module.exports = router;

@@ -64,31 +64,20 @@ const config = {
 const env = process.env.NODE_ENV || 'development';
 const dbConfig = config[env];
 
-// Create Sequelize instance
-let sequelize;
-
-if (dbConfig.dialect === 'sqlite') {
-  sequelize = new Sequelize({
-    dialect: 'sqlite',
-    storage: process.env.DB_STORAGE || './database/wa_gateway.sqlite',
+// Create Sequelize instance - MySQL only
+const sequelize = new Sequelize(
+  dbConfig.database,
+  dbConfig.username,
+  dbConfig.password,
+  {
+    host: dbConfig.host,
+    port: dbConfig.port,
+    dialect: dbConfig.dialect,
     logging: dbConfig.logging,
+    pool: dbConfig.pool,
     define: dbConfig.define
-  });
-} else {
-  sequelize = new Sequelize(
-    dbConfig.database,
-    dbConfig.username,
-    dbConfig.password,
-    {
-      host: dbConfig.host,
-      port: dbConfig.port,
-      dialect: dbConfig.dialect,
-      logging: dbConfig.logging,
-      pool: dbConfig.pool,
-      define: dbConfig.define
-    }
-  );
-}
+  }
+);
 
 // Test database connection
 const testConnection = async () => {
@@ -102,10 +91,10 @@ const testConnection = async () => {
   }
 };
 
-// Sync database (create tables if they don't exist)
-const syncDatabase = async (force = false) => {
+// Sync database (create/alter tables to match models)
+const syncDatabase = async (force = false, alter = (process.env.NODE_ENV === 'development')) => {
   try {
-    await sequelize.sync({ force });
+    await sequelize.sync({ force, alter });
     console.log('✅ Database synchronized successfully.');
     return true;
   } catch (error) {

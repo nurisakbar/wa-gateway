@@ -5,45 +5,73 @@ const { logError, logInfo } = require('../utils/logger');
 const sendMessage = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { to, message, device_id, type = 'text' } = req.body;
+    const { to, device_id } = req.body;
+    // Support flexible payloads: text or media URL
+    const textMessage = req.body.message || req.body.text;
+    const mediaUrl = req.body.media_url || req.body.url || req.body.mediaUrl || req.body.file_url || req.body.fileUrl;
+    const mimeTypeOverride = req.body.mime_type || req.body.mimetype;
+    const fileNameOverride = req.body.file_name || req.body.filename;
 
-    // Validate input
-    if (!to || !message) {
+    // Reject interactive payloads here; they belong to /send-interactive
+    if (req.body.template_buttons || req.body.list_message || req.body.buttons) {
       return res.status(400).json({
         success: false,
-        message: 'Phone number and message are required'
+        message: 'Interactive payload detected. Use /api/v1/whatsapp/send-interactive for template buttons or list messages.'
       });
     }
 
-    // Find active device
+    // Check for valid message content: text or media only
+    const hasValidContent = textMessage || mediaUrl;
+    
+    if (!to || !hasValidContent) {
+      return res.status(400).json({
+        success: false,
+        message: 'Provide: to and (message OR media_url OR template_buttons OR list_message)'
+      });
+    }
+
+    // Resolve device: explicit device_id > apiKey bound device > any user device
     let device;
     if (device_id) {
-      device = await Device.findOne({
-        where: { id: device_id, user_id: userId, status: 'connected' }
-      });
+      device = await Device.findOne({ where: { id: device_id, user_id: userId } });
+    } else if (req.apiKey?.device_id) {
+      device = await Device.findOne({ where: { id: req.apiKey.device_id, user_id: userId } });
     } else {
-      device = await Device.findOne({
-        where: { user_id: userId, status: 'connected' }
-      });
+      device = await Device.findOne({ where: { user_id: userId } });
     }
 
     if (!device) {
-      return res.status(400).json({
-        success: false,
-        message: 'No connected device available'
-      });
+      return res.status(404).json({ success: false, message: 'Device not found for this user' });
     }
 
-    // Send message via appropriate service
+    // Verify live connection, not just DB flag
+    const whatsappService = require('../services/whatsappService');
+    let status = await whatsappService.getConnectionStatus(device.id);
+    if (!status.connected) {
+      logInfo(`Device ${device.id} not live-connected. Attempting auto-reconnect...`);
+      try {
+        await whatsappService.reconnectDevice(device.id);
+        await new Promise(r => setTimeout(r, 3000));
+        status = await whatsappService.getConnectionStatus(device.id);
+      } catch (e) {
+        // ignore and fall through to error response below
+      }
+      if (!status.connected) {
+        return res.status(400).json({ success: false, message: 'Device not connected' });
+      }
+    }
+
+    // Send via service
+    const messageService = require('../services/messageService');
     let result;
-    if (type === 'media' && req.body.media_url) {
-      // Send media message
-      const messageService = require('../services/messageService');
-      result = await messageService.sendMediaMessage(device.id, to, req.body.media_url, message);
+    if (mediaUrl) {
+      logInfo(`API media send detected url=${mediaUrl}`, 'WHATSAPP_API');
+      const options = {};
+      if (mimeTypeOverride) options.mimeType = mimeTypeOverride;
+      if (fileNameOverride) options.fileName = fileNameOverride;
+      result = await messageService.sendMediaMessage(device.id, to, mediaUrl, textMessage || '', options);
     } else {
-      // Send text message
-      const messageService = require('../services/messageService');
-      result = await messageService.sendTextMessage(device.id, to, message);
+      result = await messageService.sendTextMessage(device.id, to, textMessage);
     }
 
     logInfo(`Message sent via API: ${result.database_id} to ${to}`, 'WHATSAPP_API');
@@ -66,6 +94,82 @@ const sendMessage = async (req, res) => {
       message: 'Failed to send message',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
+  }
+};
+
+// Send interactive (template buttons or list message)
+const sendInteractive = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { to, device_id } = req.body;
+    const textMessage = req.body.message || req.body.text;
+
+    if (!to || !(req.body.template_buttons || req.body.list_message || req.body.buttons)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Provide: to and (template_buttons OR list_message)'
+      });
+    }
+
+    // Resolve device: explicit device_id > apiKey bound device > any user device
+    let device;
+    if (device_id) {
+      device = await Device.findOne({ where: { id: device_id, user_id: userId } });
+    } else if (req.apiKey?.device_id) {
+      device = await Device.findOne({ where: { id: req.apiKey.device_id, user_id: userId } });
+    } else {
+      device = await Device.findOne({ where: { user_id: userId } });
+    }
+
+    if (!device) {
+      return res.status(404).json({ success: false, message: 'Device not found for this user' });
+    }
+
+    const whatsappService = require('../services/whatsappService');
+    let status = await whatsappService.getConnectionStatus(device.id);
+    if (!status.connected) {
+      logInfo(`Device ${device.id} not live-connected. Attempting auto-reconnect...`);
+      try {
+        await whatsappService.reconnectDevice(device.id);
+        await new Promise(r => setTimeout(r, 3000));
+        status = await whatsappService.getConnectionStatus(device.id);
+      } catch (e) {
+        // ignore and fall through to error response below
+      }
+      if (!status.connected) {
+        return res.status(400).json({ success: false, message: 'Device not connected' });
+      }
+    }
+
+    const payload = {};
+    if (req.body.list_message) {
+      const lm = req.body.list_message;
+      payload.text = textMessage || lm.text || 'Choose an option';
+      if (lm.title) payload.title = lm.title;
+      if (lm.footer) payload.footer = lm.footer;
+      payload.buttonText = lm.button_text || 'Select';
+      payload.sections = lm.sections || [];
+    } else {
+      payload.text = textMessage || '';
+      if (req.body.template_buttons) payload.templateButtons = req.body.template_buttons;
+      if (req.body.buttons) payload.buttons = req.body.buttons;
+      if (req.body.header_type !== undefined) payload.headerType = req.body.header_type;
+    }
+
+    const result = await whatsappService.sendMessage(device.id, to, payload, {});
+
+    res.json({
+      success: true,
+      message: 'Interactive message sent successfully',
+      data: {
+        message_id: result.messageId,
+        status: 'sent',
+        sent_at: new Date()
+      }
+    });
+  } catch (error) {
+    logError(error, 'Send Interactive API Error');
+    res.status(500).json({ success: false, message: 'Failed to send interactive message' });
   }
 };
 
@@ -406,6 +510,7 @@ const handleWebhook = async (req, res) => {
 
 module.exports = {
   sendMessage,
+  sendInteractive,
   sendTemplate,
   sendBulk,
   getMessages,

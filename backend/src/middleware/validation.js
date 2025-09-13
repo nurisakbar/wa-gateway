@@ -183,7 +183,7 @@ const validateContactCreation = [
     .isLength({ min: 1, max: 100 })
     .withMessage('Contact name must be between 1 and 100 characters'),
   
-  body('phone')
+  body('phone_number')
     .trim()
     .notEmpty()
     .withMessage('Phone number is required')
@@ -220,7 +220,7 @@ const validateContactUpdate = [
     .isLength({ min: 1, max: 100 })
     .withMessage('Contact name must be between 1 and 100 characters'),
   
-  body('phone')
+  body('phone_number')
     .optional()
     .trim()
     .custom(value => {

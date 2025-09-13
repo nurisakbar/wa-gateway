@@ -48,6 +48,21 @@ export const useContactStore = defineStore('contacts', {
   },
 
   actions: {
+    // Normalize backend contact payloads into the frontend Contact shape
+    normalizeContact(raw: any): Contact {
+      return {
+        id: raw.id,
+        user_id: raw.user_id,
+        name: raw.name,
+        phone_number: raw.phone_number ?? raw.phone ?? '',
+        email: raw.email ?? undefined,
+        tags: Array.isArray(raw.tags) ? raw.tags : [],
+        // Derive is_active when backend doesn't provide it; treat not blocked as active
+        is_active: typeof raw.is_active === 'boolean' ? raw.is_active : (typeof raw.is_blocked === 'boolean' ? !raw.is_blocked : true),
+        created_at: raw.created_at,
+        updated_at: raw.updated_at
+      }
+    },
     async fetchContacts() {
       this.loading = true
       this.error = null
@@ -63,7 +78,8 @@ export const useContactStore = defineStore('contacts', {
         })
 
         if (response.success) {
-          this.contacts = response.data.contacts || []
+          const raw = (Array.isArray(response.data) ? response.data : (response.data?.contacts || []))
+          this.contacts = raw.map((c: any) => this.normalizeContact(c))
           return { success: true, contacts: this.contacts }
         }
       } catch (error: any) {
@@ -98,7 +114,7 @@ export const useContactStore = defineStore('contacts', {
         })
 
         if (response.success) {
-          const newContact = response.data.contact
+          const newContact = this.normalizeContact(response.data.contact)
           this.contacts.push(newContact)
           return { success: true, contact: newContact }
         }
@@ -128,7 +144,7 @@ export const useContactStore = defineStore('contacts', {
         })
 
         if (response.success) {
-          const updatedContact = response.data.contact
+          const updatedContact = this.normalizeContact(response.data.contact)
           const index = this.contacts.findIndex(c => c.id === contactId)
           if (index !== -1) {
             this.contacts[index] = updatedContact
@@ -192,7 +208,7 @@ export const useContactStore = defineStore('contacts', {
         })
 
         if (response.success) {
-          const importedContacts = response.data.contacts
+          const importedContacts = (response.data.contacts || []).map((c: any) => this.normalizeContact(c))
           this.contacts.push(...importedContacts)
           return { 
             success: true, 
@@ -279,7 +295,7 @@ export const useContactStore = defineStore('contacts', {
         })
 
         if (response.success) {
-          const updatedContacts = response.data.contacts
+          const updatedContacts = (response.data.contacts || []).map((c: any) => this.normalizeContact(c))
           updatedContacts.forEach(updatedContact => {
             const index = this.contacts.findIndex(c => c.id === updatedContact.id)
             if (index !== -1) {

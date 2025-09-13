@@ -99,10 +99,10 @@ class ContactController {
   async createContact(req, res) {
     try {
       const userId = req.user.id;
-      const { name, phone, email, organization, notes, tags } = req.body;
+      const { name, phone_number, email, organization, notes, tags } = req.body;
 
       // Format phone number
-      const formattedPhone = formatPhoneNumber(phone);
+      const formattedPhone = formatPhoneNumber(phone_number);
 
       // Check if contact already exists
       const existingContact = await Contact.findByPhone(formattedPhone, userId);
@@ -129,7 +129,7 @@ class ContactController {
       res.status(201).json({
         success: true,
         message: 'Contact created successfully',
-        data: contact
+        data: { contact }
       });
 
     } catch (error) {
@@ -147,7 +147,7 @@ class ContactController {
     try {
       const { contactId } = req.params;
       const userId = req.user.id;
-      const { name, phone, email, organization, notes, tags } = req.body;
+      const { name, phone_number, email, organization, notes, tags } = req.body;
 
       // Find contact
       const contact = await Contact.findOne({
@@ -162,8 +162,8 @@ class ContactController {
       }
 
       // Check if new phone number conflicts with existing contact
-      if (phone && phone !== contact.phone) {
-        const formattedPhone = formatPhoneNumber(phone);
+      if (phone_number && phone_number !== contact.phone) {
+        const formattedPhone = formatPhoneNumber(phone_number);
         const existingContact = await Contact.findByPhone(formattedPhone, userId);
         if (existingContact && existingContact.id !== contactId) {
           return res.status(400).json({
@@ -176,7 +176,7 @@ class ContactController {
       // Update contact
       const updateData = {};
       if (name !== undefined) updateData.name = name;
-      if (phone !== undefined) updateData.phone = formatPhoneNumber(phone);
+      if (phone_number !== undefined) updateData.phone = formatPhoneNumber(phone_number);
       if (email !== undefined) updateData.email = email;
       if (organization !== undefined) updateData.organization = organization;
       if (notes !== undefined) updateData.notes = notes;
@@ -189,7 +189,7 @@ class ContactController {
       res.json({
         success: true,
         message: 'Contact updated successfully',
-        data: contact
+        data: { contact }
       });
 
     } catch (error) {
@@ -507,17 +507,17 @@ class ContactController {
 
       for (const contactData of contacts) {
         try {
-          const { name, phone, email, organization, notes, tags } = contactData;
+          const { name, phone_number, email, organization, notes, tags } = contactData;
 
-          if (!name || !phone) {
+          if (!name || !phone_number) {
             results.errors.push({
               contact: contactData,
-              error: 'Name and phone are required'
+              error: 'Name and phone_number are required'
             });
             continue;
           }
 
-          const formattedPhone = formatPhoneNumber(phone);
+          const formattedPhone = formatPhoneNumber(phone_number);
 
           // Try to create or update contact
           const contact = await Contact.updateOrCreate(userId, formattedPhone, {

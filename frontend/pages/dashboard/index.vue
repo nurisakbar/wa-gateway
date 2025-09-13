@@ -2,6 +2,32 @@
   <div class="dashboard-page">
     <!-- Welcome Section -->
 
+    <!-- Subscription Warning Banner -->
+    <div v-if="user && !hasActiveSubscription && user.role !== 'admin' && user.role !== 'super_admin'" class="subscription-warning-banner mb-4">
+      <div class="modern-alert">
+        <div class="d-flex align-items-center justify-content-between">
+          <div class="alert-content">
+            <div class="d-flex align-items-center mb-2">
+              <i class="bi bi-star-fill text-primary me-2"></i>
+              <h5 class="mb-0 fw-bold text-dark">Ayo Berlangganan Sekarang!</h5>
+            </div>
+            <p class="mb-1 text-muted small">
+              Nikmati semua fitur WA Gateway tanpa batas. Dengan berlangganan, Anda bisa menambahkan device, mengirim pesan otomatis, hingga akses penuh API.
+            </p>
+            <p class="mb-0 text-dark small fw-medium">
+              Jangan biarkan bisnis Anda terhambat—aktifkan paket langganan sekarang!
+            </p>
+          </div>
+          <div class="alert-actions ms-3">
+            <NuxtLink to="/subscriptions" class="btn btn-primary btn-sm px-3">
+              <i class="bi bi-star-fill me-1"></i>
+              Berlangganan
+            </NuxtLink>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Statistics Cards -->
     <div class="row mb-4">
       <div class="col-lg-3 col-md-6 mb-3">
@@ -271,13 +297,15 @@
 
 <script setup>
 import { Chart } from 'chart.js'
+import { storeToRefs } from 'pinia'
 
 definePageMeta({
   layout: 'dashboard',
   middleware: 'auth'
 })
 
-const { user } = useAuth()
+const authStore = useAuthStore()
+const { user, hasActiveSubscription } = storeToRefs(authStore)
 const { $toast } = useNuxtApp()
 
 // Reactive data
@@ -304,19 +332,38 @@ const fetchAnalytics = async () => {
   try {
     const config = useRuntimeConfig()
     const token = localStorage.getItem('auth_token')
+    
+    if (!token) {
+      console.log('fetchAnalytics - No token found')
+      return
+    }
+    
     const response = await $fetch(`${config.public.apiBase}/analytics/user`, {
       query: { period: selectedPeriod.value },
       headers: {
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
       }
     })
     
-    if (response.success) {
+    console.log('Analytics response:', response)
+    
+    if (response && response.success) {
       analytics.value = response.data
       updateCharts()
     }
   } catch (error) {
     console.error('Error fetching analytics:', error)
+    
+    // Handle 401 specifically
+    if (error.status === 401 || error.statusCode === 401) {
+      console.log('Analytics - Token expired, logging out')
+      const authStore = useAuthStore()
+      authStore.logout()
+      return
+    }
+    
+    // For other errors, show toast but don't logout
     $toast.error('Gagal memuat data analytics')
   }
 }
@@ -326,17 +373,36 @@ const fetchRealtimeData = async () => {
   try {
     const config = useRuntimeConfig()
     const token = localStorage.getItem('auth_token')
+    
+    if (!token) {
+      console.log('fetchRealtimeData - No token found')
+      return
+    }
+    
     const response = await $fetch(`${config.public.apiBase}/analytics/realtime`, {
       headers: {
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
       }
     })
     
-    if (response.success) {
+    console.log('Realtime response:', response)
+    
+    if (response && response.success) {
       realtimeData.value = response.data
     }
   } catch (error) {
     console.error('Error fetching real-time data:', error)
+    
+    // Handle 401 specifically
+    if (error.status === 401 || error.statusCode === 401) {
+      console.log('Realtime - Token expired, logging out')
+      const authStore = useAuthStore()
+      authStore.logout()
+      return
+    }
+    
+    // For other errors, just log (don't show toast for realtime data)
   }
 }
 
@@ -482,6 +548,34 @@ const getActivityIcon = (type) => {
 
 // Initialize data
 onMounted(async () => {
+  // Wait for auth to be initialized
+  const authStore = useAuthStore()
+  
+  // Check if we have a token
+  const token = localStorage.getItem('auth_token')
+  if (!token) {
+    console.log('Dashboard - No token found, redirecting to login')
+    return navigateTo('/login')
+  }
+  
+  // If we have token but no user, wait for auth initialization
+  if (!authStore.user) {
+    console.log('Dashboard - Token found but no user, waiting for auth initialization...')
+    // Wait a bit for auth to initialize
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    
+    // If still no user after waiting, try to fetch user
+    if (!authStore.user) {
+      try {
+        await authStore.fetchUser()
+      } catch (error) {
+        console.error('Dashboard - Failed to fetch user:', error)
+        return navigateTo('/login')
+      }
+    }
+  }
+  
+  console.log('Dashboard - Auth ready, fetching analytics...')
   await Promise.all([
     fetchAnalytics(),
     fetchRealtimeData()
@@ -505,6 +599,77 @@ onUnmounted(() => {
 <style scoped>
 .dashboard-page {
   padding: 1.5rem;
+}
+
+/* Modern Subscription Alert Styles */
+.subscription-warning-banner {
+  animation: fadeInUp 0.4s ease-out;
+}
+
+.modern-alert {
+  background: #ffffff;
+  border: 1px solid #e3f2fd;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-left: 4px solid #2196f3;
+  transition: all 0.3s ease;
+}
+
+.modern-alert:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
+}
+
+.modern-alert .alert-content h5 {
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.modern-alert .alert-content p {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  margin-bottom: 0.25rem;
+}
+
+.modern-alert .btn-primary {
+  background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.875rem;
+  padding: 0.5rem 1rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(33, 150, 243, 0.2);
+}
+
+.modern-alert .btn-primary:hover {
+  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(33, 150, 243, 0.3);
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .welcome-section {

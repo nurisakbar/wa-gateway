@@ -353,6 +353,140 @@ class MessageController {
     }
   }
 
+  // Get sent messages only
+  async getSentMessages(req, res) {
+    try {
+      const userId = req.user.id;
+      const { page = 1, limit = 20, type, status, search, from_date, to_date } = req.query;
+
+      // Build where clause for sent messages
+      const whereClause = { 
+        user_id: userId,
+        direction: 'outgoing'
+      };
+      
+      if (type) whereClause.message_type = type;
+      if (status) whereClause.status = status;
+      if (from_date) whereClause.created_at = { [require('sequelize').Op.gte]: new Date(from_date) };
+      if (to_date) {
+        if (whereClause.created_at) {
+          whereClause.created_at[require('sequelize').Op.lte] = new Date(to_date);
+        } else {
+          whereClause.created_at = { [require('sequelize').Op.lte]: new Date(to_date) };
+        }
+      }
+
+      // Get messages with pagination
+      const offset = (page - 1) * limit;
+      const messages = await Message.findAndCountAll({
+        where: whereClause,
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+        order: [['created_at', 'DESC']],
+        include: [
+          {
+            model: Device,
+            as: 'device',
+            attributes: ['id', 'name', 'phone_number']
+          }
+        ]
+      });
+
+      const totalPages = Math.ceil(messages.count / limit);
+
+      res.json({
+        success: true,
+        data: messages.rows,
+        pagination: {
+          current_page: parseInt(page),
+          total_pages: totalPages,
+          total_items: messages.count,
+          items_per_page: parseInt(limit)
+        }
+      });
+
+    } catch (error) {
+      logError(error, 'Error getting sent messages');
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  }
+
+  // Get chat messages only (filtered inbox)
+  async getInboxMessages(req, res) {
+    try {
+      const userId = req.user.id;
+      const { page = 1, limit = 20, type, status, search, from_date, to_date } = req.query;
+
+      // Build where clause for inbox messages
+      const whereClause = { 
+        user_id: userId,
+        direction: 'incoming'
+      };
+      
+      if (type) whereClause.message_type = type;
+      if (status) whereClause.status = status;
+      if (from_date) whereClause.created_at = { [require('sequelize').Op.gte]: new Date(from_date) };
+      if (to_date) {
+        if (whereClause.created_at) {
+          whereClause.created_at[require('sequelize').Op.lte] = new Date(to_date);
+        } else {
+          whereClause.created_at = { [require('sequelize').Op.lte]: new Date(to_date) };
+        }
+      }
+
+      // Get messages with pagination
+      const offset = (page - 1) * limit;
+      const messages = await Message.findAndCountAll({
+        where: whereClause,
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+        order: [['created_at', 'DESC']],
+        include: [
+          {
+            model: Device,
+            as: 'device',
+            attributes: ['id', 'name', 'phone_number']
+          }
+        ]
+      });
+
+      // Filter out system messages and status updates
+      const filteredMessages = messages.rows.filter(msg => {
+        const fromNumber = msg.from_number;
+        // Only show messages from real phone numbers (no @ symbols, only digits, 10+ chars)
+        return fromNumber && 
+               !fromNumber.includes('@') && 
+               /^[0-9]+$/.test(fromNumber) && 
+               fromNumber.length >= 10;
+      });
+
+      const filteredTotalPages = Math.ceil(filteredMessages.length / limit);
+
+      res.json({
+        success: true,
+        data: filteredMessages,
+        pagination: {
+          current_page: parseInt(page),
+          total_pages: filteredTotalPages,
+          total_items: filteredMessages.length,
+          items_per_page: parseInt(limit)
+        }
+      });
+
+    } catch (error) {
+      logError(error, 'Error getting inbox messages');
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  }
+
   // Get conversation with a specific number
   async getConversation(req, res) {
     try {

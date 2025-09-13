@@ -1,251 +1,59 @@
-const { SubscriptionPlan, UserSubscription, User } = require('../models');
+const { SubscriptionPlan, UserSubscription, User, Device, Message, ApiUsage } = require('../models');
 const { logError, logInfo } = require('../utils/logger');
 
 // Get all subscription plans
-const getSubscriptionPlans = async (req, res) => {
+const getPlans = async (req, res) => {
   try {
     const plans = await SubscriptionPlan.findAll({
       where: { is_active: true },
-      order: [['sort_order', 'ASC'], ['price', 'ASC']]
+      order: [['sort_order', 'ASC']]
     });
 
     res.json({
       success: true,
-      data: plans
+      data: { plans }
     });
-
   } catch (error) {
-    logError(error, 'Get Subscription Plans Error');
+    logError(error, 'Get subscription plans error');
     res.status(500).json({
       success: false,
-      message: 'Failed to get subscription plans',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      message: 'Failed to fetch subscription plans'
     });
   }
 };
 
-// Get subscription plan by ID
-const getSubscriptionPlan = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const plan = await SubscriptionPlan.findByPk(id);
-
-    if (!plan) {
-      return res.status(404).json({
-        success: false,
-        message: 'Subscription plan not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      data: plan
-    });
-
-  } catch (error) {
-    logError(error, 'Get Subscription Plan Error');
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get subscription plan',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-};
-
-// Create subscription plan (Admin only)
-const createSubscriptionPlan = async (req, res) => {
-  try {
-    const {
-      name,
-      description,
-      price,
-      currency = 'USD',
-      billing_cycle = 'monthly',
-      features,
-      limits,
-      is_popular = false,
-      sort_order = 0
-    } = req.body;
-
-    // Validate required fields
-    if (!name || !price) {
-      return res.status(400).json({
-        success: false,
-        message: 'Name and price are required'
-      });
-    }
-
-    // Check if plan name already exists
-    const existingPlan = await SubscriptionPlan.findOne({
-      where: { name }
-    });
-
-    if (existingPlan) {
-      return res.status(400).json({
-        success: false,
-        message: 'Subscription plan with this name already exists'
-      });
-    }
-
-    const plan = await SubscriptionPlan.create({
-      name,
-      description,
-      price,
-      currency,
-      billing_cycle,
-      features: features || {},
-      limits: limits || {
-        messages_per_month: 1000,
-        api_requests_per_month: 10000,
-        devices: 1,
-        webhooks: 5,
-        storage_gb: 1,
-        support_level: 'email'
-      },
-      is_popular,
-      sort_order
-    });
-
-    logInfo(`Subscription plan created: ${plan.name}`, 'Subscription Plan Created');
-
-    res.status(201).json({
-      success: true,
-      message: 'Subscription plan created successfully',
-      data: plan
-    });
-
-  } catch (error) {
-    logError(error, 'Create Subscription Plan Error');
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create subscription plan',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-};
-
-// Update subscription plan (Admin only)
-const updateSubscriptionPlan = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const updateData = req.body;
-
-    const plan = await SubscriptionPlan.findByPk(id);
-
-    if (!plan) {
-      return res.status(404).json({
-        success: false,
-        message: 'Subscription plan not found'
-      });
-    }
-
-    // Check if name is being updated and if it conflicts
-    if (updateData.name && updateData.name !== plan.name) {
-      const existingPlan = await SubscriptionPlan.findOne({
-        where: { name: updateData.name }
-      });
-
-      if (existingPlan) {
-        return res.status(400).json({
-          success: false,
-          message: 'Subscription plan with this name already exists'
-        });
-      }
-    }
-
-    await plan.update(updateData);
-
-    logInfo(`Subscription plan updated: ${plan.name}`, 'Subscription Plan Updated');
-
-    res.json({
-      success: true,
-      message: 'Subscription plan updated successfully',
-      data: plan
-    });
-
-  } catch (error) {
-    logError(error, 'Update Subscription Plan Error');
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update subscription plan',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-};
-
-// Delete subscription plan (Admin only)
-const deleteSubscriptionPlan = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const plan = await SubscriptionPlan.findByPk(id);
-
-    if (!plan) {
-      return res.status(404).json({
-        success: false,
-        message: 'Subscription plan not found'
-      });
-    }
-
-    // Check if plan has active subscriptions
-    const activeSubscriptions = await UserSubscription.count({
-      where: { plan_id: id, status: 'active' }
-    });
-
-    if (activeSubscriptions > 0) {
-      return res.status(400).json({
-        success: false,
-        message: `Cannot delete plan with ${activeSubscriptions} active subscriptions`
-      });
-    }
-
-    await plan.destroy();
-
-    logInfo(`Subscription plan deleted: ${plan.name}`, 'Subscription Plan Deleted');
-
-    res.json({
-      success: true,
-      message: 'Subscription plan deleted successfully'
-    });
-
-  } catch (error) {
-    logError(error, 'Delete Subscription Plan Error');
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete subscription plan',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-};
-
-// Get user's current subscription
-const getUserSubscription = async (req, res) => {
+// Get current user subscription
+const getCurrentSubscription = async (req, res) => {
   try {
     const userId = req.user.id;
-
+    
     const subscription = await UserSubscription.findOne({
-      where: { user_id: userId, status: 'active' },
-      include: [
-        {
-          model: SubscriptionPlan,
-          as: 'plan'
-        }
-      ],
-      order: [['created_at', 'DESC']]
+      where: { 
+        user_id: userId,
+        status: ['active', 'trialing']
+      },
+      include: [{
+        model: SubscriptionPlan,
+        as: 'plan'
+      }]
     });
+
+    if (!subscription) {
+      return res.status(404).json({
+        success: false,
+        message: 'No active subscription found'
+      });
+    }
 
     res.json({
       success: true,
       data: subscription
     });
-
   } catch (error) {
-    logError(error, 'Get User Subscription Error');
+    logError(error, 'Get current subscription error');
     res.status(500).json({
       success: false,
-      message: 'Failed to get user subscription',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      message: 'Failed to fetch current subscription'
     });
   }
 };
@@ -254,70 +62,136 @@ const getUserSubscription = async (req, res) => {
 const subscribeToPlan = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { plan_id, payment_method_id } = req.body;
+    const { plan_id, billing_cycle = 'monthly' } = req.body;
 
-    // Validate plan exists
+    if (!plan_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Plan ID is required'
+      });
+    }
+
+    // Get the plan
     const plan = await SubscriptionPlan.findByPk(plan_id);
-    if (!plan || !plan.is_active) {
+    if (!plan) {
       return res.status(404).json({
         success: false,
-        message: 'Subscription plan not found or inactive'
+        message: 'Subscription plan not found'
       });
     }
 
     // Check if user already has an active subscription
     const existingSubscription = await UserSubscription.findOne({
-      where: { user_id: userId, status: 'active' }
+      where: { 
+        user_id: userId,
+        status: 'active'
+      }
     });
 
     if (existingSubscription) {
       return res.status(400).json({
         success: false,
-        message: 'User already has an active subscription'
+        message: 'User already has an active subscription. Use upgrade endpoint instead.'
       });
     }
 
-    // Calculate subscription dates
+    // Calculate billing dates
     const now = new Date();
     const currentPeriodStart = now;
-    let currentPeriodEnd;
-
-    if (plan.billing_cycle === 'monthly') {
-      currentPeriodEnd = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
-    } else if (plan.billing_cycle === 'yearly') {
-      currentPeriodEnd = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate());
-    }
+    const currentPeriodEnd = new Date(now);
+    currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + 1);
 
     // Create subscription
     const subscription = await UserSubscription.create({
       user_id: userId,
-      plan_id: plan_id,
+      plan_id: plan.id,
       status: 'active',
+      billing_cycle: billing_cycle,
       current_period_start: currentPeriodStart,
       current_period_end: currentPeriodEnd,
-      payment_method_id: payment_method_id || null,
-      metadata: {
-        subscribed_at: now.toISOString(),
-        plan_name: plan.name,
-        plan_price: plan.price,
-        plan_currency: plan.currency
+      price: plan.price,
+      currency: plan.currency
+    });
+
+    logInfo(`User ${userId} subscribed to plan ${plan.name}`);
+
+    res.json({
+      success: true,
+      message: 'Successfully subscribed to plan',
+      data: {
+        subscription,
+        plan
+      }
+    });
+  } catch (error) {
+    logError(error, 'Subscribe to plan error');
+    res.status(500).json({
+      success: false,
+      message: 'Failed to subscribe to plan'
+    });
+  }
+};
+
+// Upgrade subscription
+const upgradePlan = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { plan_id, billing_cycle = 'monthly' } = req.body;
+
+    if (!plan_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Plan ID is required'
+      });
+    }
+
+    // Get the plan
+    const plan = await SubscriptionPlan.findByPk(plan_id);
+    if (!plan) {
+      return res.status(404).json({
+        success: false,
+        message: 'Subscription plan not found'
+      });
+    }
+
+    // Get current subscription
+    const currentSubscription = await UserSubscription.findOne({
+      where: { 
+        user_id: userId,
+        status: 'active'
       }
     });
 
-    logInfo(`User ${userId} subscribed to plan: ${plan.name}`, 'User Subscription Created');
+    if (!currentSubscription) {
+      return res.status(400).json({
+        success: false,
+        message: 'No active subscription found. Use subscribe endpoint instead.'
+      });
+    }
 
-    res.status(201).json({
-      success: true,
-      message: 'Successfully subscribed to plan',
-      data: subscription
+    // Update subscription
+    await currentSubscription.update({
+      plan_id: plan.id,
+      price: plan.price,
+      currency: plan.currency,
+      billing_cycle: billing_cycle
     });
 
+    logInfo(`User ${userId} upgraded to plan ${plan.name}`);
+
+    res.json({
+      success: true,
+      message: 'Successfully upgraded subscription',
+      data: {
+        subscription: currentSubscription,
+        plan
+      }
+    });
   } catch (error) {
-    logError(error, 'Subscribe to Plan Error');
+    logError(error, 'Upgrade plan error');
     res.status(500).json({
       success: false,
-      message: 'Failed to subscribe to plan',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      message: 'Failed to upgrade plan'
     });
   }
 };
@@ -329,7 +203,10 @@ const cancelSubscription = async (req, res) => {
     const { cancel_at_period_end = true } = req.body;
 
     const subscription = await UserSubscription.findOne({
-      where: { user_id: userId, status: 'active' }
+      where: { 
+        user_id: userId,
+        status: 'active'
+      }
     });
 
     if (!subscription) {
@@ -340,109 +217,116 @@ const cancelSubscription = async (req, res) => {
     }
 
     if (cancel_at_period_end) {
-      // Cancel at period end
       await subscription.update({
-        cancel_at_period_end: true,
-        cancelled_at: new Date()
+        cancel_at_period_end: true
       });
-
-      logInfo(`User ${userId} cancelled subscription at period end`, 'Subscription Cancelled');
     } else {
-      // Cancel immediately
       await subscription.update({
         status: 'cancelled',
         cancelled_at: new Date()
       });
-
-      logInfo(`User ${userId} cancelled subscription immediately`, 'Subscription Cancelled');
     }
+
+    logInfo(`User ${userId} cancelled subscription`);
 
     res.json({
       success: true,
-      message: cancel_at_period_end 
-        ? 'Subscription will be cancelled at the end of current period'
-        : 'Subscription cancelled immediately'
+      message: 'Subscription cancelled successfully'
     });
-
   } catch (error) {
-    logError(error, 'Cancel Subscription Error');
+    logError(error, 'Cancel subscription error');
     res.status(500).json({
       success: false,
-      message: 'Failed to cancel subscription',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      message: 'Failed to cancel subscription'
     });
   }
 };
 
-// Get subscription usage
-const getSubscriptionUsage = async (req, res) => {
+// Get usage data
+const getUsage = async (req, res) => {
   try {
     const userId = req.user.id;
-
+    
+    // Get current subscription
     const subscription = await UserSubscription.findOne({
-      where: { user_id: userId, status: 'active' },
-      include: [
-        {
-          model: SubscriptionPlan,
-          as: 'plan'
-        }
-      ]
+      where: { 
+        user_id: userId,
+        status: ['active', 'trialing']
+      },
+      include: [{
+        model: SubscriptionPlan,
+        as: 'plan'
+      }]
     });
 
-    // Get current usage (this would be implemented based on your tracking system)
-    const currentUsage = {
-      messages_used: 0, // Get from ApiUsage table
-      api_requests_used: 0, // Get from ApiUsage table
-      devices_used: 0, // Get from Device table
-      webhooks_used: 0, // Get from Webhook table
-      storage_used_gb: 0 // Get from file storage
+    if (!subscription) {
+      return res.status(404).json({
+        success: false,
+        message: 'No active subscription found'
+      });
+    }
+
+    const plan = subscription.plan;
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    // Get usage for current month
+    const [messageCount, deviceCount, apiUsageCount] = await Promise.all([
+      Message.count({
+        where: {
+          user_id: userId,
+          created_at: {
+            [require('sequelize').Op.gte]: startOfMonth
+          }
+        }
+      }),
+      Device.count({
+        where: { user_id: userId }
+      }),
+      ApiUsage.count({
+        where: {
+          user_id: userId,
+          created_at: {
+            [require('sequelize').Op.gte]: startOfMonth
+          }
+        }
+      })
+    ]);
+
+    const usage = {
+      messages_used: messageCount,
+      devices_used: deviceCount,
+      api_requests_used: apiUsageCount
     };
 
-    // Default limits when no subscription
-    const defaultLimits = {
-      messages_per_month: 0,
-      api_requests_per_month: 0,
-      devices: 0,
-      webhooks: 0,
-      storage_gb: 0
+    const limits = {
+      messages_per_month: plan.limits.messages_per_month,
+      devices: plan.limits.devices,
+      api_requests_per_month: plan.limits.api_requests_per_month
     };
-
-    const limits = subscription?.plan?.limits || defaultLimits;
 
     res.json({
       success: true,
       data: {
-        subscription,
-        usage: currentUsage,
+        usage,
         limits,
-        remaining: {
-          messages: Math.max(0, limits.messages_per_month - currentUsage.messages_used),
-          api_requests: Math.max(0, limits.api_requests_per_month - currentUsage.api_requests_used),
-          devices: Math.max(0, limits.devices - currentUsage.devices_used),
-          webhooks: Math.max(0, limits.webhooks - currentUsage.webhooks_used),
-          storage_gb: Math.max(0, limits.storage_gb - currentUsage.storage_used_gb)
-        }
+        subscription
       }
     });
-
   } catch (error) {
-    logError(error, 'Get Subscription Usage Error');
+    logError(error, 'Get usage error');
     res.status(500).json({
       success: false,
-      message: 'Failed to get subscription usage',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      message: 'Failed to fetch usage data'
     });
   }
 };
 
 module.exports = {
-  getSubscriptionPlans,
-  getSubscriptionPlan,
-  createSubscriptionPlan,
-  updateSubscriptionPlan,
-  deleteSubscriptionPlan,
-  getUserSubscription,
+  getPlans,
+  getCurrentSubscription,
   subscribeToPlan,
+  upgradePlan,
   cancelSubscription,
-  getSubscriptionUsage
-}; 
+  getUsage
+};

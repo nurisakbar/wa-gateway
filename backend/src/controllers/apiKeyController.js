@@ -17,9 +17,15 @@ const getUserApiKeys = async (req, res) => {
 
     logInfo(`Retrieved ${apiKeys.length} API keys for user: ${userId}`, 'API_KEY');
 
+    // Add full_key to each API key for display
+    const apiKeysWithFullKey = apiKeys.map(key => ({
+      ...key.toJSON(),
+      full_key: key.getFullKey()
+    }));
+
     res.json({
       success: true,
-      data: apiKeys
+      data: apiKeysWithFullKey
     });
 
   } catch (error) {
@@ -78,6 +84,7 @@ const createApiKey = async (req, res) => {
         id: apiKey.id,
         name: apiKey.name,
         key: key, // Only returned once
+        full_key: key, // Always available for display
         key_prefix: apiKey.key_prefix,
         permissions: apiKey.permissions,
         rate_limit: apiKey.rate_limit,
@@ -277,7 +284,7 @@ const getApiKey = async (req, res) => {
     const apiKey = await ApiKey.findOne({
       where: { id, user_id: userId },
       attributes: [
-        'id', 'name', 'key_prefix', 'permissions', 'rate_limit', 
+        'id', 'name', 'key_prefix', 'key_hash', 'permissions', 'rate_limit', 
         'is_active', 'last_used_at', 'expires_at', 'created_at', 'updated_at'
       ]
     });
@@ -291,7 +298,10 @@ const getApiKey = async (req, res) => {
 
     res.json({
       success: true,
-      data: apiKey
+      data: {
+        ...apiKey.toJSON(),
+        full_key: apiKey.getFullKey()
+      }
     });
 
   } catch (error) {

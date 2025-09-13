@@ -23,16 +23,44 @@
             </NuxtLink>
           </li>
           <li class="nav-item">
+            <NuxtLink to="/docs/api-keys" class="nav-link" active-class="active">
+              <i class="bi bi-journal-text me-2"></i>
+              <span v-if="!sidebarCollapsed">Docs: API Keys</span>
+            </NuxtLink>
+          </li>
+          <li class="nav-item">
             <NuxtLink to="/devices" class="nav-link" active-class="active">
               <i class="bi bi-phone me-2"></i>
               <span v-if="!sidebarCollapsed">Devices</span>
             </NuxtLink>
           </li>
           <li class="nav-item">
-            <NuxtLink to="/messages" class="nav-link" active-class="active">
-              <i class="bi bi-chat-dots me-2"></i>
-              <span v-if="!sidebarCollapsed">Messages</span>
-            </NuxtLink>
+            <a 
+              href="#" 
+              class="nav-link messages-menu-link" 
+              :class="{ 'active': $route.path.startsWith('/messages') }"
+              @click.prevent="toggleMessagesSubmenu"
+            >
+              <div class="d-flex align-items-center">
+                <i class="bi bi-chat-dots me-2"></i>
+                <span v-if="!sidebarCollapsed">Messages</span>
+              </div>
+              <i v-if="!sidebarCollapsed" class="bi bi-chevron-down" :class="{ 'bi-chevron-up': messagesSubmenuOpen }"></i>
+            </a>
+            <ul v-if="!sidebarCollapsed && messagesSubmenuOpen" class="nav flex-column ms-3">
+              <li class="nav-item">
+                <NuxtLink to="/messages/send" class="nav-link submenu-link" active-class="active">
+                  <i class="bi bi-send me-2"></i>
+                  <span>Send</span>
+                </NuxtLink>
+              </li>
+              <li class="nav-item">
+                <NuxtLink to="/messages/inbox" class="nav-link submenu-link" active-class="active">
+                  <i class="bi bi-inbox me-2"></i>
+                  <span>Inbox</span>
+                </NuxtLink>
+              </li>
+            </ul>
           </li>
           <li class="nav-item">
             <NuxtLink to="/contacts" class="nav-link" active-class="active">
@@ -58,12 +86,7 @@
               <span v-if="!sidebarCollapsed">Analytics</span>
             </NuxtLink>
           </li>
-          <li class="nav-item">
-            <NuxtLink to="/api-keys" class="nav-link" active-class="active">
-              <i class="bi bi-key me-2"></i>
-              <span v-if="!sidebarCollapsed">API Keys</span>
-            </NuxtLink>
-          </li>
+          <!-- API Keys menu hidden; token managed per-device -->
           <li class="nav-item">
             <NuxtLink to="/webhooks" class="nav-link" active-class="active">
               <i class="bi bi-plug me-2"></i>
@@ -99,13 +122,13 @@
         <div class="container-fluid">
           <div class="d-flex align-items-center justify-content-between py-2">
             <div class="d-flex align-items-center">
-              <button
+              <!-- <button
                 class="btn btn-link text-dark me-3 d-lg-none"
                 @click="toggleSidebar"
               >
                 <i class="bi bi-list fs-4"></i>
-              </button>
-              <h4 class="mb-0">{{ pageTitle }}</h4>
+              </button> -->
+              <!-- <h4 class="mb-0">{{ pageTitle }}</h4> -->
             </div>
             
             <div class="d-flex align-items-center gap-3">
@@ -204,22 +227,57 @@
 import { storeToRefs } from 'pinia'
 
 const authStore = useAuthStore()
-const { user } = storeToRefs(authStore)
+const { user, hasActiveSubscription } = storeToRefs(authStore)
 const { $toast } = useNuxtApp()
+const currentRoute = useRoute()
+const { checkAndShowSubscriptionAlert } = useSubscriptionAlert()
 
 // Initialize auth on mount
 onMounted(async () => {
-  // Initialize auth store if not already done
-  if (!user.value) {
-    authStore.initializeAuth()
+  // Wait a bit for middleware to complete
+  await nextTick()
+  
+  // Check if we have a token but no user (page refresh scenario)
+  const token = localStorage.getItem('auth_token')
+  if (token && !user.value) {
+    console.log('Layout - Token exists but no user, fetching user data...')
+    try {
+      await authStore.fetchUser()
+    } catch (error) {
+      console.error('Layout - Failed to fetch user:', error)
+      // Don't logout here, let the API calls handle it
+    }
   }
   
-  // If still no user, try to fetch from API
-  const token = localStorage.getItem('auth_token')
-  if (!user.value && token) {
-    await authStore.fetchUser()
+  // Fetch subscription data if user is authenticated
+  if (token && user.value) {
+    try {
+      await authStore.fetchSubscription()
+      // Check and show subscription alert if needed
+      checkAndShowSubscriptionAlert()
+    } catch (error) {
+      console.error('Layout - Failed to fetch subscription:', error)
+    }
+  }
+  
+  // Auto-open messages submenu if on messages pages
+  if (currentRoute.path.startsWith('/messages')) {
+    messagesSubmenuOpen.value = true
   }
 })
+
+// Watch for subscription changes and redirect if needed
+watch([hasActiveSubscription, user], async ([hasSub, currentUser]) => {
+  if (currentUser && !hasSub && currentRoute.path !== '/subscriptions') {
+    // Skip redirect for admin users
+    if (currentUser.role === 'admin' || currentUser.role === 'super_admin') {
+      return
+    }
+    
+    console.log('No active subscription found, redirecting to subscriptions')
+    await navigateTo('/subscriptions')
+  }
+}, { immediate: false })
 
 // Get user display name
 const getUserDisplayName = () => {
@@ -247,6 +305,7 @@ const sidebarCollapsed = ref(false)
 const pageTitle = ref('Dashboard')
 const showUserDropdown = ref(false)
 const userDropdown = ref(null)
+const messagesSubmenuOpen = ref(false)
 
 // Notifications
 const notifications = ref([])
@@ -261,6 +320,11 @@ const handleLogout = async () => {
 // Toggle sidebar
 const toggleSidebar = () => {
   sidebarCollapsed.value = !sidebarCollapsed.value
+}
+
+// Toggle messages submenu
+const toggleMessagesSubmenu = () => {
+  messagesSubmenuOpen.value = !messagesSubmenuOpen.value
 }
 
 // Toggle user dropdown
@@ -298,8 +362,7 @@ onMounted(() => {
 })
 
 // Update page title based on route
-const route = useRoute()
-    watch(() => route.path, (newPath) => {
+watch(() => currentRoute.path, (newPath) => {
       const titles = {
         '/dashboard': 'Dashboard',
         '/devices': 'Device Management',
@@ -311,6 +374,7 @@ const route = useRoute()
         '/api-keys': 'API Key Management',
         '/webhooks': 'Webhook Management',
         '/subscriptions': 'Subscription Plans',
+        '/docs/api-keys': 'API Keys Documentation',
         '/settings': 'Settings'
       }
       pageTitle.value = titles[newPath] || 'Dashboard'
@@ -373,6 +437,8 @@ const route = useRoute()
   padding: 0.75rem 1.5rem;
   border: none;
   transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
 }
 
 .nav-link:hover {
@@ -384,6 +450,37 @@ const route = useRoute()
   color: white;
   background-color: rgba(37, 211, 102, 0.2);
   border-right: 3px solid #25D366;
+}
+
+/* Special styling for Messages menu with submenu */
+.messages-menu-link {
+  justify-content: space-between;
+}
+
+/* Submenu styles */
+.submenu-link {
+  padding: 0.5rem 1.5rem 0.5rem 3rem !important;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.7);
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+}
+
+.submenu-link:hover {
+  color: white;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.submenu-link.active {
+  color: white;
+  background-color: rgba(37, 211, 102, 0.2);
+  border-right: 3px solid #25D366;
+}
+
+.nav-link i.bi-chevron-down,
+.nav-link i.bi-chevron-up {
+  transition: transform 0.2s ease;
 }
 
 .main-content {
@@ -425,6 +522,7 @@ const route = useRoute()
   font-size: 0.75rem;
   line-height: 1.2;
 }
+
 
 /* Responsive */
 @media (max-width: 992px) {

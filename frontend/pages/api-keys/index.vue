@@ -328,9 +328,13 @@
                     <i class="bi bi-clipboard"></i>
                   </button>
                 </div>
-                <div class="form-text text-warning">
+                <div class="form-text text-info" v-if="selectedApiKey.full_key">
+                  <i class="bi bi-info-circle me-1"></i>
+                  Full API key is always available for copying.
+                </div>
+                <div class="form-text text-warning" v-else>
                   <i class="bi bi-exclamation-triangle me-1"></i>
-                  Copy this key now. You won't be able to see it again!
+                  Loading full API key...
                 </div>
               </div>
 
@@ -462,7 +466,8 @@ const fetchApiKeys = async () => {
     })
     
     if (response.success) {
-      apiKeys.value = response.data.apiKeys || []
+      const raw = response.data
+      apiKeys.value = Array.isArray(raw) ? raw : (raw?.apiKeys || [])
     }
   } catch (error) {
     console.error('Error fetching API keys:', error)
@@ -493,9 +498,14 @@ const createApiKey = async () => {
       closeModal()
       await fetchApiKeys()
       
-      // Show the full key to user
-      selectedApiKey.value = response.data
+      // Show the full key to user - ensure full_key is available
+      selectedApiKey.value = {
+        ...response.data,
+        full_key: response.data.full_key || response.data.key
+      }
       showViewModal.value = true
+      
+      console.log('Created API key with full_key:', response.data.full_key || response.data.key)
     }
   } catch (error) {
     console.error('Error creating API key:', error)
@@ -622,8 +632,41 @@ const toggleApiKey = async (apiKey) => {
 }
 
 // View API key
-const viewApiKey = (apiKey) => {
-  selectedApiKey.value = apiKey
+const viewApiKey = async (apiKey) => {
+  try {
+    console.log('Opening API key:', apiKey.id, apiKey.name)
+    
+    // Fetch the API key details with full_key from backend
+    const config = useRuntimeConfig()
+    const token = localStorage.getItem('auth_token') || useCookie('auth_token').value
+    
+    console.log('Fetching API key details from:', `${config.public.apiBase}/api-keys/${apiKey.id}`)
+    
+    const response = await $fetch(`${config.public.apiBase}/api-keys/${apiKey.id}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    }).catch(error => {
+      console.error('Fetch error details:', error)
+      throw error
+    })
+    
+    console.log('API response:', response)
+    
+    if (response.success) {
+      selectedApiKey.value = response.data
+      console.log('Set selectedApiKey with full_key:', response.data.full_key)
+    } else {
+      console.log('API response failed, using fallback data')
+      selectedApiKey.value = apiKey // fallback to cached data
+    }
+  } catch (error) {
+    console.error('Error fetching API key details:', error)
+    selectedApiKey.value = apiKey // fallback to cached data
+    $toast.error('Gagal memuat detail API key')
+  }
+  
   showViewModal.value = true
 }
 

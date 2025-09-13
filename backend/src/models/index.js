@@ -12,6 +12,7 @@ const Webhook = require('./Webhook');
 const SubscriptionPlan = require('./SubscriptionPlan');
 const UserSubscription = require('./UserSubscription');
 const Invoice = require('./Invoice');
+const Broadcast = require('./Broadcast');
 
 // Define associations
 User.hasMany(Device, { 
@@ -79,6 +80,17 @@ User.hasMany(ApiKey, {
 ApiKey.belongsTo(User, {
   foreignKey: 'user_id',
   as: 'user'
+});
+
+// Bind API keys optionally to a specific device
+Device.hasMany(ApiKey, {
+  foreignKey: 'device_id',
+  as: 'apiKeys'
+});
+
+ApiKey.belongsTo(Device, {
+  foreignKey: 'device_id',
+  as: 'device'
 });
 
 // API Usage associations
@@ -161,6 +173,29 @@ UserSubscription.hasMany(Invoice, {
 });
 
 // Export models
+// Broadcast associations
+User.hasMany(Broadcast, {
+  foreignKey: 'user_id',
+  as: 'broadcasts',
+  onDelete: 'CASCADE'
+});
+
+Broadcast.belongsTo(User, {
+  foreignKey: 'user_id',
+  as: 'user'
+});
+
+Device.hasMany(Broadcast, {
+  foreignKey: 'device_id',
+  as: 'broadcasts',
+  onDelete: 'CASCADE'
+});
+
+Broadcast.belongsTo(Device, {
+  foreignKey: 'device_id',
+  as: 'device'
+});
+
 module.exports = {
   sequelize,
   User,
@@ -173,5 +208,6 @@ module.exports = {
   Webhook,
   SubscriptionPlan,
   UserSubscription,
-  Invoice
+  Invoice,
+  Broadcast
 }; 

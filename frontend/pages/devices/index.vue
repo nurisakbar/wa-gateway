@@ -1,46 +1,5 @@
 <template>
   <div class="devices-page">
-    <!-- Page Header -->
-    <div class="page-header bg-white border-bottom">
-      <div class="container-fluid py-3">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <nav aria-label="breadcrumb">
-              <ol class="breadcrumb mb-1">
-                <li class="breadcrumb-item">
-                  <NuxtLink to="/dashboard" class="text-decoration-none">
-                    <i class="bi bi-house-door me-1"></i>Dashboard
-                  </NuxtLink>
-                </li>
-                <li class="breadcrumb-item active" aria-current="page">Devices</li>
-              </ol>
-            </nav>
-            <h1 class="h3 mb-0 text-dark fw-bold">
-              <i class="bi bi-phone me-2 text-primary"></i>Device Management
-            </h1>
-            <p class="text-muted mb-0">Manage your WhatsApp devices and connections</p>
-          </div>
-          <div class="d-flex gap-2">
-            <button
-              class="btn btn-outline-primary d-flex align-items-center"
-              @click="refreshDevices"
-              :disabled="deviceStore.isLoading"
-            >
-              <i class="bi bi-arrow-clockwise me-1"></i>
-              <span>Refresh</span>
-            </button>
-            <button
-              class="btn btn-primary d-flex align-items-center"
-              @click="showAddModal = true"
-              :disabled="deviceStore.isLoading"
-            >
-              <i class="bi bi-plus-circle me-1"></i>
-              <span>Add Device</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
 
     <!-- Main Content -->
     <div class="container-fluid py-4">
@@ -102,12 +61,76 @@
 
       <!-- Devices Section -->
       <div class="whatsapp-card">
-        <div class="card-header bg-transparent border-0 py-3">
-          <h5 class="card-title mb-0 fw-bold">
-            <i class="bi bi-list-ul me-2 text-primary"></i>
-            Your Devices
-          </h5>
+        <div class="card-header bg-transparent border-0 py-3" style="padding: 20px;">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0 fw-bold">
+              <i class="bi bi-list-ul me-2 text-primary"></i>
+              Devices
+            </h5>
+            <div class="d-flex gap-2">
+              <button
+                class="btn btn-outline-primary d-flex align-items-center"
+                @click="refreshDevices"
+                :disabled="deviceStore.isLoading"
+              >
+                <i class="bi bi-arrow-clockwise me-1"></i>
+                <span>Refresh</span>
+              </button>
+              <button
+                class="btn btn-primary d-flex align-items-center"
+                @click="showAddModal = true"
+                :disabled="deviceStore.isLoading"
+              >
+                <i class="bi bi-plus-circle me-1"></i>
+                <span>Add Device</span>
+              </button>
+            </div>
+          </div>
         </div>
+        
+        <!-- Filter Section -->
+        <div class="filter-section bg-light border-top border-bottom py-3 px-4">
+          <div class="row align-items-center">
+            <div class="col-md-6 mb-2 mb-md-0">
+              <div class="input-group">
+                <span class="input-group-text bg-white border-end-0">
+                  <i class="bi bi-search text-muted"></i>
+                </span>
+                <input
+                  type="text"
+                  class="form-control border-start-0"
+                  placeholder="Search devices by name or phone number..."
+                  v-model="searchQuery"
+                />
+              </div>
+            </div>
+            <div class="col-md-3 mb-2 mb-md-0">
+              <select class="form-select" v-model="statusFilter">
+                <option value="">All Status</option>
+                <option value="connected">Connected</option>
+                <option value="connecting">Connecting</option>
+                <option value="disconnected">Disconnected</option>
+                <option value="error">Error</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <div class="d-flex gap-2">
+                <button
+                  class="btn btn-outline-secondary btn-sm"
+                  @click="clearFilters"
+                  :disabled="!hasActiveFilters"
+                >
+                  <i class="bi bi-x-circle me-1"></i>
+                  Clear
+                </button>
+                <span class="badge bg-primary align-self-center" v-if="filteredDevices.length !== deviceStore.getDevices.length">
+                  {{ filteredDevices.length }} of {{ deviceStore.getDevices.length }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
         <div class="card-body p-0">
           <!-- Loading State -->
           <div v-if="deviceStore.isLoading" class="text-center py-5">
@@ -116,7 +139,7 @@
             <p class="text-muted small">Please wait while we fetch your devices</p>
           </div>
           
-          <!-- Empty State -->
+          <!-- No Devices State -->
           <div v-else-if="deviceStore.getDevices.length === 0" class="empty-state text-center py-5">
             <div class="empty-state-icon mb-4">
               <div class="phone-icon-container">
@@ -145,6 +168,29 @@
               </small>
             </div>
           </div>
+          
+          <!-- No Filtered Results State -->
+          <div v-else-if="filteredDevices.length === 0" class="empty-state text-center py-5">
+            <div class="empty-state-icon mb-4">
+              <div class="phone-icon-container">
+                <i class="bi bi-search text-muted"></i>
+              </div>
+            </div>
+            <h4 class="text-dark mb-3">No devices match your filters</h4>
+            <p class="text-muted mb-4 max-width-400 mx-auto">
+              Try adjusting your search criteria or clear the filters to see all devices.
+            </p>
+            <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center">
+              <button class="btn btn-outline-primary d-flex align-items-center justify-content-center" @click="clearFilters">
+                <i class="bi bi-x-circle me-2"></i>
+                <span>Clear Filters</span>
+              </button>
+              <button class="btn btn-outline-secondary d-flex align-items-center justify-content-center" @click="refreshDevices">
+                <i class="bi bi-arrow-clockwise me-2"></i>
+                <span>Refresh</span>
+              </button>
+            </div>
+          </div>
           <!-- Devices Table -->
           <div v-else class="table-responsive">
             <table class="table table-hover mb-0">
@@ -168,7 +214,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="device in deviceStore.getDevices" :key="device.id" class="device-row">
+                <tr v-for="device in filteredDevices" :key="device.id" class="device-row">
                   <td class="px-4 py-3">
                     <div class="d-flex align-items-center">
                       <div class="device-status-indicator me-3" :class="device && device.status ? device.status : 'disconnected'"></div>
@@ -195,6 +241,15 @@
                   </td>
                   <td class="px-4 py-3 text-end">
                     <div class="d-flex gap-2 justify-content-end">
+                      <!-- Token Button -->
+                      <button
+                        class="btn btn-dark btn-sm d-flex align-items-center"
+                        @click="copyToken(device)"
+                        title="Copy API Token for this device"
+                      >
+                        <i class="bi bi-key me-1"></i>
+                        <span class="d-none d-sm-inline">Token</span>
+                      </button>
                       <!-- Connect Button -->
                       <button
                         v-if="device && device.status === 'disconnected'"
@@ -452,6 +507,10 @@ const errors = ref({
   phone_number: ''
 })
 
+// Filter data
+const searchQuery = ref('')
+const statusFilter = ref('')
+
 // Load devices on mount
 onMounted(async () => {
   console.log('Loading devices on mount...')
@@ -473,10 +532,48 @@ onUnmounted(() => {
   }
 })
 
+// Computed properties for filtering
+const filteredDevices = computed(() => {
+  let devices = deviceStore.getDevices || []
+  
+  // Filter by search query
+  if (searchQuery.value.trim()) {
+    const query = searchQuery.value.toLowerCase().trim()
+    devices = devices.filter(device => {
+      if (!device) return false
+      const name = (device.name || '').toLowerCase()
+      const phone = (device.phone_number || '').toLowerCase()
+      const description = (device.description || '').toLowerCase()
+      return name.includes(query) || phone.includes(query) || description.includes(query)
+    })
+  }
+  
+  // Filter by status
+  if (statusFilter.value) {
+    devices = devices.filter(device => {
+      if (!device) return false
+      return device.status === statusFilter.value
+    })
+  }
+  
+  return devices
+})
+
+const hasActiveFilters = computed(() => {
+  return searchQuery.value.trim() !== '' || statusFilter.value !== ''
+})
+
 // Refresh devices
 const refreshDevices = async () => {
   await deviceStore.fetchDevices()
   $toast.success('Devices refreshed')
+}
+
+// Clear filters
+const clearFilters = () => {
+  searchQuery.value = ''
+  statusFilter.value = ''
+  $toast.info('Filters cleared')
 }
 
 // Connect device
@@ -772,6 +869,21 @@ const deleteDevice = async (device) => {
       console.error('Delete device error:', error)
       $toast.error('Failed to delete device')
     }
+  }
+}
+
+// Copy token handler
+const copyToken = async (device) => {
+  try {
+    const result = await deviceStore.getDeviceToken(device.id)
+    if (result.success && result.token) {
+      await navigator.clipboard.writeText(result.token)
+      $toast.success('API key copied to clipboard')
+    } else {
+      $toast.error(result.error || 'Failed to get API key')
+    }
+  } catch (error) {
+    $toast.error('Failed to copy API key')
   }
 }
 
@@ -1119,5 +1231,41 @@ const isValidPhoneNumber = (phone) => {
   border-radius: 8px;
   border: none;
   font-size: 0.875rem;
+}
+
+/* Filter Section */
+.filter-section {
+  background: #f8f9fa;
+  border-top: 1px solid #dee2e6;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.filter-section .input-group-text {
+  border-color: #dee2e6;
+  background: white;
+}
+
+.filter-section .form-control {
+  border-color: #dee2e6;
+  border-left: none;
+}
+
+.filter-section .form-control:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.filter-section .form-select {
+  border-color: #dee2e6;
+}
+
+.filter-section .form-select:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.filter-section .badge {
+  font-size: 0.75rem;
+  padding: 0.375rem 0.5rem;
 }
 </style> 

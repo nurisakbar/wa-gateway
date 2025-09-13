@@ -120,8 +120,10 @@ definePageMeta({
   middleware: 'guest'
 })
 
-const { login, isLoading } = useAuth()
+const authStore = useAuthStore()
 const { $toast } = useNuxtApp()
+
+const isLoading = computed(() => authStore.loading)
 
 const form = ref({
   email: '',
@@ -171,14 +173,14 @@ const handleLogin = async () => {
   }
 
   try {
-    const result = await login({
+    const result = await authStore.login({
       email: form.value.email,
       password: form.value.password
     })
 
     if (result.success) {
-      $toast.success(result.message || 'Welcome back!')
-      navigateTo('/dashboard')
+      $toast.success('Welcome back!')
+      await navigateTo('/dashboard')
     } else {
       $toast.error(result.error || 'Login failed')
     }

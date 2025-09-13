@@ -30,6 +30,12 @@ class MessageService {
       // Format phone number
       const formattedNumber = formatPhoneNumber(toNumber);
 
+      // Check if this is a media message with URL
+      if (options.media_url && (options.message_type === 'document' || options.message_type === 'image' || options.message_type === 'video' || options.message_type === 'audio')) {
+        logInfo(`Media URL detected in text message, redirecting to media message: ${options.media_url}`);
+        return await this.sendMediaMessage(deviceId, toNumber, options.media_url, text, options);
+      }
+
       // Send message via WhatsApp service
       const result = await whatsappService.sendMessage(deviceId, formattedNumber, { text }, options);
 
@@ -86,12 +92,20 @@ class MessageService {
       let messageType = this.messageTypes.IMAGE; // Default to image
 
       // Handle external URLs
-      if (mediaPath.startsWith('http://') || mediaPath.startsWith('https://')) {
+      if (typeof mediaPath === 'string' && (mediaPath.startsWith('http://') || mediaPath.startsWith('https://'))) {
         logInfo(`External URL detected: ${mediaPath}`);
         
         // Download the media from URL
         const axios = require('axios');
-        const response = await axios.get(mediaPath, { responseType: 'arraybuffer' });
+        const response = await axios.get(mediaPath, {
+          responseType: 'arraybuffer',
+          headers: {
+            // Allow public content fetches that may require UA
+            'User-Agent': 'WA-Gateway/1.0 (+https://github.com)',
+            'Accept': '*/*'
+          },
+          maxRedirects: 5
+        });
         const mediaBuffer = Buffer.from(response.data);
         
         // Determine media type from content type or URL

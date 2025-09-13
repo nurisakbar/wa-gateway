@@ -152,13 +152,13 @@ export const useDeviceStore = defineStore('devices', {
           // Handle different response structures
           let newDevice = null
           
-          // Backend returns: { success: true, data: device }
-          if (response.data.data && !Array.isArray(response.data.data)) {
-            newDevice = response.data.data
-          }
-          // Handle nested structure if exists: { success: true, data: { device: device } }
-          else if (response.data.data?.device) {
+          // Prefer explicit device field when present: { data: { device, api_key } }
+          if (response.data.data?.device) {
             newDevice = response.data.data.device
+          }
+          // Backend returns: { success: true, data: device }
+          else if (response.data.data && !Array.isArray(response.data.data)) {
+            newDevice = response.data.data
           }
           // Handle array response: { success: true, data: [device] }
           else if (response.data.data && Array.isArray(response.data.data) && response.data.data.length > 0) {
@@ -170,6 +170,11 @@ export const useDeviceStore = defineStore('devices', {
           // Ensure device has required fields
           if (newDevice && newDevice.id) {
             this.devices.push(newDevice)
+            // Optionally expose returned api_key
+            const apiKey = (response.data.data && (response.data.data as any).api_key) ? (response.data.data as any).api_key : null
+            if (apiKey?.full_key) {
+              try { await navigator.clipboard.writeText(apiKey.full_key) } catch (e) {}
+            }
             return { success: true, device: newDevice }
           } else {
             console.error('Invalid device data received:', newDevice)
@@ -466,6 +471,31 @@ export const useDeviceStore = defineStore('devices', {
         return { success: false, error: this.error }
       } finally {
         this.loading = false
+      }
+    },
+
+    async getDeviceToken(deviceId: string) {
+      try {
+        const { $api } = useNuxtApp()
+        const response = await $api.get(`/devices/${deviceId}/token`)
+        if (response.data?.success) {
+          return { success: true, token: response.data.data.full_key, info: response.data.data }
+        }
+        return { success: false, error: response.data?.message || 'Failed to get token' }
+      } catch (error: any) {
+        const config = useRuntimeConfig()
+        try {
+          const token = localStorage.getItem('auth_token')
+          const res = await $fetch(`${config.public.apiBase}/devices/${deviceId}/token`, {
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+          })
+          if (res.data?.success) {
+            return { success: true, token: res.data.data.full_key, info: res.data.data }
+          }
+          return { success: false, error: res.data?.message || 'Failed to get token' }
+        } catch (e: any) {
+          return { success: false, error: e?.response?.data?.message || e?.data?.message || 'Failed to get token' }
+        }
       }
     },
 

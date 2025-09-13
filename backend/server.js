@@ -18,7 +18,7 @@ const { User, Device, Message, Contact } = require('./src/models');
 const app = express();
 
 // Environment variables
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:3000';
 
@@ -126,6 +126,7 @@ const API_VERSION = process.env.API_VERSION || 'v1';
 const authRoutes = require('./src/routes/auth');
 const deviceRoutes = require('./src/routes/devices');
 const messageRoutes = require('./src/routes/messages');
+const mockMessageRoutes = require('./src/routes/mockMessages');
 const contactRoutes = require('./src/routes/contacts');
 const fileRoutes = require('./src/routes/files');
 const webhookRoutes = require('./src/routes/webhooks');
@@ -145,6 +146,7 @@ const { trackApiUsage } = require('./src/middleware/usageTracker');
 app.use(`${API_PREFIX}/${API_VERSION}/auth`, authRoutes);
 app.use(`${API_PREFIX}/${API_VERSION}/devices`, deviceRoutes);
 app.use(`${API_PREFIX}/${API_VERSION}/messages`, messageRoutes);
+app.use(`${API_PREFIX}/${API_VERSION}/mock-messages`, mockMessageRoutes);
 app.use(`${API_PREFIX}/${API_VERSION}/contacts`, contactRoutes);
 app.use(`${API_PREFIX}/${API_VERSION}/files`, fileRoutes);
 app.use(`${API_PREFIX}/${API_VERSION}/webhooks`, webhookRoutes);
@@ -260,7 +262,8 @@ const startServer = async () => {
 
     // Sync database (create tables if they don't exist)
     if (NODE_ENV === 'development') {
-      await syncDatabase(false); // false = don't force recreate tables
+      // Alter tables to match models in development so new columns (e.g., api_keys.device_id) are created
+      await syncDatabase(false);
       logInfo('Database synchronized successfully');
     }
 

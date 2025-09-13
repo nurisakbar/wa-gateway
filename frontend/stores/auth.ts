@@ -11,11 +11,25 @@ interface User {
   updated_at: string
 }
 
+interface Subscription {
+  id: string
+  status: string
+  current_period_end: string
+  plan?: {
+    id: string
+    name: string
+    price: number
+    limits: any
+  }
+}
+
 interface AuthState {
   user: User | null
   token: string | null
   isAuthenticated: boolean
   loading: boolean
+  subscription: Subscription | null
+  hasActiveSubscription: boolean
 }
 
 export const useAuthStore = defineStore('auth', {
@@ -23,7 +37,9 @@ export const useAuthStore = defineStore('auth', {
     user: null,
     token: null,
     isAuthenticated: false,
-    loading: false
+    loading: false,
+    subscription: null,
+    hasActiveSubscription: false
   }),
 
   getters: {
@@ -34,7 +50,9 @@ export const useAuthStore = defineStore('auth', {
     isAdmin: (state) => state.user?.role === 'admin' || state.user?.role === 'super_admin',
     isManager: (state) => state.user?.role === 'manager',
     isOperator: (state) => state.user?.role === 'operator',
-    isViewer: (state) => state.user?.role === 'viewer'
+    isViewer: (state) => state.user?.role === 'viewer',
+    getSubscription: (state) => state.subscription,
+    hasSubscription: (state) => state.hasActiveSubscription
   },
 
   actions: {
@@ -44,8 +62,14 @@ export const useAuthStore = defineStore('auth', {
         const { $api } = useNuxtApp()
         const response = await $api.post('/auth/login', credentials)
         
-        if (response.data.success) {
+        console.log('Login response:', response.data)
+        
+        // Backend returns { error: false, data: { user, token } }
+        if (response.data && !response.data.error && response.data.data) {
           const { user, token } = response.data.data
+          
+          console.log('Login successful - User:', user)
+          console.log('Login successful - Token:', token ? 'Token received' : 'No token')
           
           this.user = user
           this.token = token
@@ -56,15 +80,26 @@ export const useAuthStore = defineStore('auth', {
           localStorage.setItem('user', JSON.stringify(user))
           // Also persist in cookie for SSR checks
           if (process.client) {
-            const tokenCookie = useCookie('auth_token', { maxAge: 60 * 60 * 24 })
+            const tokenCookie = useCookie('auth_token', { maxAge: 60 * 60 * 24 * 7 }) // 7 days
             tokenCookie.value = token
           }
           
           // Initialize socket connection
           const { $socket } = useNuxtApp()
-          $socket.init()
+          if ($socket && $socket.init) {
+            $socket.init()
+          }
+          
+          // Fetch subscription data after successful login
+          await this.fetchSubscription()
           
           return { success: true, user }
+        } else {
+          console.log('Login failed - Invalid response structure')
+          return { 
+            success: false, 
+            error: response.data?.message || 'Login failed' 
+          }
         }
       } catch (error: any) {
         console.error('Login error:', error)
@@ -105,29 +140,21 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async logout() {
+      console.log('Auth store - logout called')
       try {
         const { $api } = useNuxtApp()
         await $api.post('/auth/logout')
       } catch (error) {
         console.error('Logout error:', error)
       } finally {
-        // Clear state
-        this.user = null
-        this.token = null
-        this.isAuthenticated = false
-        
-        // Clear localStorage
-        localStorage.removeItem('auth_token')
-        localStorage.removeItem('user')
-        // Clear cookie
-        if (process.client) {
-          const tokenCookie = useCookie('auth_token')
-          tokenCookie.value = null
-        }
+        // Use clearAuth to ensure all storage is cleared
+        this.clearAuth()
         
         // Disconnect socket
         const { $socket } = useNuxtApp()
-        $socket.disconnect()
+        if ($socket && $socket.disconnect) {
+          $socket.disconnect()
+        }
         
         // Force redirect to login using window.location
         if (process.client) {
@@ -156,67 +183,116 @@ export const useAuthStore = defineStore('auth', {
 
     async fetchUser() {
       try {
-        const { $api } = useNuxtApp()
-        const response = await $api.get('/auth/profile')
-        
-        if (response.data.success) {
-          this.user = response.data.data
-          localStorage.setItem('user', JSON.stringify(response.data.data))
-          return true
-        } else {
+        const token = localStorage.getItem('auth_token')
+        if (!token) {
+          console.log('fetchUser - No token found')
           return false
         }
-      } catch (error) {
+
+        const config = useRuntimeConfig()
+        const response = await $fetch(`${config.public.apiBase}/auth/profile`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        
+        if (response.success) {
+          this.user = response.data
+          this.isAuthenticated = true
+          localStorage.setItem('user', JSON.stringify(response.data))
+          console.log('fetchUser - User data loaded successfully')
+          return true
+        } else {
+          console.log('fetchUser - Invalid response:', response)
+          return false
+        }
+      } catch (error: any) {
         console.error('fetchUser - Error:', error)
+        // Only logout if it's a 401 error
+        if (error.status === 401 || error.statusCode === 401) {
+          console.log('fetchUser - Token expired, logging out')
+          this.logout()
+        }
         return false
       }
     },
 
     initializeAuth() {
+      console.log('Auth store - initializeAuth called')
+      
       // Check for stored token and user
       const token = localStorage.getItem('auth_token') || (process.client ? useCookie('auth_token').value : null)
       const userStr = localStorage.getItem('user')
       
-      console.log('Auth store - initializeAuth called')
       console.log('Auth store - Token exists:', !!token)
       console.log('Auth store - User data exists:', !!userStr)
+      console.log('Auth store - Token value:', token ? 'Token present' : 'No token')
       
-      if (token && userStr) {
-        try {
-          const user = JSON.parse(userStr)
-          console.log('Auth store - Parsed user:', user)
-          
-          this.token = token
-          this.user = user
-          this.isAuthenticated = true
-          
-          console.log('Auth store - Auth state set:', {
-            hasToken: !!this.token,
-            hasUser: !!this.user,
-            isAuthenticated: this.isAuthenticated
-          })
-          
-          // Initialize socket connection
-          const { $socket } = useNuxtApp()
-          $socket.init()
-          
-          return true
-        } catch (error) {
-          console.error('Auth initialization error:', error)
-          this.clearAuth()
-          return false
+      if (token) {
+        // If we have token, set it and try to restore user data
+        this.token = token
+        this.isAuthenticated = true
+        
+        if (userStr) {
+          try {
+            const user = JSON.parse(userStr)
+            console.log('Auth store - Parsed user:', user)
+            
+            this.user = user
+            
+            console.log('Auth store - Auth state fully restored:', {
+              hasToken: !!this.token,
+              hasUser: !!this.user,
+              isAuthenticated: this.isAuthenticated
+            })
+            
+            // Initialize socket connection
+            const { $socket } = useNuxtApp()
+            if ($socket && $socket.init) {
+              $socket.init()
+            }
+            
+            return true
+          } catch (error) {
+            console.error('Auth initialization error:', error)
+            // Clear corrupted user data but keep token
+            localStorage.removeItem('user')
+            this.user = null
+          }
         }
+        
+        // If we have token but no user data, that's ok - it will be fetched
+        console.log('Auth store - Token found, user data will be fetched later')
+        return true
       }
-      console.log('Auth store - No token or user data found')
+      
+      console.log('Auth store - No token found, clearing auth')
+      this.clearAuth()
       return false
     },
 
     clearAuth() {
+      console.log('Auth store - clearAuth called')
       this.user = null
       this.token = null
       this.isAuthenticated = false
+      this.subscription = null
+      this.hasActiveSubscription = false
+      
+      // Clear all possible storage locations
       localStorage.removeItem('auth_token')
       localStorage.removeItem('user')
+      
+      // Clear any VueUse persisted data
+      if (process.client) {
+        localStorage.removeItem('persist:root')
+        localStorage.removeItem('persist:auth')
+        
+        // Clear cookie
+        const tokenCookie = useCookie('auth_token')
+        tokenCookie.value = null
+      }
     },
 
     updateUser(userData: Partial<User>) {
@@ -224,6 +300,54 @@ export const useAuthStore = defineStore('auth', {
         this.user = { ...this.user, ...userData }
         localStorage.setItem('user', JSON.stringify(this.user))
       }
+    },
+
+    async fetchSubscription() {
+      try {
+        const token = localStorage.getItem('auth_token')
+        if (!token) return false
+
+        const config = useRuntimeConfig()
+        const response = await $fetch(`${config.public.apiBase}/subscriptions/my-subscription`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        
+        if (response.success && response.data) {
+          this.subscription = response.data
+          this.hasActiveSubscription = response.data.status === 'active' || response.data.status === 'trialing'
+          return true
+        } else {
+          this.subscription = null
+          this.hasActiveSubscription = false
+          return false
+        }
+      } catch (error: any) {
+        // Handle 404 as expected behavior (no subscription found)
+        if (error.status === 404 || error.statusCode === 404) {
+          this.subscription = null
+          this.hasActiveSubscription = false
+          return false
+        }
+        
+        // Log other errors
+        console.error('fetchSubscription - Error:', error)
+        this.subscription = null
+        this.hasActiveSubscription = false
+        return false
+      }
+    },
+
+    updateSubscription(subscriptionData: Subscription) {
+      this.subscription = subscriptionData
+      this.hasActiveSubscription = subscriptionData.status === 'active' || subscriptionData.status === 'trialing'
+    },
+
+    clearSubscription() {
+      this.subscription = null
+      this.hasActiveSubscription = false
     }
   }
 }) 

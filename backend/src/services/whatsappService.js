@@ -273,10 +273,25 @@ class WhatsAppService {
   // Send message
   async sendMessage(deviceId, to, message, options = {}) {
     try {
-      const connection = this.connections.get(deviceId);
+      let connection = this.connections.get(deviceId);
       if (!connection || !connection.isConnected) {
-        throw new Error('Device not connected');
+        // Try to auto-reconnect using stored session
+        try {
+          const device = await Device.findByPk(deviceId);
+          if (device) {
+            await this.initializeConnection(deviceId, device.user_id);
+            // wait briefly for open state
+            const waitUntil = Date.now() + 10000; // 10s
+            while (Date.now() < waitUntil) {
+              const st = await this.getConnectionStatus(deviceId);
+              if (st.connected) break;
+              await new Promise(r => setTimeout(r, 500));
+            }
+          }
+        } catch (_) { /* ignore */ }
+        connection = this.connections.get(deviceId);
       }
+      if (!connection || !connection.isConnected) throw new Error('Device not connected');
 
       const { sock } = connection;
 
@@ -284,10 +299,28 @@ class WhatsAppService {
       const formattedNumber = this.formatPhoneNumber(to);
 
       // Prepare message data
-      const messageData = {
-        text: message.text || message,
-        ...options
-      };
+      let messageData;
+      if (typeof message === 'object' && (message.image || message.video || message.audio || message.document)) {
+        // Already structured media payload
+        messageData = { ...message };
+      } else if (typeof message === 'object' && message.sections) {
+        // List message
+        messageData = {
+          text: message.text || 'Choose an option',
+          ...(message.title && { title: message.title }),
+          ...(message.footer && { footer: message.footer }),
+          buttonText: message.buttonText || 'Select',
+          sections: message.sections
+        };
+      } else if (typeof message === 'object' && message.templateButtons) {
+        // Template buttons
+        messageData = {
+          text: message.text || '',
+          templateButtons: message.templateButtons
+        };
+      } else {
+        messageData = { text: message.text || message, ...options };
+      }
 
       // Send message
       const result = await sock.sendMessage(`${formattedNumber}@s.whatsapp.net`, messageData);
@@ -315,10 +348,24 @@ class WhatsAppService {
   // Send media message
   async sendMediaMessage(deviceId, to, mediaPathOrBuffer, caption = '', options = {}) {
     try {
-      const connection = this.connections.get(deviceId);
+      let connection = this.connections.get(deviceId);
       if (!connection || !connection.isConnected) {
-        throw new Error('Device not connected');
+        // Try to auto-reconnect using stored session
+        try {
+          const device = await Device.findByPk(deviceId);
+          if (device) {
+            await this.initializeConnection(deviceId, device.user_id);
+            const waitUntil = Date.now() + 10000;
+            while (Date.now() < waitUntil) {
+              const st = await this.getConnectionStatus(deviceId);
+              if (st.connected) break;
+              await new Promise(r => setTimeout(r, 500));
+            }
+          }
+        } catch (_) { /* ignore */ }
+        connection = this.connections.get(deviceId);
       }
+      if (!connection || !connection.isConnected) throw new Error('Device not connected');
 
       const { sock } = connection;
 

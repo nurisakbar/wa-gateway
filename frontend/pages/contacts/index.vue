@@ -1,173 +1,125 @@
 <template>
   <div class="contacts-page">
-    <!-- Header -->
-    <div class="page-header bg-white border-bottom">
-      <div class="container-fluid py-3">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <nav aria-label="breadcrumb" class="mb-1">
-              <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item">
-                  <NuxtLink to="/dashboard" class="text-decoration-none">
-                    <i class="bi bi-house-door me-1"></i>Dashboard
-                  </NuxtLink>
-                </li>
-                <li class="breadcrumb-item active" aria-current="page">Contacts</li>
-              </ol>
-            </nav>
-            <h1 class="h3 mb-0 text-dark fw-bold">
-              <i class="bi bi-people me-2 text-primary"></i>Contact Management
-            </h1>
-            <p class="text-muted mb-0">Manage your contacts for easy messaging and broadcast</p>
+    <!-- Statistics Cards -->
+    <div class="container-fluid py-4" v-if="showStats" style="padding-bottom: 0px !important;">
+      <div class="row mb-4">
+        <div class="col-md-3 col-sm-6">
+          <div class="stat-card h-100 d-flex align-items-center">
+            <div class="stat-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+              <i class="bi bi-people text-primary fs-4"></i>
+            </div>
+            <div>
+              <div class="stat-number text-primary fw-bold">{{ totalContacts }}</div>
+              <div class="stat-label text-muted">Total Contacts</div>
+            </div>
           </div>
-          <div class="d-flex gap-2">
-            <button
-              class="btn btn-outline-primary d-flex align-items-center"
-              @click="showImportModal = true"
-              :disabled="contactStore.isLoading"
-            >
-              <i class="bi bi-upload me-1"></i><span>Import</span>
-            </button>
-            <button
-              class="btn btn-outline-success d-flex align-items-center"
-              @click="exportContacts"
-              :disabled="contactStore.isLoading"
-            >
-              <i class="bi bi-download me-1"></i><span>Export</span>
-            </button>
-            <button
-              class="btn btn-primary d-flex align-items-center"
-              @click="showAddModal = true"
-              :disabled="contactStore.isLoading"
-            >
-              <i class="bi bi-plus-circle me-1"></i><span>Add Contact</span>
-            </button>
+        </div>
+        <div class="col-md-3 col-sm-6">
+          <div class="stat-card h-100 d-flex align-items-center">
+            <div class="stat-icon bg-success bg-opacity-10 rounded-3 p-3 me-3">
+              <i class="bi bi-check-circle text-success fs-4"></i>
+            </div>
+            <div>
+              <div class="stat-number text-success fw-bold">{{ activeContacts }}</div>
+              <div class="stat-label text-muted">Active Contacts</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+          <div class="stat-card h-100 d-flex align-items-center">
+            <div class="stat-icon bg-info bg-opacity-10 rounded-3 p-3 me-3">
+              <i class="bi bi-tags text-info fs-4"></i>
+            </div>
+            <div>
+              <div class="stat-number text-info fw-bold">{{ uniqueTags }}</div>
+              <div class="stat-label text-muted">Unique Tags</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+          <div class="stat-card h-100 d-flex align-items-center">
+            <div class="stat-icon bg-warning bg-opacity-10 rounded-3 p-3 me-3">
+              <i class="bi bi-envelope text-warning fs-4"></i>
+            </div>
+            <div>
+              <div class="stat-number text-warning fw-bold">{{ contactsWithEmail }}</div>
+              <div class="stat-label text-muted">With Email</div>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Main Content -->
-    <div class="container-fluid py-4">
-      <!-- Statistics Cards -->
-      <div class="row mb-4">
-        <div class="col-md-3">
-          <div class="stat-card">
-            <div class="d-flex align-items-center">
-              <div class="stat-icon bg-primary bg-opacity-10 rounded p-3 me-3">
-                <i class="bi bi-people text-primary fs-4"></i>
-              </div>
-              <div>
-                <div class="stat-number">{{ contactStore.getContactCount }}</div>
-                <div class="stat-label">Total Contacts</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="stat-card">
-            <div class="d-flex align-items-center">
-              <div class="stat-icon bg-success bg-opacity-10 rounded p-3 me-3">
-                <i class="bi bi-check-circle text-success fs-4"></i>
-              </div>
-              <div>
-                <div class="stat-number">{{ contactStore.getContacts.filter(c => c.is_active).length }}</div>
-                <div class="stat-label">Active Contacts</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="stat-card">
-            <div class="d-flex align-items-center">
-              <div class="stat-icon bg-info bg-opacity-10 rounded p-3 me-3">
-                <i class="bi bi-tags text-info fs-4"></i>
-              </div>
-              <div>
-                <div class="stat-number">{{ uniqueTags.length }}</div>
-                <div class="stat-label">Unique Tags</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="stat-card">
-            <div class="d-flex align-items-center">
-              <div class="stat-icon bg-warning bg-opacity-10 rounded p-3 me-3">
-                <i class="bi bi-envelope text-warning fs-4"></i>
-              </div>
-              <div>
-                <div class="stat-number">{{ contactStore.getContacts.filter(c => c.email).length }}</div>
-                <div class="stat-label">With Email</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Search and Filters -->
-      <div class="whatsapp-card mb-4">
-        <div class="card-body">
-          <div class="row g-3">
-            <div class="col-md-4">
-              <div class="input-group">
-                <span class="input-group-text">
-                  <i class="bi bi-search"></i>
-                </span>
-                <input
-                  type="text"
-                  class="form-control"
-                  v-model="searchQuery"
-                  placeholder="Search contacts..."
-                  @input="filterContacts"
-                />
-              </div>
-            </div>
-            <div class="col-md-3">
-              <select class="form-select" v-model="selectedTag" @change="filterContacts">
-                <option value="">All Tags</option>
-                <option v-for="tag in uniqueTags" :key="tag" :value="tag">
-                  {{ tag }}
-                </option>
-              </select>
-            </div>
-            <div class="col-md-3">
-              <select class="form-select" v-model="statusFilter" @change="filterContacts">
-                <option value="">All Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
-            <div class="col-md-2">
+    <div class="container-fluid">
+      <!-- Contacts Section -->
+      <div class="whatsapp-card">
+        <div class="card-header bg-transparent border-0 py-3" style="padding: 20px;">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0 fw-bold">
+              <i class="bi bi-people me-2 text-primary"></i>
+              Contacts
+            </h5>
+            <div class="d-flex gap-2">
               <button
-                class="btn btn-outline-secondary w-100"
-                @click="clearFilters"
+                class="btn btn-outline-primary d-flex align-items-center"
+                @click="refreshContacts"
+                :disabled="contactStore.isLoading"
               >
-                Clear
+                <i class="bi bi-arrow-clockwise me-1"></i>
+                Refresh
+              </button>
+              <button
+                class="btn btn-primary d-flex align-items-center"
+                @click="showAddModal = true"
+                :disabled="contactStore.isLoading"
+              >
+                <i class="bi bi-plus-circle me-1"></i>
+                Add Contact
               </button>
             </div>
           </div>
         </div>
-      </div>
-
-      <!-- Contacts Grid -->
-      <div class="whatsapp-card">
-        <div class="card-header bg-transparent border-bottom d-flex justify-content-between align-items-center">
-          <h5 class="card-title mb-0">
-            <i class="bi bi-list-ul me-2"></i>
-            Contacts ({{ filteredContacts.length }})
-          </h5>
-          <div class="d-flex gap-2">
-            <button
-              class="btn btn-outline-primary btn-sm"
-              @click="refreshContacts"
-              :disabled="contactStore.isLoading"
-            >
-              <i class="bi bi-arrow-clockwise me-1"></i>
-              Refresh
-            </button>
-          </div>
-        </div>
+              
+              <!-- Filter Section -->
+              <div class="filter-section bg-light border-top border-bottom py-3 px-4">
+                <div class="row align-items-center">
+                  <div class="col-md-4 mb-2 mb-md-0">
+                    <div class="input-group">
+                      <span class="input-group-text bg-white border-end-0">
+                        <i class="bi bi-search text-muted"></i>
+                      </span>
+                      <input
+                        type="text"
+                        class="form-control border-start-0"
+                        placeholder="Search contacts..."
+                        v-model="searchQuery"
+                      />
+                    </div>
+                  </div>
+                  <div class="col-md-3 mb-2 mb-md-0">
+                    <select class="form-select" v-model="selectedTag">
+                      <option value="">All Tags</option>
+                      <option v-for="tag in uniqueTags" :key="tag" :value="tag">
+                        {{ tag }}
+                      </option>
+                    </select>
+                  </div>
+                  <div class="col-md-3 mb-2 mb-md-0">
+                    <select class="form-select" v-model="statusFilter">
+                      <option value="">All Status</option>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                    </select>
+                  </div>
+                  <div class="col-md-2 mb-2 mb-md-0">
+                    <button class="btn btn-outline-secondary w-100" @click="clearFilters">
+                      <i class="bi bi-x-circle me-1"></i>
+                      Clear
+                    </button>
+                  </div>
+                </div>
+              </div>
         <div class="card-body p-0">
           <!-- Loading State -->
           <div v-if="contactStore.isLoading" class="text-center py-5">
@@ -479,7 +431,12 @@ const errors = ref({
   email: ''
 })
 
+// Reactive state
+const showStats = ref(true)
+
 // Computed properties
+const totalContacts = computed(() => contactStore.getContacts.length)
+const activeContacts = computed(() => contactStore.getContacts.filter(c => c.is_active).length)
 const uniqueTags = computed(() => {
   const tags = new Set()
   contactStore.getContacts.forEach(contact => {
@@ -489,6 +446,7 @@ const uniqueTags = computed(() => {
   })
   return Array.from(tags).sort()
 })
+const contactsWithEmail = computed(() => contactStore.getContacts.filter(c => c.email).length)
 
 const filteredContacts = computed(() => {
   let contacts = contactStore.getContacts
@@ -722,8 +680,13 @@ const closeImportModal = () => {
 
 // Utility functions
 const isValidPhoneNumber = (phone) => {
-  const phoneRegex = /^\+?[1-9]\d{1,14}$/
-  return phoneRegex.test(phone.replace(/\s/g, ''))
+  // Remove all non-digit characters except +
+  const cleaned = phone.replace(/[^\d+]/g, '');
+  
+  // Check if it's a valid international phone number
+  // Must start with + or country code, and be 7-15 digits long
+  const phoneRegex = /^(\+\d{1,3}|\d{1,3})?\d{7,14}$/;
+  return phoneRegex.test(cleaned) && cleaned.length >= 7 && cleaned.length <= 15;
 }
 
 const isValidEmail = (email) => {
@@ -742,6 +705,37 @@ const isValidEmail = (email) => {
   position: sticky;
   top: 0;
   /* z-index: 1000; */
+}
+
+.filter-section {
+  background: #f8f9fa !important;
+  border-top: 1px solid #dee2e6;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.filter-section .input-group-text {
+  background: white;
+  border-color: #ced4da;
+}
+
+.filter-section .form-control,
+.filter-section .form-select {
+  border-color: #ced4da;
+  font-size: 0.875rem;
+}
+
+.filter-section .form-control:focus,
+.filter-section .form-select:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.whatsapp-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  overflow: hidden;
 }
 
 .stat-card {

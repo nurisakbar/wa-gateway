@@ -1,5 +1,5 @@
 const broadcastService = require('../services/broadcastService');
-const { Contact, Device } = require('../models');
+const { Contact, Device, Broadcast } = require('../models');
 const { logInfo, logError } = require('../utils/logger');
 const { validateBroadcastRequest } = require('../middleware/validation');
 
@@ -305,6 +305,112 @@ class BroadcastController {
 
     } catch (error) {
       logError(error, 'Error getting broadcast statistics');
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      });
+    }
+  }
+
+  // Get broadcast history
+  async getBroadcastHistory(req, res) {
+    try {
+      const userId = req.user.id;
+      const { page = 1, limit = 20, status, device_id } = req.query;
+      
+      const offset = (page - 1) * limit;
+      
+      const result = await Broadcast.findByUserId(userId, {
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+        status,
+        device_id
+      });
+
+      res.json({
+        success: true,
+        data: {
+          broadcasts: result.rows,
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total: result.count,
+            pages: Math.ceil(result.count / limit)
+          }
+        }
+      });
+
+    } catch (error) {
+      logError(error, 'Error getting broadcast history');
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      });
+    }
+  }
+
+  // Create broadcast
+  async createBroadcast(req, res) {
+    try {
+      const userId = req.user.id;
+      const { title, device_id, message, message_type = 'text', scheduled_at } = req.body;
+
+      console.log('=== BROADCAST CREATE REQUEST ===');
+      console.log('User ID:', userId);
+      console.log('Request body:', req.body);
+      console.log('Device ID:', device_id);
+
+      // Validate required fields
+      if (!title || !device_id || !message) {
+        console.log('Validation failed - missing required fields');
+        return res.status(400).json({
+          success: false,
+          message: 'Title, device_id, and message are required'
+        });
+      }
+
+      // Check device ownership
+      const device = await Device.findOne({
+        where: { id: device_id, user_id: userId }
+      });
+
+      console.log('Device lookup for broadcast:', {
+        device_id,
+        userId,
+        device: device ? {
+          id: device.id,
+          name: device.name,
+          is_active: device.is_active,
+          status: device.status
+        } : null
+      });
+
+      if (!device || device.status !== 'connected') {
+        return res.status(400).json({
+          success: false,
+          message: 'Device not found or not connected'
+        });
+      }
+
+      // Create broadcast
+      const broadcast = await Broadcast.create({
+        user_id: userId,
+        device_id,
+        name: title,
+        message,
+        message_type,
+        scheduled_at: scheduled_at ? new Date(scheduled_at) : null,
+        status: scheduled_at ? 'draft' : 'draft'
+      });
+
+      res.json({
+        success: true,
+        message: 'Broadcast created successfully',
+        data: broadcast
+      });
+
+    } catch (error) {
+      logError(error, 'Error creating broadcast');
       res.status(500).json({
         success: false,
         message: 'Internal server error'

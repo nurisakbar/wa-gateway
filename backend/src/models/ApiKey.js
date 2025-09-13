@@ -16,6 +16,15 @@ const ApiKey = sequelize.define('ApiKey', {
       key: 'id'
     }
   },
+  device_id: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    references: {
+      model: 'devices',
+      key: 'id'
+    },
+    comment: 'If set, this API key is bound to a specific device'
+  },
   name: {
     type: DataTypes.STRING,
     allowNull: false,
@@ -84,6 +93,9 @@ const ApiKey = sequelize.define('ApiKey', {
       fields: ['user_id']
     },
     {
+      fields: ['device_id']
+    },
+    {
       fields: ['key_hash'],
       unique: true
     },
@@ -96,7 +108,8 @@ const ApiKey = sequelize.define('ApiKey', {
 // Instance methods
 ApiKey.prototype.generateKey = function() {
   const key = `wg_${crypto.randomBytes(32).toString('hex')}`;
-  this.key_hash = crypto.createHash('sha256').update(key).digest('hex');
+  // Store the full key as base64 in key_hash for easy retrieval
+  this.key_hash = Buffer.from(key).toString('base64');
   this.key_prefix = key.substring(0, 8);
   return key;
 };
@@ -115,12 +128,40 @@ ApiKey.prototype.isIpAllowed = function(ip) {
   return this.ip_whitelist.includes(ip);
 };
 
+// Method to get the full API key by decoding the stored key_hash
+ApiKey.prototype.getFullKey = function() {
+  try {
+    return Buffer.from(this.key_hash, 'base64').toString('utf8');
+  } catch (error) {
+    return null;
+  }
+};
+
+// Method to verify API key (for authentication)
+ApiKey.prototype.verifyKey = function(inputKey) {
+  try {
+    const storedKey = this.getFullKey();
+    return storedKey === inputKey;
+  } catch (error) {
+    return false;
+  }
+};
+
+
 // Static methods
 ApiKey.findByKey = async function(key) {
-  const keyHash = crypto.createHash('sha256').update(key).digest('hex');
-  return await this.findOne({
-    where: { key_hash: keyHash, is_active: true }
+  // Find by comparing with decoded key_hash values
+  const apiKeys = await this.findAll({
+    where: { is_active: true }
   });
+  
+  for (const apiKey of apiKeys) {
+    if (apiKey.verifyKey(key)) {
+      return apiKey;
+    }
+  }
+  
+  return null;
 };
 
 ApiKey.generateNewKey = function(userId, name, permissions = {}) {

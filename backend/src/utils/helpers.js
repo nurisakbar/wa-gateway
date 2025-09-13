@@ -75,8 +75,13 @@ const formatPhoneNumber = (phone) => {
  * @returns {boolean} Is valid phone number
  */
 const isValidPhoneNumber = (phone) => {
-  const phoneRegex = /^(\+62|62|0)8[1-9][0-9]{6,9}$/;
-  return phoneRegex.test(phone);
+  // Remove all non-digit characters except +
+  const cleaned = phone.replace(/[^\d+]/g, '');
+  
+  // Check if it's a valid international phone number
+  // Must start with + or country code, and be 7-15 digits long
+  const phoneRegex = /^(\+\d{1,3}|\d{1,3})?\d{7,14}$/;
+  return phoneRegex.test(cleaned) && cleaned.length >= 7 && cleaned.length <= 15;
 };
 
 /**

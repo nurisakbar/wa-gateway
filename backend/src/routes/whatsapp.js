@@ -2,13 +2,21 @@ const express = require('express');
 const router = express.Router();
 const { authenticateApiKey, requireWritePermission } = require('../middleware/apiAuth');
 const { validateUUID } = require('../middleware/validation');
+const { enforceMessageLimit, enforceApiLimit } = require('../middleware/subscriptionLimits');
+const { requireSubscription } = require('../middleware/requireSubscription');
 const whatsappController = require('../controllers/whatsappController');
 
 // All routes require API key authentication
 router.use(authenticateApiKey);
 
+// Apply subscription requirement to all WhatsApp API routes
+router.use(requireSubscription);
+
 // Send message
-router.post('/send-message', requireWritePermission, whatsappController.sendMessage);
+router.post('/send-message', requireWritePermission, enforceMessageLimit, enforceApiLimit, whatsappController.sendMessage);
+
+// Send interactive (template buttons, list message)
+router.post('/send-interactive', requireWritePermission, enforceMessageLimit, enforceApiLimit, whatsappController.sendInteractive);
 
 // Send template message
 router.post('/send-template', requireWritePermission, whatsappController.sendTemplate);

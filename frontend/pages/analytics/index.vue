@@ -68,7 +68,7 @@
             <i class="bi bi-speedometer2"></i>
           </div>
           <div class="overview-content">
-            <div class="overview-number">{{ analytics.api_usage?.avg_response_time?.toFixed(0) || 0 }}ms</div>
+            <div class="overview-number">{{ formatResponseTime(analytics.api_usage?.avg_response_time) }}ms</div>
             <div class="overview-label">Avg Response Time</div>
             <div class="overview-change text-info">
               <i class="bi bi-clock"></i>
@@ -89,6 +89,150 @@
             <div class="overview-change text-warning">
               <i class="bi bi-arrow-down"></i>
               {{ getErrorRate() }}% error rate
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Subscription Plan & Usage Section -->
+    <div class="row mb-4">
+      <div class="col-lg-6 mb-3">
+        <div class="chart-card">
+          <div class="chart-header">
+            <h5 class="chart-title">
+              <i class="bi bi-credit-card me-2"></i>
+              Current Subscription Plan
+            </h5>
+            <div class="chart-actions">
+              <NuxtLink to="/subscriptions" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-arrow-right me-1"></i>
+                Manage Plan
+              </NuxtLink>
+            </div>
+          </div>
+          <div class="chart-body">
+            <div v-if="subscriptionData" class="subscription-info">
+              <div class="subscription-plan">
+                <div class="plan-name">{{ subscriptionData.SubscriptionPlan?.name || 'Free Plan' }}</div>
+                <div class="plan-price">
+                  <span v-if="subscriptionData.SubscriptionPlan?.price > 0">
+                    Rp {{ subscriptionData.SubscriptionPlan?.price?.toLocaleString('id-ID') }}/bulan
+                  </span>
+                  <span v-else class="text-success">Gratis</span>
+                </div>
+                <div class="plan-description">
+                  {{ subscriptionData.SubscriptionPlan?.description || 'Paket gratis untuk memulai' }}
+                </div>
+              </div>
+              
+              <div class="subscription-status">
+                <span class="badge bg-success">Active</span>
+                <span class="text-muted ms-2">
+                  Berakhir: {{ formatDate(subscriptionData.current_period_end) }}
+                </span>
+              </div>
+            </div>
+            <div v-else class="text-center text-muted py-4">
+              <i class="bi bi-credit-card fs-1"></i>
+              <p>Belum ada subscription aktif</p>
+              <NuxtLink to="/subscriptions" class="btn btn-primary btn-sm">
+                Pilih Paket
+              </NuxtLink>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-6 mb-3">
+        <div class="chart-card">
+          <div class="chart-header">
+            <h5 class="chart-title">
+              <i class="bi bi-speedometer2 me-2"></i>
+              Usage Limits (Bulan Ini)
+            </h5>
+          </div>
+          <div class="chart-body">
+            <div v-if="usageData" class="usage-limits">
+              <!-- Messages Usage -->
+              <div class="usage-item">
+                <div class="usage-header">
+                  <div class="usage-label">
+                    <i class="bi bi-chat-dots me-2"></i>
+                    Messages
+                  </div>
+                  <div class="usage-count">
+                    {{ usageData.usage?.messages_used || 0 }} / 
+                    <span v-if="usageData.limits?.messages_per_month === -1">∞</span>
+                    <span v-else>{{ usageData.limits?.messages_per_month || 1000 }}</span>
+                  </div>
+                </div>
+                <div class="progress mb-2" style="height: 8px;">
+                  <div 
+                    class="progress-bar" 
+                    :class="getUsageBarClass(usageData.usage?.messages_used, usageData.limits?.messages_per_month)"
+                    :style="{ width: getUsagePercentage(usageData.usage?.messages_used, usageData.limits?.messages_per_month) + '%' }"
+                  ></div>
+                </div>
+                <div class="usage-warning" v-if="isUsageHigh(usageData.usage?.messages_used, usageData.limits?.messages_per_month)">
+                  <i class="bi bi-exclamation-triangle text-warning me-1"></i>
+                  <small class="text-warning">Mendekati limit!</small>
+                </div>
+              </div>
+
+              <!-- API Requests Usage -->
+              <div class="usage-item">
+                <div class="usage-header">
+                  <div class="usage-label">
+                    <i class="bi bi-arrow-up-circle me-2"></i>
+                    API Requests
+                  </div>
+                  <div class="usage-count">
+                    {{ usageData.usage?.api_requests_used || 0 }} / 
+                    <span v-if="usageData.limits?.api_requests_per_month === -1">∞</span>
+                    <span v-else>{{ usageData.limits?.api_requests_per_month || 500 }}</span>
+                  </div>
+                </div>
+                <div class="progress mb-2" style="height: 8px;">
+                  <div 
+                    class="progress-bar" 
+                    :class="getUsageBarClass(usageData.usage?.api_requests_used, usageData.limits?.api_requests_per_month)"
+                    :style="{ width: getUsagePercentage(usageData.usage?.api_requests_used, usageData.limits?.api_requests_per_month) + '%' }"
+                  ></div>
+                </div>
+                <div class="usage-warning" v-if="isUsageHigh(usageData.usage?.api_requests_used, usageData.limits?.api_requests_per_month)">
+                  <i class="bi bi-exclamation-triangle text-warning me-1"></i>
+                  <small class="text-warning">Mendekati limit!</small>
+                </div>
+              </div>
+
+              <!-- Devices Usage -->
+              <div class="usage-item">
+                <div class="usage-header">
+                  <div class="usage-label">
+                    <i class="bi bi-phone me-2"></i>
+                    Devices
+                  </div>
+                  <div class="usage-count">
+                    {{ usageData.usage?.devices_used || 0 }} / {{ usageData.limits?.devices || 1 }}
+                  </div>
+                </div>
+                <div class="progress mb-2" style="height: 8px;">
+                  <div 
+                    class="progress-bar" 
+                    :class="getUsageBarClass(usageData.usage?.devices_used, usageData.limits?.devices)"
+                    :style="{ width: getUsagePercentage(usageData.usage?.devices_used, usageData.limits?.devices) + '%' }"
+                  ></div>
+                </div>
+                <div class="usage-warning" v-if="isUsageHigh(usageData.usage?.devices_used, usageData.limits?.devices)">
+                  <i class="bi bi-exclamation-triangle text-warning me-1"></i>
+                  <small class="text-warning">Mendekati limit!</small>
+                </div>
+              </div>
+            </div>
+            <div v-else class="text-center text-muted py-4">
+              <i class="bi bi-speedometer2 fs-1"></i>
+              <p>Loading usage data...</p>
             </div>
           </div>
         </div>
@@ -167,7 +311,7 @@
                 <div class="endpoint-info">
                   <div class="endpoint-name">{{ endpoint.endpoint }}</div>
                   <div class="endpoint-stats">
-                    {{ endpoint.count }} requests • {{ endpoint.avg_response_time?.toFixed(0) || 0 }}ms avg
+                    {{ endpoint.count }} requests • {{ formatResponseTime(endpoint.avg_response_time) }}ms avg
                   </div>
                 </div>
                 <div class="endpoint-percentage">
@@ -284,6 +428,8 @@ const selectedPeriod = ref('30d')
 const topEndpoints = ref([])
 const recentApiCalls = ref([])
 const errorAnalysis = ref([])
+const subscriptionData = ref(null)
+const usageData = ref(null)
 
 // Chart references
 const usageChart = ref(null)
@@ -314,6 +460,46 @@ const fetchAnalytics = async () => {
   } catch (error) {
     console.error('Error fetching analytics:', error)
     $toast.error('Gagal memuat data analytics')
+  }
+}
+
+// Fetch subscription data
+const fetchSubscriptionData = async () => {
+  try {
+    const config = useRuntimeConfig()
+    const token = localStorage.getItem('auth_token')
+    const response = await $fetch(`${config.public.apiBase}/subscriptions/my-subscription`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+    
+    if (response.success) {
+      subscriptionData.value = response.data
+    }
+  } catch (error) {
+    console.error('Error fetching subscription:', error)
+    // Don't show error toast for subscription, as user might not have one
+  }
+}
+
+// Fetch usage data
+const fetchUsageData = async () => {
+  try {
+    const config = useRuntimeConfig()
+    const token = localStorage.getItem('auth_token')
+    const response = await $fetch(`${config.public.apiBase}/subscriptions/usage`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+    
+    if (response.success) {
+      usageData.value = response.data
+    }
+  } catch (error) {
+    console.error('Error fetching usage:', error)
+    // Don't show error toast for usage, as user might not have subscription
   }
 }
 
@@ -522,6 +708,13 @@ const getErrorRate = () => {
   return total > 0 ? ((failed / total) * 100).toFixed(1) : 0
 }
 
+const formatResponseTime = (time) => {
+  if (time === null || time === undefined || typeof time !== 'number') {
+    return 0
+  }
+  return time.toFixed(0)
+}
+
 const getEndpointPercentage = (count) => {
   const total = analytics.value.api_usage?.total_requests || 0
   return total > 0 ? ((count / total) * 100).toFixed(1) : 0
@@ -541,6 +734,30 @@ const getStatusBadgeClass = (statusCode) => {
 
 const formatTime = (timestamp) => {
   return new Date(timestamp).toLocaleString('id-ID')
+}
+
+const formatDate = (timestamp) => {
+  return new Date(timestamp).toLocaleDateString('id-ID')
+}
+
+// Usage calculation functions
+const getUsagePercentage = (used, limit) => {
+  if (limit === -1) return 0 // Unlimited
+  if (!limit || limit === 0) return 0
+  return Math.min((used / limit) * 100, 100)
+}
+
+const getUsageBarClass = (used, limit) => {
+  const percentage = getUsagePercentage(used, limit)
+  if (percentage >= 90) return 'bg-danger'
+  if (percentage >= 75) return 'bg-warning'
+  return 'bg-success'
+}
+
+const isUsageHigh = (used, limit) => {
+  if (limit === -1) return false // Unlimited
+  if (!limit || limit === 0) return false
+  return (used / limit) >= 0.75
 }
 
 // Generate mock data for demo
@@ -565,7 +782,11 @@ const generateMockData = () => {
 
 // Initialize data
 onMounted(async () => {
-  await fetchAnalytics()
+  await Promise.all([
+    fetchAnalytics(),
+    fetchSubscriptionData(),
+    fetchUsageData()
+  ])
 })
 
 // Cleanup charts on unmount
@@ -812,6 +1033,90 @@ onUnmounted(() => {
   background-color: #007bff;
   border-color: #007bff;
   color: white;
+}
+
+/* Subscription and Usage Styles */
+.subscription-info {
+  text-align: center;
+}
+
+.subscription-plan {
+  margin-bottom: 1.5rem;
+}
+
+.plan-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+}
+
+.plan-price {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #007bff;
+  margin-bottom: 0.5rem;
+}
+
+.plan-description {
+  color: #6c757d;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.subscription-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.usage-limits {
+  /* space-y equivalent */
+}
+
+.usage-item {
+  margin-bottom: 1.5rem;
+}
+
+.usage-item:last-child {
+  margin-bottom: 0;
+}
+
+.usage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.usage-label {
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  color: #495057;
+}
+
+.usage-count {
+  font-weight: 600;
+  color: #007bff;
+  font-size: 0.9rem;
+}
+
+.usage-warning {
+  display: flex;
+  align-items: center;
+  margin-top: 0.25rem;
+}
+
+.progress {
+  border-radius: 0.5rem;
+  background-color: #e9ecef;
+}
+
+.progress-bar {
+  border-radius: 0.5rem;
+  transition: width 0.3s ease;
 }
 
 @media (max-width: 768px) {

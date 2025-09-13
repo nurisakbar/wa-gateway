@@ -1,4 +1,4 @@
-const { Device, User } = require('../models');
+const { Device, User, ApiKey } = require('../models');
 const whatsappService = require('../services/whatsappService');
 const { logError, logInfo, logWarn } = require('../utils/logger');
 const { generateUUID } = require('../utils/helpers');
@@ -140,10 +140,26 @@ class DeviceController {
 
       logInfo(`Device created: ${device.id} by user: ${userId}`);
 
+      // Create API key bound to this device
+      const { apiKey, key } = ApiKey.generateNewKey(userId, `${name || 'Device'} Key`, { read: true, write: true });
+      apiKey.device_id = device.id;
+      await apiKey.save();
+
       res.status(201).json({
         success: true,
-        message: 'Device created successfully',
-        data: device
+        message: 'Device and API key created successfully',
+        data: {
+          device,
+          api_key: {
+            id: apiKey.id,
+            name: apiKey.name,
+            key_prefix: apiKey.key_prefix,
+            full_key: key,
+            permissions: apiKey.permissions,
+            is_active: apiKey.is_active,
+            device_id: device.id
+          }
+        }
       });
 
     } catch (error) {
@@ -591,6 +607,56 @@ class DeviceController {
 
     } catch (error) {
       logError(error, 'Error getting all connected devices');
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  }
+
+  // Get or create API key bound to this device
+  async getDeviceApiKey(req, res) {
+    try {
+      const { deviceId } = req.params;
+      const userId = req.user.id;
+
+      // Ensure device belongs to user
+      const device = await Device.findOne({ where: { id: deviceId, user_id: userId } });
+      if (!device) {
+        return res.status(404).json({ success: false, message: 'Device not found' });
+      }
+
+      // Find existing key
+      let apiKey = await ApiKey.findOne({ where: { user_id: userId, device_id: deviceId } });
+
+      // Create if missing
+      let fullKey = null;
+      if (!apiKey) {
+        const { apiKey: created, key } = ApiKey.generateNewKey(userId, `${device.name} Key`, { read: true, write: true });
+        created.device_id = deviceId;
+        await created.save();
+        apiKey = created;
+        fullKey = key;
+      } else {
+        fullKey = apiKey.getFullKey();
+      }
+
+      return res.json({
+        success: true,
+        data: {
+          id: apiKey.id,
+          device_id: deviceId,
+          name: apiKey.name,
+          key_prefix: apiKey.key_prefix,
+          full_key: fullKey,
+          permissions: apiKey.permissions,
+          is_active: apiKey.is_active
+        }
+      });
+
+    } catch (error) {
+      logError(error, 'Error getting device API key');
       res.status(500).json({
         success: false,
         message: 'Internal server error',

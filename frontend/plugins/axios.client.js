@@ -43,13 +43,13 @@ export default defineNuxtPlugin((nuxtApp) => {
     (error) => {
       if (error.response?.status === 401) {
         const url = error.config?.url || ''
-        // Only force logout on auth endpoints
-        const isAuthEndpoint = url.includes('/auth/profile') || url.includes('/auth/refresh') || url.includes('/auth/logout')
+        // Only force logout on specific auth endpoints, not all API calls
+        const isAuthEndpoint = url.includes('/auth/profile') || url.includes('/auth/refresh')
 
         if (isAuthEndpoint) {
-          localStorage.removeItem('auth_token')
-          localStorage.removeItem('user')
-          navigateTo('/login')
+          console.log('401 on auth endpoint, logging out...')
+          const authStore = useAuthStore()
+          authStore.logout()
         }
       }
       return Promise.reject(error)

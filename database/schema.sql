@@ -340,6 +340,118 @@ CREATE INDEX idx_files_user_type ON files(user_id, file_type);
 CREATE INDEX idx_contacts_user_favorite ON contacts(user_id, is_favorite);
 CREATE INDEX idx_devices_user_status ON devices(user_id, status);
 
+-- Subscription plans table
+CREATE TABLE subscription_plans (
+    id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    name VARCHAR(100) UNIQUE NOT NULL,
+    description TEXT,
+    price DECIMAL(10,2) NOT NULL,
+    currency VARCHAR(3) DEFAULT 'USD',
+    billing_cycle ENUM('monthly', 'yearly') DEFAULT 'monthly',
+    features JSON DEFAULT ('{}'),
+    limits JSON DEFAULT ('{
+        "messages_per_month": 1000,
+        "api_requests_per_month": 10000,
+        "devices": 1,
+        "webhooks": 5,
+        "storage_gb": 1,
+        "support_level": "email"
+    }'),
+    is_active BOOLEAN DEFAULT TRUE,
+    is_popular BOOLEAN DEFAULT FALSE,
+    sort_order INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_name (name),
+    INDEX idx_is_active (is_active),
+    INDEX idx_sort_order (sort_order)
+);
+
+-- User subscriptions table
+CREATE TABLE user_subscriptions (
+    id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    user_id VARCHAR(36) NOT NULL,
+    plan_id VARCHAR(36) NOT NULL,
+    status ENUM('active', 'cancelled', 'expired', 'past_due', 'trialing') DEFAULT 'active',
+    current_period_start TIMESTAMP NOT NULL,
+    current_period_end TIMESTAMP NOT NULL,
+    trial_start TIMESTAMP NULL,
+    trial_end TIMESTAMP NULL,
+    cancel_at_period_end BOOLEAN DEFAULT FALSE,
+    cancelled_at TIMESTAMP NULL,
+    payment_method_id VARCHAR(255),
+    external_subscription_id VARCHAR(255),
+    metadata JSON DEFAULT ('{}'),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (plan_id) REFERENCES subscription_plans(id) ON DELETE CASCADE,
+    INDEX idx_user_id (user_id),
+    INDEX idx_plan_id (plan_id),
+    INDEX idx_status (status),
+    INDEX idx_external_subscription_id (external_subscription_id),
+    INDEX idx_current_period_end (current_period_end)
+);
+
+-- Invoices table
+CREATE TABLE invoices (
+    id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    user_id VARCHAR(36) NOT NULL,
+    subscription_id VARCHAR(36),
+    invoice_number VARCHAR(100) UNIQUE NOT NULL,
+    status ENUM('draft', 'pending', 'paid', 'failed', 'cancelled') DEFAULT 'draft',
+    amount DECIMAL(10,2) NOT NULL,
+    currency VARCHAR(3) DEFAULT 'USD',
+    subtotal DECIMAL(10,2) NOT NULL,
+    tax DECIMAL(10,2) DEFAULT 0,
+    discount DECIMAL(10,2) DEFAULT 0,
+    total DECIMAL(10,2) NOT NULL,
+    due_date TIMESTAMP NOT NULL,
+    paid_at TIMESTAMP NULL,
+    items JSON DEFAULT ('[]'),
+    metadata JSON DEFAULT ('{}'),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (subscription_id) REFERENCES user_subscriptions(id) ON DELETE SET NULL,
+    INDEX idx_user_id (user_id),
+    INDEX idx_subscription_id (subscription_id),
+    INDEX idx_invoice_number (invoice_number),
+    INDEX idx_status (status),
+    INDEX idx_due_date (due_date)
+);
+
+-- API usage tracking table
+CREATE TABLE api_usage (
+    id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    user_id VARCHAR(36) NOT NULL,
+    api_key_id VARCHAR(36),
+    endpoint VARCHAR(255) NOT NULL,
+    method VARCHAR(10) NOT NULL,
+    response_status INT NOT NULL,
+    response_time INT,
+    request_size INT,
+    response_size INT,
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (api_key_id) REFERENCES api_keys(id) ON DELETE SET NULL,
+    INDEX idx_user_id (user_id),
+    INDEX idx_api_key_id (api_key_id),
+    INDEX idx_endpoint (endpoint),
+    INDEX idx_created_at (created_at)
+);
+
+-- Insert default subscription plans
+INSERT INTO subscription_plans (id, name, description, price, currency, billing_cycle, features, limits, is_active, is_popular, sort_order) VALUES 
+('plan-001', 'Free', 'Perfect for getting started with basic messaging', 0.00, 'USD', 'monthly', '{}', '{"messages_per_month": 1000, "api_requests_per_month": 500, "devices": 1, "webhooks": 1, "storage_gb": 1, "support_level": "community"}', TRUE, FALSE, 1),
+('plan-002', 'Lite', 'Great for small businesses', 25.00, 'USD', 'monthly', '{}', '{"messages_per_month": 1000, "api_requests_per_month": 1000, "devices": 1, "webhooks": 2, "storage_gb": 2, "support_level": "email"}', TRUE, FALSE, 2),
+('plan-003', 'Regular', 'Perfect for growing businesses', 66.00, 'USD', 'monthly', '{}', '{"messages_per_month": 10000, "api_requests_per_month": 5000, "devices": 2, "webhooks": 5, "storage_gb": 5, "support_level": "priority"}', TRUE, TRUE, 3),
+('plan-004', 'Regular Pro', 'Advanced features for professional use', 110.00, 'USD', 'monthly', '{}', '{"messages_per_month": 25000, "api_requests_per_month": 10000, "devices": 3, "webhooks": 10, "storage_gb": 10, "support_level": "priority"}', TRUE, FALSE, 4),
+('plan-005', 'Super', 'All features with attachment support', 165.00, 'USD', 'monthly', '{}', '{"messages_per_month": 10000, "api_requests_per_month": 5000, "devices": 2, "webhooks": 5, "storage_gb": 10, "support_level": "priority", "attachments": true, "autoreply": true, "remove_watermark": true}', TRUE, FALSE, 5),
+('plan-006', 'Advanced', 'Enhanced features for advanced users', 255.00, 'USD', 'monthly', '{}', '{"messages_per_month": 25000, "api_requests_per_month": 10000, "devices": 3, "webhooks": 10, "storage_gb": 20, "support_level": "priority", "attachments": true, "autoreply": true, "remove_watermark": true, "device_notifications": true}', TRUE, FALSE, 6);
+
 -- Create views for common queries
 CREATE VIEW message_stats AS
 SELECT 

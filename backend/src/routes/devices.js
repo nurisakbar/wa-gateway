@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const deviceController = require('../controllers/deviceController');
 const { authenticateToken, requireOperator } = require('../middleware/auth');
+const { enforceDeviceLimit } = require('../middleware/subscriptionLimits');
+const { requireSubscription } = require('../middleware/requireSubscription');
 const { 
   validateDeviceCreation, 
   validateDeviceUpdate, 
@@ -11,6 +13,9 @@ const {
 
 // Apply authentication middleware to all routes
 router.use(authenticateToken);
+
+// Apply subscription requirement to all device routes (except stats for admin)
+router.use(requireSubscription);
 
 // Get all devices for the authenticated user
 router.get('/', validatePagination, deviceController.getUserDevices);
@@ -22,7 +27,7 @@ router.get('/stats', deviceController.getDeviceStats);
 router.get('/connected', requireOperator, deviceController.getAllConnectedDevices);
 
 // Create a new device
-router.post('/', validateDeviceCreation, deviceController.createDevice);
+router.post('/', validateDeviceCreation, enforceDeviceLimit, deviceController.createDevice);
 
 // Get a specific device
 router.get('/:deviceId', validateUUID, deviceController.getDevice);
@@ -47,5 +52,8 @@ router.get('/:deviceId/qr', validateUUID, deviceController.getDeviceQR);
 
 // Get device connection status
 router.get('/:deviceId/status', validateUUID, deviceController.getDeviceStatus);
+
+// Get or create device API key
+router.get('/:deviceId/token', validateUUID, deviceController.getDeviceApiKey);
 
 module.exports = router; 

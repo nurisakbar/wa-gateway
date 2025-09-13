@@ -16,6 +16,11 @@ interface Message {
   timestamp: string
   created_at: string
   updated_at: string
+  device?: {
+    id: string
+    name: string
+    phone_number?: string
+  }
 }
 
 interface MessageState {
@@ -39,7 +44,7 @@ export const useMessageStore = defineStore('messages', {
     isLoading: (state) => state.loading,
     getError: (state) => state.error,
     getMessageCount: (state) => state.messages.length,
-    getSentMessages: (state) => state.messages.filter(m => m.direction === 'outbound'),
+    getSentMessages: (state) => state.messages.filter(m => m.direction === 'outbound' || m.direction === 'outgoing'),
     getReceivedMessages: (state) => state.messages.filter(m => m.direction === 'inbound'),
     getMessageById: (state) => (id: string) => state.messages.find(m => m.id === id),
     getMessagesByPhone: (state) => (phoneNumber: string) => 
@@ -56,8 +61,8 @@ export const useMessageStore = defineStore('messages', {
       from_number?: string
       device_id?: string
       status?: string
+      page?: number
       limit?: number
-      offset?: number
     } = {}) {
       this.loading = true
       this.error = null
@@ -69,11 +74,13 @@ export const useMessageStore = defineStore('messages', {
           if (value) params.append(key, value.toString())
         })
 
-        const response = await $api.get(`/whatsapp/messages?${params.toString()}`)
+        const response = await $api.get(`/messages?${params.toString()}`)
 
         if (response.data.success) {
-          // API may return { data: { messages: [...] }} or { data: [...] }
-          const raw = response.data.data?.messages ?? response.data.data ?? []
+          // Backend returns { data: [...], pagination: {...} } from messageController
+          const raw = response.data.data ?? []
+          const pagination = response.data.pagination
+          
           // Normalize payload to frontend Message interface
           this.messages = (raw as any[]).map((m: any) => ({
             id: m.id,
@@ -82,21 +89,159 @@ export const useMessageStore = defineStore('messages', {
             to_number: m.to_number,
             from_number: m.from_number,
             content: m.content,
-            type: (m.type || m.message_type || 'text') as any,
-            direction: m.direction === 'outgoing' ? 'outbound' : 'inbound',
+            type: m.message_type || m.type || 'text',
+            direction: m.direction === 'outgoing' ? 'outbound' : (m.direction === 'incoming' ? 'inbound' : m.direction),
             status: m.status,
-            media_url: m.metadata?.media_path || m.media_url,
-            filename: m.metadata?.filename || m.filename,
-            file_size: m.file_size,
-            timestamp: m.timestamp || m.sent_at || m.created_at,
+            media_url: m.metadata?.media_path || m.metadata?.media_url,
+            filename: m.metadata?.filename,
+            file_size: m.metadata?.file_size,
+            timestamp: m.sent_at || m.created_at,
             created_at: m.created_at,
-            updated_at: m.updated_at
+            updated_at: m.updated_at,
+            device: m.device
           }))
-          return { success: true, messages: this.messages }
+          return { 
+            success: true, 
+            messages: this.messages,
+            pagination: pagination ? {
+              total: pagination.total_items,
+              current_page: pagination.current_page,
+              total_pages: pagination.total_pages,
+              items_per_page: pagination.items_per_page
+            } : null
+          }
         }
       } catch (error: any) {
         console.error('Fetch messages error:', error)
         this.error = error.response?.data?.message || 'Failed to fetch messages'
+        return { success: false, error: this.error }
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async fetchSentMessages(filters: {
+      to_number?: string
+      from_number?: string
+      device_id?: string
+      status?: string
+      page?: number
+      limit?: number
+    } = {}) {
+      this.loading = true
+      this.error = null
+      try {
+        const { $api } = useNuxtApp()
+        const params = new URLSearchParams()
+        
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value) params.append(key, value.toString())
+        })
+
+        const response = await $api.get(`/messages/sent?${params.toString()}`)
+
+        if (response.data.success) {
+          // Backend returns { data: [...], pagination: {...} } from messageController
+          const raw = response.data.data ?? []
+          const pagination = response.data.pagination
+          
+          // Normalize payload to frontend Message interface
+          this.messages = (raw as any[]).map((m: any) => ({
+            id: m.id,
+            user_id: m.user_id,
+            device_id: m.device_id,
+            to_number: m.to_number,
+            from_number: m.from_number,
+            content: m.content,
+            type: m.message_type || m.type || 'text',
+            direction: m.direction === 'outgoing' ? 'outbound' : (m.direction === 'incoming' ? 'inbound' : m.direction),
+            status: m.status,
+            media_url: m.metadata?.media_path || m.metadata?.media_url,
+            filename: m.metadata?.filename,
+            file_size: m.metadata?.file_size,
+            timestamp: m.sent_at || m.created_at,
+            created_at: m.created_at,
+            updated_at: m.updated_at,
+            device: m.device
+          }))
+          return { 
+            success: true, 
+            messages: this.messages,
+            pagination: pagination ? {
+              total: pagination.total_items,
+              current_page: pagination.current_page,
+              total_pages: pagination.total_pages,
+              items_per_page: pagination.items_per_page
+            } : null
+          }
+        }
+      } catch (error: any) {
+        console.error('Fetch sent messages error:', error)
+        this.error = error.response?.data?.message || 'Failed to fetch sent messages'
+        return { success: false, error: this.error }
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async fetchInboxMessages(filters: {
+      to_number?: string
+      from_number?: string
+      device_id?: string
+      status?: string
+      page?: number
+      limit?: number
+    } = {}) {
+      this.loading = true
+      this.error = null
+      try {
+        const { $api } = useNuxtApp()
+        const params = new URLSearchParams()
+        
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value) params.append(key, value.toString())
+        })
+
+        const response = await $api.get(`/messages/inbox?${params.toString()}`)
+
+        if (response.data.success) {
+          // Backend returns { data: [...], pagination: {...} } from messageController
+          const raw = response.data.data ?? []
+          const pagination = response.data.pagination
+          
+          // Normalize payload to frontend Message interface
+          this.messages = (raw as any[]).map((m: any) => ({
+            id: m.id,
+            user_id: m.user_id,
+            device_id: m.device_id,
+            to_number: m.to_number,
+            from_number: m.from_number,
+            content: m.content,
+            type: m.message_type || m.type || 'text',
+            direction: m.direction === 'outgoing' ? 'outbound' : (m.direction === 'incoming' ? 'inbound' : m.direction),
+            status: m.status,
+            media_url: m.metadata?.media_path || m.metadata?.media_url,
+            filename: m.metadata?.filename,
+            file_size: m.metadata?.file_size,
+            timestamp: m.sent_at || m.created_at,
+            created_at: m.created_at,
+            updated_at: m.updated_at,
+            device: m.device
+          }))
+          return { 
+            success: true, 
+            messages: this.messages,
+            pagination: pagination ? {
+              total: pagination.total_items,
+              current_page: pagination.current_page,
+              total_pages: pagination.total_pages,
+              items_per_page: pagination.items_per_page
+            } : null
+          }
+        }
+      } catch (error: any) {
+        console.error('Fetch inbox messages error:', error)
+        this.error = error.response?.data?.message || 'Failed to fetch inbox messages'
         return { success: false, error: this.error }
       } finally {
         this.loading = false

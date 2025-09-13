@@ -1,54 +1,8 @@
 <template>
   <div class="messages-page">
-    <!-- Enhanced Header -->
-    <div class="page-header bg-white border-bottom">
-      <div class="container-fluid py-3">
-        <div class="row align-items-center">
-          <div class="col">
-            <nav aria-label="breadcrumb" class="mb-2">
-              <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item">
-                  <NuxtLink to="/dashboard" class="text-decoration-none">
-                    <i class="bi bi-house-door me-1"></i>Dashboard
-                  </NuxtLink>
-                </li>
-                <li class="breadcrumb-item active" aria-current="page">Messages</li>
-              </ol>
-            </nav>
-            <h1 class="h3 mb-0 fw-bold text-dark">
-              <i class="bi bi-chat-dots me-3 text-primary"></i>
-              Message Center
-            </h1>
-            <p class="text-muted mb-0">Send and manage your WhatsApp messages</p>
-          </div>
-          <div class="col-auto">
-            <div class="d-flex gap-3">
-              <button
-                class="btn btn-outline-primary d-flex align-items-center"
-                @click="showNewMessageModal = true"
-                :disabled="messageStore.isLoading"
-              >
-                <i class="bi bi-plus-circle me-2"></i>
-                <span class="d-none d-sm-inline">New Message</span>
-                <span class="d-inline d-sm-none">New</span>
-              </button>
-              <button
-                class="btn btn-primary d-flex align-items-center"
-                @click="showBroadcastModal = true"
-                :disabled="messageStore.isLoading"
-              >
-                <i class="bi bi-megaphone me-2"></i>
-                <span class="d-none d-sm-inline">Broadcast</span>
-                <span class="d-inline d-sm-none">Broadcast</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
 
     <!-- Statistics Cards -->
-    <div class="container-fluid py-4">
+    <div class="container-fluid py-4 flex-shrink-0" v-if="showStats">
       <div class="row mb-4">
         <div class="col-md-3 col-sm-6">
           <div class="stat-card h-100 d-flex align-items-center">
@@ -98,17 +52,112 @@
     </div>
 
     <!-- Main Content -->
-    <div class="container-fluid">
-      <div class="row g-4">
+    <div class="container-fluid flex-grow-1 d-flex flex-column">
+      <div class="row g-4 flex-grow-1">
         <!-- Main Area (full width) -->
-        <div class="col-12">
-          <div class="chat-panel">
+        <div class="col-12 d-flex flex-column">
+          <div class="chat-panel flex-grow-1 d-flex flex-column">
             <div v-if="!selectedContact" class="all-messages-view">
               <div class="messages-header">
-                <h5 class="mb-3">
-                  <i class="bi bi-chat-dots me-2"></i>
-                  All Messages
-                </h5>
+                <div class="d-flex justify-content-between align-items-center">
+                  <h5 class="mb-0 fw-bold">
+                    <i class="bi bi-chat-dots me-2 text-primary"></i>
+                    All Messages
+                  </h5>
+                  <div class="d-flex gap-2">
+                    <button
+                      class="btn btn-outline-primary d-flex align-items-center"
+                      @click="refreshMessages"
+                      :disabled="messageStore.isLoading"
+                    >
+                      <i class="bi bi-arrow-clockwise me-1"></i>
+                      <span>Refresh</span>
+                    </button>
+                    <button
+                      class="btn btn-outline-primary d-flex align-items-center"
+                      @click="showNewMessageModal = true"
+                      :disabled="messageStore.isLoading"
+                    >
+                      <i class="bi bi-plus-circle me-1"></i>
+                      <span>New Message</span>
+                    </button>
+                    <button
+                      class="btn btn-primary d-flex align-items-center"
+                      @click="showBroadcastModal = true"
+                      :disabled="messageStore.isLoading"
+                    >
+                      <i class="bi bi-megaphone me-1"></i>
+                      <span>Broadcast</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Filter Section -->
+              <div class="filter-section bg-light border-top border-bottom py-3 px-4">
+                <div class="row align-items-center">
+                  <div class="col-md-3 mb-2 mb-md-0">
+                    <div class="input-group">
+                      <span class="input-group-text bg-white border-end-0">
+                        <i class="bi bi-search text-muted"></i>
+                      </span>
+                      <input
+                        type="text"
+                        class="form-control border-start-0"
+                        placeholder="Search messages by content, number, or device..."
+                        v-model="searchQuery"
+                      />
+                    </div>
+                  </div>
+                  <div class="col-md-2 mb-2 mb-md-0">
+                    <select class="form-select" v-model="statusFilter">
+                      <option value="">All Status</option>
+                      <option value="pending">Pending</option>
+                      <option value="sent">Sent</option>
+                      <option value="delivered">Delivered</option>
+                      <option value="read">Read</option>
+                      <option value="failed">Failed</option>
+                      <option value="received">Received</option>
+                    </select>
+                  </div>
+                  <div class="col-md-2 mb-2 mb-md-0">
+                    <select class="form-select" v-model="typeFilter">
+                      <option value="">All Types</option>
+                      <option value="text">Text</option>
+                      <option value="image">Image</option>
+                      <option value="video">Video</option>
+                      <option value="document">Document</option>
+                      <option value="audio">Audio</option>
+                      <option value="sticker">Sticker</option>
+                      <option value="location">Location</option>
+                      <option value="contact">Contact</option>
+                      <option value="list_message">List Message</option>
+                      <option value="template_buttons">Template Buttons</option>
+                    </select>
+                  </div>
+                  <div class="col-md-2 mb-2 mb-md-0">
+                    <select class="form-select" v-model="directionFilter">
+                      <option value="">All Directions</option>
+                      <option value="inbound">Inbound</option>
+                      <option value="outbound">Outbound</option>
+                    </select>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="d-flex gap-2">
+                      <button
+                        class="btn btn-outline-secondary btn-sm"
+                        @click="clearFilters"
+                        :disabled="!hasActiveFilters"
+                      >
+                        <i class="bi bi-x-circle me-1"></i>
+                        Clear
+                      </button>
+                      <span class="badge bg-primary align-self-center" v-if="filteredMessages.length !== messageStore.getMessages.length">
+                        {{ filteredMessages.length }} of {{ messageStore.getMessages.length }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
               
               <div class="messages-area" ref="messagesArea">
@@ -125,7 +174,20 @@
                   <p class="text-muted">Start the conversation by sending your first message!</p>
                 </div>
 
-                <div v-else class="table-responsive">
+                <div v-else-if="filteredMessages.length === 0 && hasActiveFilters" class="empty-state text-center py-5">
+                  <div class="empty-messages-icon mb-3">
+                    <i class="bi bi-funnel fs-1 text-muted"></i>
+                  </div>
+                  <h6 class="text-dark mb-2">No filtered results</h6>
+                  <p class="text-muted">Try adjusting your filters or clear them to see all messages.</p>
+                  <button class="btn btn-outline-primary btn-sm" @click="clearFilters">
+                    <i class="bi bi-x-circle me-1"></i>
+                    Clear Filters
+                  </button>
+                </div>
+
+                <div v-else class="whatsapp-card">
+                  <div class="table-responsive">
                   <table class="table table-hover mb-0">
                     <thead class="table-light">
                       <tr>
@@ -139,7 +201,7 @@
                       </tr>
                     </thead>
                     <tbody>
-                      <tr v-for="msg in messageStore.getMessages" :key="msg.id">
+                      <tr v-for="msg in paginatedMessages" :key="msg.id" class="message-row">
                         <td class="px-4 py-3"><small class="text-muted">{{ formatTime(msg.timestamp || msg.created_at) }}</small></td>
                         <td class="px-4 py-3">
                           <span class="badge" :class="msg.direction === 'outbound' ? 'bg-primary' : 'bg-secondary'">
@@ -176,6 +238,42 @@
                       </tr>
                     </tbody>
                   </table>
+                  </div>
+                  
+                  <!-- Pagination -->
+                  <div v-if="totalPages > 1" class="pagination-container p-3 border-top">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <div class="pagination-info">
+                        <small class="text-muted">
+                          Showing {{ (currentPage - 1) * itemsPerPage + 1 }} to {{ Math.min(currentPage * itemsPerPage, totalMessageCount) }} of {{ totalMessageCount }} messages
+                        </small>
+                      </div>
+                      <nav aria-label="Page navigation">
+                        <ul class="pagination mb-0">
+                          <li class="page-item" :class="{ disabled: currentPage === 1 }">
+                            <button class="page-link" @click="prevPage" :disabled="currentPage === 1">
+                              <i class="bi bi-chevron-left"></i>
+                            </button>
+                          </li>
+                          <li 
+                            v-for="page in totalPages" 
+                            :key="page" 
+                            class="page-item" 
+                            :class="{ active: currentPage === page }"
+                          >
+                            <button class="page-link" @click="goToPage(page)">
+                              {{ page }}
+                            </button>
+                          </li>
+                          <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+                            <button class="page-link" @click="nextPage" :disabled="currentPage === totalPages">
+                              <i class="bi bi-chevron-right"></i>
+                            </button>
+                          </li>
+                        </ul>
+                      </nav>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -184,17 +282,25 @@
               <!-- Enhanced Chat Header -->
               <div class="chat-header">
                 <div class="chat-header-info">
-                  <div class="contact-avatar">
+                  <div class="contact-avatar gradient">
                     <img v-if="selectedContact.avatar" :src="selectedContact.avatar" :alt="selectedContact.name" />
                     <i v-else class="bi bi-person"></i>
                   </div>
                   <div class="contact-details">
-                    <h6 class="contact-name mb-0">{{ selectedContact.name }}</h6>
-                    <div class="contact-meta">
-                      <span class="phone-number">{{ selectedContact.phone_number }}</span>
-                      <span class="status-indicator" :class="{ online: selectedContact.is_active }">
+                    <div class="name-row">
+                      <h5 class="contact-name mb-0">{{ selectedContact.name }}</h5>
+                      <span class="badge rounded-pill status-pill" :class="selectedContact.is_active ? 'bg-success' : 'bg-secondary'">
                         {{ selectedContact.is_active ? 'Online' : 'Offline' }}
                       </span>
+                    </div>
+                    <div class="header-meta">
+                      <span class="phone-number">{{ selectedContact.phone_number }}</span>
+                      <button class="btn-icon" @click="copyNumber" title="Copy number">
+                        <i class="bi bi-clipboard"></i>
+                      </button>
+                      <a class="btn-icon" :href="`https://wa.me/${selectedContact.phone_number}`" target="_blank" title="Open in WhatsApp">
+                        <i class="bi bi-whatsapp"></i>
+                      </a>
                     </div>
                   </div>
                 </div>
@@ -205,13 +311,13 @@
                   <button class="btn btn-sm btn-outline-secondary" @click="showContactInfo" title="Contact info">
                     <i class="bi bi-info-circle"></i>
                   </button>
-                  <button class="btn btn-sm btn-outline-danger" @click="selectedContact = null" title="Close chat">
+                  <button class="btn btn-sm btn-outline-danger" @click="selectedContact = null; showStats = true" title="Close chat">
                     <i class="bi bi-x"></i>
                   </button>
                 </div>
               </div>
 
-              <!-- Enhanced Messages Area -->
+              <!-- Modern Bubble Messages Area with date separators -->
               <div class="messages-area" ref="messagesArea">
                 <div v-if="messageStore.isLoading" class="loading-state">
                   <div class="loading-spinner"></div>
@@ -224,41 +330,32 @@
                   <h6 class="empty-messages-title">No messages yet</h6>
                   <p class="empty-messages-description">Start the conversation by sending your first message!</p>
                 </div>
-                <div v-else class="messages-list">
-                  <div
-                    v-for="message in messages"
-                    :key="message.id"
-                    class="message-item"
-                    :class="{ sent: message.direction === 'outbound', received: message.direction === 'inbound' }"
-                  >
-                    <div class="message-bubble">
-                      <div class="message-content">
-                        <div v-if="message.type === 'text'" class="message-text">
-                          {{ message.content }}
-                        </div>
-                        <div v-else-if="message.type === 'image'" class="message-media">
-                          <img :src="message.media_url" alt="Image" class="img-fluid rounded" />
-                        </div>
-                        <div v-else-if="message.type === 'document'" class="message-media">
-                          <div class="document-preview">
-                            <i class="bi bi-file-earmark-text fs-1 text-primary"></i>
+                <div v-else class="bubble-list">
+                  <div v-for="(msg, index) in messages" :key="msg.id">
+                    <!-- Date separator -->
+                    <div v-if="showDateSeparator(index)" class="date-separator">
+                      <span>{{ new Date(msg.timestamp || msg.created_at).toLocaleDateString() }}</span>
+                    </div>
+                    <!-- Bubble item -->
+                    <div class="message-item" :class="{ sent: msg.direction === 'outbound', received: msg.direction === 'inbound' }">
+                      <div class="message-bubble">
+                        <div class="message-content">
+                          <div v-if="msg.type === 'text'" class="message-text">{{ msg.content }}</div>
+                          <div v-else-if="msg.type === 'image'" class="message-media"><img :src="msg.media_url" alt="Image" /></div>
+                          <div v-else-if="msg.type === 'document'" class="document-preview">
+                            <i class="bi bi-file-earmark-text fs-5"></i>
                             <div class="document-info">
-                              <strong>{{ message.filename || 'Document' }}</strong>
-                              <small class="text-muted">{{ formatFileSize(message.file_size) }}</small>
+                              <strong>{{ msg.filename || 'Document' }}</strong>
+                              <small class="text-muted">{{ formatFileSize(msg.file_size) }}</small>
                             </div>
                           </div>
+                          <div v-else class="message-text">[{{ msg.type }} message]</div>
                         </div>
-                        <div v-else class="message-text">
-                          [{{ message.type }} message]
-                        </div>
-                      </div>
-                      <div class="message-meta">
-                        <small class="message-time">{{ formatTime(message.timestamp) }}</small>
-                        <div v-if="message.direction === 'outbound'" class="message-status">
-                          <i 
-                            :class="getStatusIcon(message.status)" 
-                            :title="message.status"
-                          ></i>
+                        <div class="message-meta">
+                          <small class="message-time">{{ formatTime(msg.timestamp || msg.created_at) }}</small>
+                          <div v-if="msg.direction === 'outbound'" class="message-status">
+                            <i :class="getStatusIcon(msg.status)" :title="msg.status"></i>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -269,6 +366,17 @@
               <!-- Enhanced Message Input -->
               <div class="message-input">
                 <div class="input-container">
+                  <div class="composer-toolbar">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                      <select class="form-select form-select-sm w-auto" v-model="composerDeviceId">
+                        <option :value="device.id" v-for="device in deviceStore.getConnectedDevices" :key="device.id">{{ device.name }}</option>
+                      </select>
+                      <div class="btn-group">
+                        <button class="btn btn-sm btn-outline-secondary" @click="insertTemplate('Hello, how can I help you today?')">Quick: Hello</button>
+                        <button class="btn btn-sm btn-outline-secondary" @click="insertTemplate('Thank you!')">Thanks</button>
+                      </div>
+                    </div>
+                  </div>
                   <div class="input-group">
                     <button
                       class="btn btn-outline-secondary attachment-btn"
@@ -719,6 +827,8 @@ const contactStore = useContactStore()
 const { $toast } = useNuxtApp()
 
 const selectedContact = ref(null)
+const showStats = ref(true)
+const composerDeviceId = ref('')
 const contactSearch = ref('')
 const messages = ref([])
 const newMessage = ref('')
@@ -758,6 +868,17 @@ const broadcastForm = ref({
   scheduled_at: ''
 })
 
+// Pagination state
+const currentPage = ref(1)
+const itemsPerPage = ref(10)
+const totalMessageCount = ref(0)
+
+// Filter state
+const searchQuery = ref('')
+const statusFilter = ref('')
+const typeFilter = ref('')
+const directionFilter = ref('')
+
 // Computed properties
 const filteredContacts = computed(() => {
   const contacts = contactStore.getContacts || []
@@ -769,6 +890,80 @@ const filteredContacts = computed(() => {
     contact.phone_number.includes(searchTerm)
   )
 })
+
+// Pagination computed properties
+const totalPages = computed(() => {
+  return Math.ceil(totalMessageCount.value / itemsPerPage.value)
+})
+
+// Filtered messages
+const filteredMessages = computed(() => {
+  let messages = messageStore.getMessages || []
+  
+  // Filter by search query
+  if (searchQuery.value.trim()) {
+    const query = searchQuery.value.toLowerCase().trim()
+    messages = messages.filter(message => {
+      if (!message) return false
+      const content = (message.content || '').toLowerCase()
+      const toNumber = (message.to_number || '').toLowerCase()
+      const fromNumber = (message.from_number || '').toLowerCase()
+      const deviceName = (message.device?.name || '').toLowerCase()
+      return content.includes(query) || 
+             toNumber.includes(query) || 
+             fromNumber.includes(query) ||
+             deviceName.includes(query)
+    })
+  }
+  
+  // Filter by status
+  if (statusFilter.value) {
+    messages = messages.filter(message => {
+      if (!message) return false
+      return message.status === statusFilter.value
+    })
+  }
+  
+  // Filter by type
+  if (typeFilter.value) {
+    messages = messages.filter(message => {
+      if (!message) return false
+      return message.type === typeFilter.value
+    })
+  }
+  
+  // Filter by direction
+  if (directionFilter.value) {
+    messages = messages.filter(message => {
+      if (!message) return false
+      return message.direction === directionFilter.value
+    })
+  }
+  
+  return messages
+})
+
+// Use filtered messages directly from store since backend handles pagination
+const paginatedMessages = computed(() => {
+  return filteredMessages.value
+})
+
+// Check if any filters are active
+const hasActiveFilters = computed(() => {
+  return searchQuery.value.trim() !== '' || 
+         statusFilter.value !== '' || 
+         typeFilter.value !== '' || 
+         directionFilter.value !== ''
+})
+
+// Clear all filters
+const clearFilters = () => {
+  searchQuery.value = ''
+  statusFilter.value = ''
+  typeFilter.value = ''
+  directionFilter.value = ''
+  $toast.info('Filters cleared')
+}
 
 // Statistics computed properties
 const totalMessages = computed(() => {
@@ -809,25 +1004,67 @@ const isBroadcastValid = computed(() => {
 
 // Load data on mount
 onMounted(async () => {
-  await Promise.all([
-    deviceStore.fetchDevices(),
-    contactStore.fetchContacts(),
-    messageStore.fetchMessages() // Load messages on page mount
-  ])
-  
-  // Check for contact parameter in URL
-  const route = useRoute()
-  if (route.query.contact) {
-          const contact = contactStore.getContactById(route.query.contact)
-    if (contact) {
-      selectContact(contact)
+  // Redirect to /messages/send as default
+  await navigateTo('/messages/send')
+})
+
+// Refresh messages
+const refreshMessages = async () => {
+  currentPage.value = 1 // Reset to first page on refresh
+  const result = await messageStore.fetchMessages({
+    page: currentPage.value,
+    limit: itemsPerPage.value
+  })
+  if (result?.pagination) {
+    totalMessageCount.value = result.pagination.total
+  }
+  $toast.success('Messages refreshed')
+}
+
+// Pagination functions
+const goToPage = async (page) => {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page
+    const result = await messageStore.fetchMessages({
+      page: currentPage.value,
+      limit: itemsPerPage.value
+    })
+    if (result?.pagination) {
+      totalMessageCount.value = result.pagination.total
     }
   }
-})
+}
+
+const nextPage = async () => {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++
+    const result = await messageStore.fetchMessages({
+      page: currentPage.value,
+      limit: itemsPerPage.value
+    })
+    if (result?.pagination) {
+      totalMessageCount.value = result.pagination.total
+    }
+  }
+}
+
+const prevPage = async () => {
+  if (currentPage.value > 1) {
+    currentPage.value--
+    const result = await messageStore.fetchMessages({
+      page: currentPage.value,
+      limit: itemsPerPage.value
+    })
+    if (result?.pagination) {
+      totalMessageCount.value = result.pagination.total
+    }
+  }
+}
 
 // Select contact
 const selectContact = async (contact) => {
   selectedContact.value = contact
+  showStats.value = false
   await loadMessages(contact.phone_number)
   scrollToBottom()
 }
@@ -862,7 +1099,7 @@ const sendMessage = async () => {
     } else {
       // Send text message
       result = await messageStore.sendMessage({
-        device_id: deviceStore.getConnectedDevices[0]?.id,
+        device_id: composerDeviceId.value || deviceStore.getConnectedDevices[0]?.id,
         to_number: selectedContact.value.phone_number,
         content: newMessage.value.trim(),
         type: 'text'
@@ -898,7 +1135,7 @@ const sendImageMessage = async () => {
     
     // Then send the message with image URL
     return await messageStore.sendMessage({
-      device_id: deviceStore.getConnectedDevices[0]?.id,
+      device_id: composerDeviceId.value || deviceStore.getConnectedDevices[0]?.id,
       to_number: selectedContact.value.phone_number,
       content: newMessage.value.trim() || 'Image',
       type: 'image',
@@ -915,13 +1152,28 @@ const sendUrlImageMessage = async () => {
   try {
     // Send the message with external URL directly
     return await messageStore.sendMessage({
-      device_id: deviceStore.getConnectedDevices[0]?.id,
+      device_id: composerDeviceId.value || deviceStore.getConnectedDevices[0]?.id,
       to_number: selectedContact.value.phone_number,
       content: newMessage.value.trim() || 'Image from URL',
       type: 'image',
       media_url: externalUrl.value,
       filename: externalUrl.value.split('/').pop() || 'image.jpg'
     })
+// Quick insert templates
+const insertTemplate = (text) => {
+  newMessage.value = `${newMessage.value ? newMessage.value + ' ' : ''}${text}`.trim()
+  nextTick(() => messageTextarea.value?.focus())
+}
+
+// Copy number helper
+const copyNumber = async () => {
+  try {
+    await navigator.clipboard.writeText(selectedContact.value.phone_number)
+    $toast.success('Phone number copied')
+  } catch {
+    $toast.error('Failed to copy')
+  }
+}
   } catch (error) {
     throw error
   }
@@ -1015,13 +1267,6 @@ const sendBroadcast = async () => {
   }
 }
 
-// Refresh messages
-const refreshMessages = async () => {
-  if (selectedContact.value) {
-    await loadMessages(selectedContact.value.phone_number)
-    $toast.success('Messages refreshed')
-  }
-}
 
 // Show contact info
 const showContactInfo = () => {
@@ -1343,12 +1588,25 @@ onMounted(() => {
     })
   }
 })
+
+// Date separator helper
+const showDateSeparator = (index) => {
+  if (index === 0) return true
+  const prev = messages.value[index - 1]
+  const curr = messages.value[index]
+  const prevDate = new Date(prev.timestamp || prev.created_at).toDateString()
+  const currDate = new Date(curr.timestamp || curr.created_at).toDateString()
+  return prevDate !== currDate
+}
 </script>
 
 <style scoped>
 .messages-page {
-  min-height: 100vh;
+  height: 100vh;
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .page-header {
@@ -1356,6 +1614,122 @@ onMounted(() => {
   top: 0;
   backdrop-filter: blur(10px);
   background: rgba(255, 255, 255, 0.95);
+}
+
+/* WhatsApp Card - Same as Devices */
+.whatsapp-card {
+  background: white;
+  border-radius: 0px 0px 16px 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+/* Table improvements - Same as Devices */
+.table {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.table th {
+  font-weight: 600;
+  color: #495057;
+  border-bottom: 2px solid #dee2e6;
+  background: #f8f9fa;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.table td {
+  vertical-align: middle;
+  border-bottom: 1px solid #f1f3f4;
+}
+
+.message-row:hover {
+  background-color: #f8f9fa;
+}
+
+/* Table responsive - natural flow */
+.table-responsive {
+  overflow-x: auto;
+}
+
+.table-responsive .table {
+  margin-bottom: 0;
+  width: 100%;
+}
+
+/* Remove table body scroll - let it flow naturally */
+.table-responsive .table tbody {
+  display: table-row-group;
+}
+
+.table-responsive .table thead {
+  display: table-header-group;
+}
+
+/* Pagination styles */
+.pagination-container {
+  background: #f8f9fa;
+  border-top: 1px solid #dee2e6;
+}
+
+.pagination .page-item .page-link {
+  color: #0d6efd;
+  border: 1px solid #dee2e6;
+  border-radius: 0.375rem;
+  margin: 0 0.25rem;
+  padding: 0.5rem 0.75rem;
+  background: white;
+  transition: all 0.2s ease;
+}
+
+.pagination .page-item .page-link:hover {
+  background-color: #e9ecef;
+  border-color: #adb5bd;
+  color: #0d6efd;
+}
+
+.pagination .page-item.active .page-link {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+  color: white;
+}
+
+.pagination .page-item.disabled .page-link {
+  color: #6c757d;
+  pointer-events: none;
+  background-color: #e9ecef;
+  border-color: #dee2e6;
+}
+
+.pagination-info {
+  font-size: 0.875rem;
+}
+
+/* Filter section styles */
+.filter-section {
+  background: #f8f9fa !important;
+  border-top: 1px solid #dee2e6;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.filter-section .input-group-text {
+  background: white;
+  border-color: #ced4da;
+}
+
+.filter-section .form-control,
+.filter-section .form-select {
+  border-color: #ced4da;
+  font-size: 0.875rem;
+}
+
+.filter-section .form-control:focus,
+.filter-section .form-select:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
 }
 /* Button improvements to match Devices */
 .btn {
@@ -1547,9 +1921,13 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 1rem;
+  margin-right: 0.75rem;
   font-size: 1.2rem;
   overflow: hidden;
+}
+
+.contact-avatar.gradient {
+  box-shadow: 0 4px 14px rgba(0, 123, 255, 0.25);
 }
 
 .contact-avatar img {
@@ -1636,7 +2014,7 @@ onMounted(() => {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
   border: 1px solid rgba(0, 0, 0, 0.05);
   overflow: hidden;
-  height: 600px;
+  height: 700px;
   display: flex;
   flex-direction: column;
 }
@@ -1725,6 +2103,29 @@ onMounted(() => {
   flex: 1;
 }
 
+.name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-pill {
+  padding: 4px 10px;
+}
+
+/* Header-only metadata row (prevents stacking and centers under name) */
+.header-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.header-meta .phone-number {
+  font-weight: 500;
+  color: #2c3e50;
+}
+
 .contact-meta {
   display: flex;
   align-items: center;
@@ -1755,12 +2156,26 @@ onMounted(() => {
   gap: 0.5rem;
 }
 
+.btn-icon {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #e9ecef;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: #6c757d;
+  background: #fff;
+}
+
+.btn-icon:hover { background: #f8f9fa; }
+
 /* Messages Area */
 .messages-area {
   flex: 1;
   overflow-y: auto;
-  padding: 1rem;
-  background: #f8f9fa;
+  /* padding: 1rem; */
+  background: #f4f6f8;
 }
 
 .loading-state {
@@ -1825,6 +2240,25 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+.bubble-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.date-separator {
+  text-align: center;
+  margin: 0.75rem 0;
+}
+
+.date-separator span {
+  background: #e9ecef;
+  color: #495057;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
 }
 
 .message-item {
@@ -1906,6 +2340,13 @@ onMounted(() => {
   border-top: 1px solid rgba(0, 0, 0, 0.1);
   background: white;
   position: relative;
+}
+
+.composer-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
 }
 
 .input-container {
@@ -2235,7 +2676,7 @@ onMounted(() => {
 }
 
 .url-input-body {
-  /* Additional styling for URL input body */
+  display: block;
 }
 
 .url-preview {

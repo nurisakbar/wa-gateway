@@ -91,12 +91,18 @@ const authenticateApiKey = async (req, res, next) => {
     await keyData.update({ last_used_at: new Date() });
 
     // Get user data
-    const { User } = require('../models');
+    const { User, Device } = require('../models');
     const user = await User.findByPk(keyData.user_id);
+    // If key is bound to a device, fetch minimal device info
+    let boundDevice = null;
+    if (keyData.device_id) {
+      boundDevice = await Device.findByPk(keyData.device_id, { attributes: ['id', 'name', 'status', 'user_id'] });
+    }
     
     // Attach data to request
     req.apiKey = keyData;
     req.user = user;
+    req.boundDevice = boundDevice;
     req.rateLimitInfo = {
       current: currentUsage.count,
       limit: keyData.rate_limit,
