@@ -145,6 +145,7 @@ const apiKeyRoutes = require('./src/routes/apiKeys');
 const whatsappRoutes = require('./src/routes/whatsapp');
 const subscriptionRoutes = require('./src/routes/subscriptions');
 const subscriptionPlanRoutes = require('./src/routes/subscriptionPlans');
+const userManagementRoutes = require('./src/routes/userManagement');
 const invoiceRoutes = require('./src/routes/invoices');
 const templateRoutes = require('./src/routes/templates');
 
@@ -166,6 +167,7 @@ app.use(`${API_PREFIX}/${API_VERSION}/api-keys`, apiKeyRoutes);
 app.use(`${API_PREFIX}/${API_VERSION}/whatsapp`, trackApiUsage, whatsappRoutes);
 app.use(`${API_PREFIX}/${API_VERSION}/subscriptions`, subscriptionRoutes);
 app.use(`${API_PREFIX}/${API_VERSION}/subscription-plans`, subscriptionPlanRoutes);
+app.use(`${API_PREFIX}/${API_VERSION}/user-management`, userManagementRoutes);
 app.use(`${API_PREFIX}/${API_VERSION}/invoices`, invoiceRoutes);
 app.use(`${API_PREFIX}/${API_VERSION}/templates`, templateRoutes);
 

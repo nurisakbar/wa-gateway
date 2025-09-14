@@ -100,10 +100,32 @@
             </NuxtLink>
           </li>
           <li class="nav-item">
-            <NuxtLink to="/subscription-plans" class="nav-link" active-class="active">
-              <i class="bi bi-gear me-2"></i>
-              <span v-if="!sidebarCollapsed">Plan Management</span>
-            </NuxtLink>
+            <a 
+              href="#" 
+              class="nav-link master-data-menu-link" 
+              :class="{ 'active': $route.path.startsWith('/master-data') }"
+              @click.prevent="toggleMasterDataMenu"
+            >
+              <div class="d-flex align-items-center">
+                <i class="bi bi-database me-2"></i>
+                <span v-if="!sidebarCollapsed">Master Data</span>
+              </div>
+              <i v-if="!sidebarCollapsed" class="bi bi-chevron-down" :class="{ 'bi-chevron-up': showMasterDataMenu }"></i>
+            </a>
+            <ul v-if="!sidebarCollapsed && showMasterDataMenu" class="nav flex-column ms-3">
+              <li class="nav-item">
+                <NuxtLink to="/master-data/subscription-plans" class="nav-link submenu-link" active-class="active">
+                  <i class="bi bi-credit-card me-2"></i>
+                  <span>Kelola Paket</span>
+                </NuxtLink>
+              </li>
+              <li class="nav-item">
+                <NuxtLink to="/master-data/users" class="nav-link submenu-link" active-class="active">
+                  <i class="bi bi-people me-2"></i>
+                  <span>Kelola Users</span>
+                </NuxtLink>
+              </li>
+            </ul>
           </li>
           <li class="nav-item">
             <NuxtLink to="/invoices" class="nav-link" active-class="active">
@@ -243,6 +265,9 @@ const { user, hasActiveSubscription } = storeToRefs(authStore)
 const { $toast } = useNuxtApp()
 const currentRoute = useRoute()
 
+// Master Data menu state
+const showMasterDataMenu = ref(false)
+
 // Initialize auth on mount
 onMounted(async () => {
   // Wait a bit for middleware to complete
@@ -307,6 +332,11 @@ const getUserDisplayName = () => {
   }
   
   return 'User'
+}
+
+// Toggle Master Data menu
+const toggleMasterDataMenu = () => {
+  showMasterDataMenu.value = !showMasterDataMenu.value
 }
 
 const sidebarCollapsed = ref(false)
@@ -462,6 +492,11 @@ watch(() => currentRoute.path, (newPath) => {
 
 /* Special styling for Messages menu with submenu */
 .messages-menu-link {
+  justify-content: space-between;
+}
+
+/* Special styling for Master Data menu with submenu */
+.master-data-menu-link {
   justify-content: space-between;
 }
 
