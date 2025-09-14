@@ -36,24 +36,26 @@ app.use(helmet({
 }));
 
 // CORS configuration
-app.use(cors({
+const whitelist = [
+  'http://103.125.181.245:3000',
+  'http://wafe.klikmedis.com',
+  // Tambahkan origins dari environment variables
+  ...(process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : [])
+]
+
+const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    const allowedOrigins = CORS_ORIGIN.split(',');
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
+    // izinkan kalau origin ada di whitelist atau origin null (misal Postman / curl)
+    if (!origin || whitelist.indexOf(origin) !== -1) {
+      callback(null, true)
     } else {
-      callback(new Error('Not allowed by CORS'));
+      callback(new Error('Not allowed by CORS'))
     }
   },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-api-key'],
-  exposedHeaders: ['Content-Range', 'X-Content-Range'],
-  optionsSuccessStatus: 200 // Some legacy browsers choke on 204
-}));
+  credentials: true
+}
+
+app.use(cors(corsOptions))
 
 // Compression middleware
 app.use(compression());
