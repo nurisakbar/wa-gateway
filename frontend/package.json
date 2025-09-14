@@ -9,7 +9,11 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "setup:env": "node -e \"console.log('Run ./setup-env.sh (Linux/Mac) or setup-env.bat (Windows) to setup environment files')\"",
+    "setup:dev": "cp env.example .env.local && echo 'Development environment file created'",
+    "setup:staging": "cp env.staging .env.staging && echo 'Staging environment file created'",
+    "setup:production": "cp env.production .env.production && echo 'Production environment file created'"
   },
   "dependencies": {
     "@pinia/nuxt": "^0.4.11",
