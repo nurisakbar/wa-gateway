@@ -37,6 +37,8 @@ app.use(helmet({
 
 // CORS configuration
 const whitelist = [
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
   'http://103.125.181.245:3000',
   'http://wafe.klikmedis.com',
   // Tambahkan origins dari environment variables
@@ -142,6 +144,7 @@ const analyticsRoutes = require('./src/routes/analytics');
 const apiKeyRoutes = require('./src/routes/apiKeys');
 const whatsappRoutes = require('./src/routes/whatsapp');
 const subscriptionRoutes = require('./src/routes/subscriptions');
+const subscriptionPlanRoutes = require('./src/routes/subscriptionPlans');
 const invoiceRoutes = require('./src/routes/invoices');
 const templateRoutes = require('./src/routes/templates');
 
@@ -162,6 +165,7 @@ app.use(`${API_PREFIX}/${API_VERSION}/analytics`, trackApiUsage, analyticsRoutes
 app.use(`${API_PREFIX}/${API_VERSION}/api-keys`, apiKeyRoutes);
 app.use(`${API_PREFIX}/${API_VERSION}/whatsapp`, trackApiUsage, whatsappRoutes);
 app.use(`${API_PREFIX}/${API_VERSION}/subscriptions`, subscriptionRoutes);
+app.use(`${API_PREFIX}/${API_VERSION}/subscription-plans`, subscriptionPlanRoutes);
 app.use(`${API_PREFIX}/${API_VERSION}/invoices`, invoiceRoutes);
 app.use(`${API_PREFIX}/${API_VERSION}/templates`, templateRoutes);
 

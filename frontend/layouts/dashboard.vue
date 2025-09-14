@@ -100,6 +100,12 @@
             </NuxtLink>
           </li>
           <li class="nav-item">
+            <NuxtLink to="/subscription-plans" class="nav-link" active-class="active">
+              <i class="bi bi-gear me-2"></i>
+              <span v-if="!sidebarCollapsed">Plan Management</span>
+            </NuxtLink>
+          </li>
+          <li class="nav-item">
             <NuxtLink to="/invoices" class="nav-link" active-class="active">
               <i class="bi bi-receipt me-2"></i>
               <span v-if="!sidebarCollapsed">Invoices</span>
