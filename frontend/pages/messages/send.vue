@@ -136,8 +136,7 @@
                   </div>
                 </div>
               </div>
-              
-        
+
         <div class="card-body p-0">
           <!-- Loading State -->
           <div v-if="messageStore.isLoading" class="text-center py-5">
@@ -514,10 +513,9 @@ const clearFilters = () => {
 
 // Functions
 const refreshMessages = async () => {
-  console.log('Refreshing sent messages...')
+
   await messageStore.fetchSentMessages()
-  console.log('All messages after refresh:', messageStore.getMessages)
-  console.log('Sent messages after refresh:', sentMessagesList.value)
+
   toast.success('Sent messages refreshed')
 }
 
@@ -720,12 +718,10 @@ const sendMessage = async () => {
 
 // Load data on mount
 onMounted(async () => {
-  console.log('Loading sent messages on mount...')
+
   await messageStore.fetchSentMessages()
   await deviceStore.fetchDevices()
-  console.log('All messages:', messageStore.getMessages)
-  console.log('Sent messages:', sentMessagesList.value)
-  console.log('Available devices:', availableDevices.value)
+
 })
 </script>
 

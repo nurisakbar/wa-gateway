@@ -45,12 +45,8 @@ export const useDeviceStore = defineStore('devices', {
       this.loading = true
       this.error = null
       try {
-        console.log('Fetching devices...')
         const config = useRuntimeConfig()
         const token = localStorage.getItem('auth_token')
-        
-        console.log('Auth token:', token ? 'Present' : 'Missing')
-        console.log('API Base URL:', config.public.apiBase)
         
         // Try using $api first, fallback to $fetch
         let response

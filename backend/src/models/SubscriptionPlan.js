@@ -65,6 +65,11 @@ const SubscriptionPlan = sequelize.define('SubscriptionPlan', {
     defaultValue: 0,
     comment: 'Display order'
   },
+  plan_type: {
+    type: DataTypes.ENUM('text_only', 'all_feature'),
+    defaultValue: 'text_only',
+    comment: 'Plan type for categorization'
+  },
   created_at: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW

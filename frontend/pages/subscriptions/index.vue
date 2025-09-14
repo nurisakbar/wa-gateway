@@ -39,22 +39,9 @@
           <!-- Controls Row -->
           <div class="row align-items-center mb-3">
             <div class="col-md-6">
-              <!-- Currency Toggle -->
-              <div class="currency-toggle">
-                <button 
-                  class="btn btn-sm" 
-                  :class="currency === 'IDR' ? 'btn-primary' : 'btn-outline-secondary'"
-                  @click="currency = 'IDR'"
-                >
-                  IDR
-                </button>
-                <button 
-                  class="btn btn-sm" 
-                  :class="currency === 'USD' ? 'btn-primary' : 'btn-outline-secondary'"
-                  @click="currency = 'USD'"
-                >
-                  USD
-                </button>
+              <!-- Currency Display -->
+              <div class="currency-display">
+                <span class="badge bg-primary fs-6">IDR</span>
               </div>
             </div>
             <div class="col-md-6">
@@ -90,8 +77,18 @@
             </div>
           </div>
         </div>
-        <div class="row">
-          <div v-for="plan in textOnlyPlans" :key="plan.code" class="col-lg-4 col-md-6 col-sm-12 mb-4">
+        <div v-if="loading" class="text-center py-4">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <p class="mt-2">Loading subscription plans...</p>
+        </div>
+        <div v-else-if="textOnlyPlans.length === 0" class="text-center py-4">
+          <p class="text-muted">No text-only subscription plans available</p>
+          <p class="text-muted small">Plans count: {{ plans.length }}, Text Only: {{ textOnlyPlans.length }}</p>
+        </div>
+        <div v-else class="row">
+          <div v-for="plan in textOnlyPlans" :key="plan.id" class="col-lg-4 col-md-6 col-sm-12 mb-4">
             <div class="plan-card h-100 text-only">
               <div class="plan-icon">
                 <i class="bi bi-chat-dots"></i>
@@ -99,7 +96,7 @@
               <div class="plan-header">
                 <h3 class="plan-name">{{ plan.name }}</h3>
                 <div class="plan-price">
-                  <span class="currency">{{ currency === 'IDR' ? 'Rp' : '$' }}</span>
+                  <span class="currency">Rp</span>
                   <span class="amount">{{ getPlanPrice(plan) }}</span>
                   <span class="period">/{{ showYearly ? 'yearly' : 'monthly' }}</span>
                   <div v-if="showYearly && plan.price.yearly > 0" class="discount-badge">
@@ -107,17 +104,18 @@
                     <span>20% OFF</span>
                   </div>
                 </div>
-                <div v-if="showYearly && plan.price.yearly > 0" class="savings-info">
-                  <small class="text-muted">
-                    <i class="bi bi-piggy-bank me-1"></i>
-                    Hemat Rp {{ (plan.price.monthly * 12 - plan.price.yearly).toLocaleString('id-ID') }}/tahun
+                <!-- Savings Information -->
+                <div v-if="showYearly && parseFloat(plan.price) > 0" class="savings-info">
+                  <small class="text-success">
+                    <i class="bi bi-check-circle me-1"></i>
+                    Hemat Rp {{ getSavingsAmount(plan) }} dibanding bulanan
                   </small>
                 </div>
               </div>
               <div class="plan-features">
-                <div v-for="f in plan.features" :key="f.text" class="feature-item">
-                  <i :class="f.ok ? 'bi bi-check text-success' : 'bi bi-x text-danger'" class="me-2"></i>
-                  <span class="feature-text" :class="{ 'text-muted': !f.ok }">{{ f.text }}</span>
+                <div v-for="(value, key) in plan.limits" :key="key" class="feature-item">
+                  <i class="bi bi-check text-success me-2"></i>
+                  <span class="feature-text">{{ formatFeature(key, value) }}</span>
                 </div>
               </div>
               <div class="plan-actions">
@@ -141,8 +139,18 @@
           <i class="bi bi-paperclip me-2"></i>
           All Feature
         </h4>
-        <div class="row">
-          <div v-for="plan in allFeaturePlans" :key="plan.code" class="col-lg-4 col-md-4 mb-4">
+        <div v-if="loading" class="text-center py-4">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <p class="mt-2">Loading all-feature plans...</p>
+        </div>
+        <div v-else-if="allFeaturePlans.length === 0" class="text-center py-4">
+          <p class="text-muted">No all-feature subscription plans available</p>
+          <p class="text-muted small">All Feature plans: {{ allFeaturePlans.length }}</p>
+        </div>
+        <div v-else class="row">
+          <div v-for="plan in allFeaturePlans" :key="plan.id" class="col-lg-4 col-md-4 mb-4">
             <div class="plan-card h-100 all-feature">
               <div class="plan-icon">
                 <i class="bi bi-paperclip"></i>
@@ -150,7 +158,7 @@
               <div class="plan-header">
                 <h3 class="plan-name">{{ plan.name }}</h3>
                 <div class="plan-price">
-                  <span class="currency">{{ currency === 'IDR' ? 'Rp' : '$' }}</span>
+                  <span class="currency">Rp</span>
                   <span class="amount">{{ getPlanPrice(plan) }}</span>
                   <span class="period">/{{ showYearly ? 'yearly' : 'monthly' }}</span>
                   <div v-if="showYearly && plan.price.yearly > 0" class="discount-badge">
@@ -158,17 +166,18 @@
                     <span>20% OFF</span>
                   </div>
                 </div>
-                <div v-if="showYearly && plan.price.yearly > 0" class="savings-info">
-                  <small class="text-muted">
-                    <i class="bi bi-piggy-bank me-1"></i>
-                    Hemat Rp {{ (plan.price.monthly * 12 - plan.price.yearly).toLocaleString('id-ID') }}/tahun
+                <!-- Savings Information -->
+                <div v-if="showYearly && parseFloat(plan.price) > 0" class="savings-info">
+                  <small class="text-success">
+                    <i class="bi bi-check-circle me-1"></i>
+                    Hemat Rp {{ getSavingsAmount(plan) }} dibanding bulanan
                   </small>
                 </div>
               </div>
               <div class="plan-features">
-                <div v-for="f in plan.features" :key="f.text" class="feature-item">
-                  <i :class="f.ok ? 'bi bi-check text-success' : 'bi bi-x text-danger'" class="me-2"></i>
-                  <span class="feature-text" :class="{ 'text-muted': !f.ok }">{{ f.text }}</span>
+                <div v-for="(value, key) in plan.limits" :key="key" class="feature-item">
+                  <i class="bi bi-check text-success me-2"></i>
+                  <span class="feature-text">{{ formatFeature(key, value) }}</span>
                 </div>
               </div>
               <div class="plan-actions">
@@ -244,230 +253,9 @@ const plans = ref([])
 const currentSubscription = ref(null)
 const usageData = ref({})
 const showYearly = ref(false)
-const currency = ref('IDR')
+// Currency is now fixed to IDR only
 
-// Static fallback plans (shown if API plans not available)
-const textOnlyPlans = ref([
-  {
-    id: 'plan-001',
-    code: 'free',
-    name: 'Free',
-    price: {
-      monthly: { IDR: 0, USD: 0 },
-      yearly: { IDR: 0, USD: 0 }
-    },
-    features: [
-      { text: '1.000 pesan/bulan', ok: true },
-      { text: 'Kirim personal', ok: true },
-      { text: 'Kirim group', ok: true },
-      { text: 'Pesan text', ok: true },
-      { text: 'Pesan schedule', ok: true },
-      { text: 'Pesan recurring', ok: true },
-      { text: 'Pesan template', ok: true },
-      { text: 'Pesan button (deprecated)', ok: true },
-      { text: 'Pesan attachment', ok: false },
-      { text: 'Autoreply', ok: true },
-      { text: 'Autoreply spreadsheet', ok: false },
-      { text: 'Webhook', ok: true },
-      { text: 'Api', ok: true },
-      { text: 'Remove watermark', ok: false },
-      { text: 'Device notification', ok: false },
-      { text: '0 Multics Agent', ok: true }
-    ]
-  },
-  { 
-    id: 'plan-002',
-    code: 'lite', 
-    name: 'Lite', 
-    price: {
-      monthly: { IDR: 25000, USD: 2 },
-      yearly: { IDR: 240000, USD: 19 }
-    },
-    features: [
-      { text: '1.000 pesan/bulan', ok: true },
-      { text: 'Kirim personal', ok: true },
-      { text: 'Kirim group', ok: true },
-      { text: 'Pesan text', ok: true },
-      { text: 'Pesan schedule', ok: true },
-      { text: 'Pesan recurring', ok: true },
-      { text: 'Pesan template', ok: true },
-      { text: 'Pesan button (deprecated)', ok: true },
-      { text: 'Pesan attachment', ok: false },
-      { text: 'Autoreply', ok: true },
-      { text: 'Autoreply spreadsheet', ok: false },
-      { text: 'Webhook', ok: true },
-      { text: 'Api', ok: true },
-      { text: 'Remove watermark', ok: true },
-      { text: 'Device notification', ok: true },
-      { text: '0 Multics Agent', ok: true }
-    ]
-  },
-  { 
-    id: 'plan-003',
-    code: 'regular', 
-    name: 'Regular', 
-    price: {
-      monthly: { IDR: 66000, USD: 5 },
-      yearly: { IDR: 633600, USD: 48 }
-    },
-    features: [
-      { text: '10.000 pesan/bulan', ok: true },
-      { text: 'Kirim personal', ok: true },
-      { text: 'Kirim group', ok: true },
-      { text: 'Pesan text', ok: true },
-      { text: 'Pesan schedule', ok: true },
-      { text: 'Pesan recurring', ok: true },
-      { text: 'Pesan template', ok: true },
-      { text: 'Pesan button (deprecated)', ok: true },
-      { text: 'Pesan attachment', ok: false },
-      { text: 'Autoreply', ok: true },
-      { text: 'Autoreply spreadsheet', ok: true },
-      { text: 'Webhook', ok: true },
-      { text: 'Api', ok: true },
-      { text: 'Remove watermark', ok: true },
-      { text: 'Device notification', ok: false },
-      { text: '2 Multics Agents', ok: true }
-    ]
-  },
-  { 
-    id: 'plan-004',
-    code: 'regular-pro', 
-    name: 'Regular Pro', 
-    price: {
-      monthly: { IDR: 110000, USD: 8 },
-      yearly: { IDR: 1056000, USD: 77 }
-    },
-    features: [
-      { text: '25.000 pesan/bulan', ok: true },
-      { text: 'Kirim personal', ok: true },
-      { text: 'Kirim group', ok: true },
-      { text: 'Pesan text', ok: true },
-      { text: 'Pesan schedule', ok: true },
-      { text: 'Pesan recurring', ok: true },
-      { text: 'Pesan template', ok: true },
-      { text: 'Pesan button (deprecated)', ok: true },
-      { text: 'Pesan attachment', ok: false },
-      { text: 'Autoreply', ok: true },
-      { text: 'Autoreply spreadsheet', ok: true },
-      { text: 'Webhook', ok: true },
-      { text: 'Api', ok: true },
-      { text: 'Remove watermark', ok: false },
-      { text: 'Device notification', ok: false },
-      { text: '2 Multics Agents', ok: true }
-    ]
-  },
-  { 
-    id: 'plan-005',
-    code: 'master', 
-    name: 'Master', 
-    price: {
-      monthly: { IDR: 175000, USD: 13 },
-      yearly: { IDR: 1680000, USD: 125 }
-    },
-    features: [
-      { text: 'Unlimited pesan/bulan', ok: true },
-      { text: 'Kirim personal', ok: true },
-      { text: 'Kirim group', ok: true },
-      { text: 'Pesan text', ok: true },
-      { text: 'Pesan schedule', ok: true },
-      { text: 'Pesan recurring', ok: true },
-      { text: 'Pesan template', ok: true },
-      { text: 'Pesan button (deprecated)', ok: true },
-      { text: 'Pesan attachment', ok: false },
-      { text: 'Autoreply', ok: true },
-      { text: 'Autoreply spreadsheet', ok: true },
-      { text: 'Webhook', ok: true },
-      { text: 'Api', ok: true },
-      { text: 'Remove watermark', ok: false },
-      { text: 'Device notification', ok: false },
-      { text: '4 Multics Agents', ok: true }
-    ]
-  }
-])
-
-const allFeaturePlans = ref([
-  { 
-    id: 'plan-006',
-    code: 'super', 
-    name: 'Super', 
-    price: {
-      monthly: { IDR: 165000, USD: 12 },
-      yearly: { IDR: 1584000, USD: 115 }
-    },
-    features: [
-      { text: '10.000 pesan/bulan', ok: true },
-      { text: 'Kirim personal', ok: true },
-      { text: 'Kirim group', ok: true },
-      { text: 'Pesan text', ok: true },
-      { text: 'Pesan schedule', ok: true },
-      { text: 'Pesan recurring', ok: true },
-      { text: 'Pesan template', ok: true },
-      { text: 'Pesan button (deprecated)', ok: true },
-      { text: 'Pesan attachment', ok: true },
-      { text: 'Autoreply', ok: true },
-      { text: 'Autoreply spreadsheet', ok: true },
-      { text: 'Webhook', ok: true },
-      { text: 'Api', ok: true },
-      { text: 'Remove watermark', ok: true },
-      { text: 'Device notification', ok: true },
-      { text: '2 Multics Agents', ok: true }
-    ]
-  },
-  { 
-    id: 'plan-007',
-    code: 'advanced', 
-    name: 'Advanced', 
-    price: {
-      monthly: { IDR: 255000, USD: 19 },
-      yearly: { IDR: 2448000, USD: 182 }
-    },
-    features: [
-      { text: '25.000 pesan/bulan', ok: true },
-      { text: 'Kirim personal', ok: true },
-      { text: 'Kirim group', ok: true },
-      { text: 'Pesan text', ok: true },
-      { text: 'Pesan schedule', ok: true },
-      { text: 'Pesan recurring', ok: true },
-      { text: 'Pesan template', ok: true },
-      { text: 'Pesan button (deprecated)', ok: true },
-      { text: 'Pesan attachment', ok: true },
-      { text: 'Autoreply', ok: true },
-      { text: 'Autoreply spreadsheet', ok: true },
-      { text: 'Webhook', ok: true },
-      { text: 'Api', ok: true },
-      { text: 'Remove watermark', ok: true },
-      { text: 'Device notification', ok: true },
-      { text: '2 Multics Agents', ok: true }
-    ]
-  },
-  { 
-    id: 'plan-008',
-    code: 'ultra', 
-    name: 'Ultra', 
-    price: {
-      monthly: { IDR: 355000, USD: 26 },
-      yearly: { IDR: 3408000, USD: 250 }
-    },
-    features: [
-      { text: 'Unlimited pesan/bulan', ok: true },
-      { text: 'Kirim personal', ok: true },
-      { text: 'Kirim group', ok: true },
-      { text: 'Pesan text', ok: true },
-      { text: 'Pesan schedule', ok: true },
-      { text: 'Pesan recurring', ok: true },
-      { text: 'Pesan template', ok: true },
-      { text: 'Pesan button (deprecated)', ok: true },
-      { text: 'Pesan attachment', ok: true },
-      { text: 'Autoreply', ok: true },
-      { text: 'Autoreply spreadsheet', ok: true },
-      { text: 'Webhook', ok: true },
-      { text: 'Api', ok: true },
-      { text: 'Remove watermark', ok: true },
-      { text: 'Device notification', ok: true },
-      { text: '4 Multics Agents', ok: true }
-    ]
-  }
-])
+// Functions
 
 const subscribeStatic = async (plan) => {
   subscribing.value = true
@@ -533,6 +321,7 @@ const fetchPlans = async () => {
         })
     if (response.success) {
       plans.value = response.data.plans || response.data.subscription || response.data.usage || response.data
+      console.log('Plans loaded:', plans.value.length, 'plans')
     }
   } catch (error) {
     console.error('Error fetching plans:', error)
@@ -726,40 +515,64 @@ const cancelSubscription = async () => {
 }
 
 // Computed properties
+const textOnlyPlans = computed(() => {
+  return plans.value.filter(plan => plan.plan_type === 'text_only')
+})
+
+const allFeaturePlans = computed(() => {
+  return plans.value.filter(plan => plan.plan_type === 'all_feature')
+})
+
 const filteredPlans = computed(() => {
-  const cycle = showYearly.value ? 'yearly' : 'monthly'
-  return plans.value.filter(plan => plan.billing_cycle === cycle)
+  // For now, show all plans since database only has monthly plans
+  // TODO: Add yearly plans to database or implement yearly pricing logic
+  console.log('Filtered plans:', plans.value.length, 'plans')
+  return plans.value
 })
 
 // Utility functions
 const getPlanPrice = (plan) => {
-  // Handle new price structure with currency and monthly/yearly
-  if (typeof plan.price === 'object' && plan.price !== null) {
-    const cycle = showYearly.value ? 'yearly' : 'monthly'
-    const price = plan.price[cycle]?.[currency.value] || plan.price[cycle]?.IDR || 0
-    
-    if (price === 0) return '0'
-    
-    if (currency.value === 'IDR') {
-      return price.toLocaleString('id-ID')
-    } else {
-      return price.toString()
-    }
+  // Handle database price structure (string from database)
+  const monthlyPrice = parseFloat(plan.price) || 0
+  
+  if (monthlyPrice === 0) return '0'
+  
+  // Calculate yearly price with 20% discount
+  let price = monthlyPrice
+  if (showYearly.value) {
+    price = monthlyPrice * 12 * 0.8 // 20% discount for yearly
   }
   
-  // Fallback for old price structure
-  if (plan.price === 0) return '0'
-  return plan.price.toLocaleString('id-ID')
+  // Format as IDR (Indonesian Rupiah)
+  return price.toLocaleString('id-ID')
+}
+
+const getSavingsAmount = (plan) => {
+  const monthlyPrice = parseFloat(plan.price) || 0
+  
+  if (monthlyPrice === 0) return '0'
+  
+  // Calculate savings: monthly price * 12 - yearly price
+  const monthlyTotal = monthlyPrice * 12
+  const yearlyPrice = monthlyPrice * 12 * 0.8
+  const savings = monthlyTotal - yearlyPrice
+  
+  return savings.toLocaleString('id-ID')
 }
 
 const formatFeature = (key, value) => {
   const labels = {
-    messages_per_month: `${value.toLocaleString()} messages/month`,
-    api_requests_per_month: `${value.toLocaleString()} API requests/month`,
-    devices: `${value} devices`,
-    webhooks: `${value} webhooks`,
-    storage_gb: `${value} GB storage`,
-    support_level: `${value} support`
+    messages_per_month: value === -1 ? 'Unlimited pesan/bulan' : `${value.toLocaleString()} pesan/bulan`,
+    api_requests_per_month: `${value.toLocaleString()} API requests/bulan`,
+    devices: `${value} device`,
+    webhooks: `${value} webhook`,
+    support_level: `Support ${value}`,
+    attachments: value ? 'Pesan attachment' : 'Tidak ada attachment',
+    autoreply: value ? 'Autoreply' : 'Tidak ada autoreply',
+    autoreply_spreadsheet: value ? 'Autoreply spreadsheet' : 'Tidak ada autoreply spreadsheet',
+    remove_watermark: value ? 'Hapus watermark' : 'Dengan watermark',
+    device_notifications: value ? 'Notifikasi device' : 'Tidak ada notifikasi',
+    multics_agents: `${value} Multics Agent`
   }
   return labels[key] || `${key}: ${value}`
 }
@@ -796,6 +609,9 @@ const scrollToPlans = () => {
 
 // Initialize data
 onMounted(async () => {
+  // Fetch subscription plans from database
+  await fetchPlans()
+  
   // Get current subscription from auth store instead of API
   const authStore = useAuthStore()
   currentSubscription.value = authStore.subscription
@@ -960,12 +776,12 @@ onMounted(async () => {
   margin-top: 0.5rem;
 }
 
-.currency-toggle, .billing-toggle {
+.billing-toggle {
   display: flex;
   gap: 0.25rem;
 }
 
-.currency-toggle .btn, .billing-toggle .btn {
+.billing-toggle .btn {
   min-width: 60px;
   font-size: 0.875rem;
   padding: 0.375rem 0.75rem;
@@ -1270,5 +1086,15 @@ onMounted(async () => {
   .section-title {
     font-size: 1.25rem;
   }
+}
+
+/* Savings Information Styling */
+.savings-info {
+  margin-top: 0.5rem;
+  text-align: center;
+}
+
+.savings-info small {
+  font-weight: 500;
 }
 </style> 

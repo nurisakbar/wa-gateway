@@ -1,7 +1,6 @@
 <template>
   <div class="settings-page">
     <div class="container-fluid">
-     
 
       <!-- Settings Content -->
       <div class="settings-content">

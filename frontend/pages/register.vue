@@ -298,10 +298,9 @@ const validateForm = () => {
 }
 
 const handleRegister = async () => {
-  console.log('handleRegister called')
-  
+
   if (!validateForm()) {
-    console.log('Form validation failed')
+
     return
   }
   

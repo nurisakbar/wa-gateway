@@ -30,7 +30,7 @@ const Invoice = sequelize.define('Invoice', {
     comment: 'Human readable invoice number'
   },
   status: {
-    type: DataTypes.ENUM('draft', 'open', 'paid', 'void', 'uncollectible'),
+    type: DataTypes.ENUM('draft', 'pending', 'paid', 'failed', 'cancelled'),
     defaultValue: 'draft',
     comment: 'Invoice status'
   },
@@ -59,6 +59,11 @@ const Invoice = sequelize.define('Invoice', {
     defaultValue: 0,
     comment: 'Discount amount'
   },
+  total: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: false,
+    comment: 'Total amount after tax and discount'
+  },
   due_date: {
     type: DataTypes.DATE,
     allowNull: false,
@@ -68,16 +73,6 @@ const Invoice = sequelize.define('Invoice', {
     type: DataTypes.DATE,
     allowNull: true,
     comment: 'When invoice was paid'
-  },
-  payment_method: {
-    type: DataTypes.STRING,
-    allowNull: true,
-    comment: 'Payment method used'
-  },
-  external_invoice_id: {
-    type: DataTypes.STRING,
-    allowNull: true,
-    comment: 'External invoice ID from payment provider'
   },
   items: {
     type: DataTypes.JSON,

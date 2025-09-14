@@ -134,8 +134,7 @@
                   </div>
                 </div>
               </div>
-              
-        
+
         <div class="card-body p-0">
           <!-- Loading State -->
           <div v-if="messageStore.isLoading" class="text-center py-5">

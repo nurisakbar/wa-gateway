@@ -415,7 +415,6 @@ const filteredBroadcasts = computed(() => {
   return filtered
 })
 
-
 const broadcastForm = ref({
   title: '',
   device_id: '',
@@ -478,13 +477,7 @@ const createBroadcast = async () => {
   try {
     const config = useRuntimeConfig()
     const token = localStorage.getItem('auth_token') || useCookie('auth_token').value
-    
-    console.log('=== FRONTEND BROADCAST CREATE ===');
-    console.log('Form data:', broadcastForm.value);
-    console.log('Selected device ID:', broadcastForm.value.device_id);
-    console.log('Available devices:', deviceStore.getDevices);
-    console.log('Connected devices:', deviceStore.getConnectedDevices);
-    
+
     const response = await $fetch(`${config.public.apiBase}/broadcasts/create`, {
       method: 'POST',
       headers: {

@@ -8,12 +8,12 @@ export default defineNuxtPlugin(() => {
         const data = JSON.parse(localStorage.getItem(key))
         // If it's auth data with empty tokens, remove it
         if (data && data.auth && (!data.auth.accessToken || !data.auth.refreshToken)) {
-          console.log('Removing conflicting persist data:', key)
+
           localStorage.removeItem(key)
         }
       } catch (error) {
         // If we can't parse it, remove it anyway
-        console.log('Removing invalid persist data:', key)
+
         localStorage.removeItem(key)
       }
     })

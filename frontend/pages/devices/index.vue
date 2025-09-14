@@ -513,11 +513,10 @@ const statusFilter = ref('')
 
 // Load devices on mount
 onMounted(async () => {
-  console.log('Loading devices on mount...')
+
   try {
     const result = await deviceStore.fetchDevices()
-    console.log('Fetch devices result:', result)
-    console.log('Current devices in store:', deviceStore.getDevices)
+
   } catch (error) {
     console.error('Error loading devices:', error)
   }
@@ -578,39 +577,33 @@ const clearFilters = () => {
 
 // Connect device
 const connectDevice = async (device) => {
-  console.log('=== CONNECT DEVICE CALLED ===')
-  console.log('Device:', device)
-  console.log('Device ID:', device?.id)
-  console.log('DeviceStore loading:', deviceStore.isLoading)
-  
+
   // Prevent multiple clicks
   if (deviceStore.isLoading) {
-    console.log('Device connection already in progress')
+
     return
   }
   
   try {
-    console.log('Starting device connection for:', device.id)
+
     $toast.info('Initializing device connection...')
-    
-    console.log('Calling deviceStore.connectDevice...')
+
     const result = await deviceStore.connectDevice(device.id)
-    console.log('Connect device result:', result)
-    
+
     if (result.success) {
       if (result.qrCode) {
-        console.log('QR code received directly')
+
         qrCode.value = result.qrCode
         showQRModal.value = true
         $toast.success('QR code generated successfully')
       } else {
-        console.log('No QR code, starting polling...')
+
         $toast.info(result.message || 'Connection initiated, QR code will be available shortly')
         // Poll for QR code
         await pollForQRCode(device.id)
       }
     } else {
-      console.log('Connect device failed:', result.error)
+
       $toast.error(result.error || 'Failed to connect device')
     }
   } catch (error) {
@@ -626,7 +619,7 @@ let statusPollingInterval = null
 const pollForQRCode = async (deviceId) => {
   // Prevent multiple polling
   if (pollingInProgress) {
-    console.log('QR polling already in progress')
+
     return
   }
   
@@ -644,7 +637,7 @@ const pollForQRCode = async (deviceId) => {
     }
     
     try {
-      console.log(`Polling for QR code, attempt ${attempts + 1}/${maxAttempts}`)
+
       const config = useRuntimeConfig()
       const token = localStorage.getItem('auth_token')
       
@@ -657,9 +650,7 @@ const pollForQRCode = async (deviceId) => {
           headers: token ? { 'Authorization': `Bearer ${token}` } : {}
         })
       }
-      
-      console.log('QR response:', response.data)
-      
+
       // Handle different response scenarios
       if (response.data.success && response.data.data.qr_code) {
         // QR code is available
@@ -673,7 +664,7 @@ const pollForQRCode = async (deviceId) => {
         return
       } else if (response.status === 202) {
         // QR code is being generated, retry after suggested delay
-        console.log(`QR code being generated, retry after ${response.data.data.retry_after || 3} seconds`)
+
         if (attempts === 5) {
           $toast.info('QR code is being generated, please wait...')
         } else if (attempts === 10) {
@@ -694,7 +685,7 @@ const pollForQRCode = async (deviceId) => {
         return
       } else {
         // QR code not ready yet
-        console.log(`QR code not ready yet, attempt ${attempts + 1}/${maxAttempts}`)
+
         if (attempts === 5) {
           $toast.info('Still waiting for QR code...')
         } else if (attempts === 10) {
@@ -727,8 +718,7 @@ const startStatusPolling = (deviceId) => {
   statusPollingInterval = setInterval(async () => {
     try {
       statusAttempts++
-      console.log(`Checking device status, attempt ${statusAttempts}/${maxStatusAttempts}`)
-      
+
       // Refresh devices to get latest status
       await deviceStore.fetchDevices()
       
@@ -737,7 +727,7 @@ const startStatusPolling = (deviceId) => {
       
       if (device && device.status === 'connected') {
         // Device is connected! Close QR modal and show success
-        console.log('Device connected successfully!')
+
         $toast.success('Device connected successfully!')
         closeQRModal()
         clearInterval(statusPollingInterval)
@@ -745,7 +735,7 @@ const startStatusPolling = (deviceId) => {
         return
       } else if (device && device.status === 'error') {
         // Device connection failed
-        console.log('Device connection failed')
+
         $toast.error('Device connection failed. Please try again.')
         closeQRModal()
         clearInterval(statusPollingInterval)
@@ -753,7 +743,7 @@ const startStatusPolling = (deviceId) => {
         return
       } else if (statusAttempts >= maxStatusAttempts) {
         // Timeout - stop polling
-        console.log('Status polling timeout')
+
         $toast.warn('Connection timeout. Please check your device and try again.')
         clearInterval(statusPollingInterval)
         statusPollingInterval = null
@@ -761,8 +751,7 @@ const startStatusPolling = (deviceId) => {
       }
       
       // Continue polling
-      console.log(`Device status: ${device?.status || 'unknown'}, continuing to poll...`)
-      
+
     } catch (error) {
       console.error('Status polling error:', error)
       statusAttempts++

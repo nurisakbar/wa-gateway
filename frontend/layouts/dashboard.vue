@@ -99,6 +99,12 @@
               <span v-if="!sidebarCollapsed">Subscriptions</span>
             </NuxtLink>
           </li>
+          <li class="nav-item">
+            <NuxtLink to="/invoices" class="nav-link" active-class="active">
+              <i class="bi bi-receipt me-2"></i>
+              <span v-if="!sidebarCollapsed">Invoices</span>
+            </NuxtLink>
+          </li>
         </ul>
 
       </div>
@@ -240,7 +246,7 @@ onMounted(async () => {
   // Check if we have a token but no user (page refresh scenario)
   const token = localStorage.getItem('auth_token')
   if (token && !user.value) {
-    console.log('Layout - Token exists but no user, fetching user data...')
+
     try {
       await authStore.fetchUser()
     } catch (error) {
@@ -273,8 +279,7 @@ watch([hasActiveSubscription, user], async ([hasSub, currentUser]) => {
     if (currentUser.role === 'admin' || currentUser.role === 'super_admin') {
       return
     }
-    
-    console.log('No active subscription found, redirecting to subscriptions')
+
     await navigateTo('/subscriptions')
   }
 }, { immediate: false })
@@ -522,7 +527,6 @@ watch(() => currentRoute.path, (newPath) => {
   font-size: 0.75rem;
   line-height: 1.2;
 }
-
 
 /* Responsive */
 @media (max-width: 992px) {

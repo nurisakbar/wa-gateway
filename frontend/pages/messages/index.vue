@@ -1267,7 +1267,6 @@ const sendBroadcast = async () => {
   }
 }
 
-
 // Show contact info
 const showContactInfo = () => {
   // Navigate to contact details

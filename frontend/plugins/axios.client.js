@@ -47,7 +47,6 @@ export default defineNuxtPlugin((nuxtApp) => {
         const isAuthEndpoint = url.includes('/auth/profile') || url.includes('/auth/refresh')
 
         if (isAuthEndpoint) {
-          console.log('401 on auth endpoint, logging out...')
           const authStore = useAuthStore()
           authStore.logout()
         }

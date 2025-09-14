@@ -6,29 +6,23 @@ export const useAuth = () => {
   const login = async (credentials: { email: string; password: string }) => {
     isLoading.value = true
     try {
-      console.log('Login attempt with:', credentials.email)
-      
+
       const config = useRuntimeConfig()
       const response = await $fetch(`${config.public.apiBase}/auth/login`, {
         method: 'POST',
         body: credentials
       })
-      
-      console.log('Login response:', response)
-      
+
       // Check if response has error
       if (response.error) {
-        console.log('Login error from backend:', response.message)
+
         throw new Error(response.message)
       }
       
       // Extract user data and token from response
       const userData = response.data?.user || response.user
       const token = response.data?.token || response.token
-      
-      console.log('User data:', userData)
-      console.log('Token:', token ? 'Token received' : 'No token')
-      
+
       user.value = userData
       isAuthenticated.value = true
       
@@ -45,8 +39,7 @@ export const useAuth = () => {
         success: true,
         message: response.message || 'Login successful'
       }
-      
-      console.log('Returning result:', result)
+
       return result
     } catch (error) {
       console.error('Login catch error:', error)
@@ -55,8 +48,7 @@ export const useAuth = () => {
         success: false,
         error: error.data?.message || error.message || 'Login failed'
       }
-      
-      console.log('Returning error result:', errorResult)
+
       return errorResult
     } finally {
       isLoading.value = false

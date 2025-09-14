@@ -219,15 +219,9 @@ export const useAuthStore = defineStore('auth', {
     },
 
     initializeAuth() {
-      console.log('Auth store - initializeAuth called')
-      
       // Check for stored token and user
       const token = localStorage.getItem('auth_token') || (process.client ? useCookie('auth_token').value : null)
       const userStr = localStorage.getItem('user')
-      
-      console.log('Auth store - Token exists:', !!token)
-      console.log('Auth store - User data exists:', !!userStr)
-      console.log('Auth store - Token value:', token ? 'Token present' : 'No token')
       
       if (token) {
         // If we have token, set it and try to restore user data
@@ -237,15 +231,7 @@ export const useAuthStore = defineStore('auth', {
         if (userStr) {
           try {
             const user = JSON.parse(userStr)
-            console.log('Auth store - Parsed user:', user)
-            
             this.user = user
-            
-            console.log('Auth store - Auth state fully restored:', {
-              hasToken: !!this.token,
-              hasUser: !!this.user,
-              isAuthenticated: this.isAuthenticated
-            })
             
             // Initialize socket connection
             const { $socket } = useNuxtApp()

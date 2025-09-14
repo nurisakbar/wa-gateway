@@ -37,14 +37,14 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
 
     // If user has no active subscription, redirect to subscription page
     if (!response.success || !response.data) {
-      console.log('No active subscription found, redirecting to subscriptions')
+
       return navigateTo('/subscriptions')
     }
 
     // Check if subscription is active
     const subscription = response.data
     if (subscription.status !== 'active' && subscription.status !== 'trialing') {
-      console.log('Subscription not active, redirecting to subscriptions')
+
       return navigateTo('/subscriptions')
     }
 

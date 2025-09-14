@@ -504,8 +504,7 @@ const createApiKey = async () => {
         full_key: response.data.full_key || response.data.key
       }
       showViewModal.value = true
-      
-      console.log('Created API key with full_key:', response.data.full_key || response.data.key)
+
     }
   } catch (error) {
     console.error('Error creating API key:', error)
@@ -634,14 +633,11 @@ const toggleApiKey = async (apiKey) => {
 // View API key
 const viewApiKey = async (apiKey) => {
   try {
-    console.log('Opening API key:', apiKey.id, apiKey.name)
-    
+
     // Fetch the API key details with full_key from backend
     const config = useRuntimeConfig()
     const token = localStorage.getItem('auth_token') || useCookie('auth_token').value
-    
-    console.log('Fetching API key details from:', `${config.public.apiBase}/api-keys/${apiKey.id}`)
-    
+
     const response = await $fetch(`${config.public.apiBase}/api-keys/${apiKey.id}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -651,14 +647,12 @@ const viewApiKey = async (apiKey) => {
       console.error('Fetch error details:', error)
       throw error
     })
-    
-    console.log('API response:', response)
-    
+
     if (response.success) {
       selectedApiKey.value = response.data
-      console.log('Set selectedApiKey with full_key:', response.data.full_key)
+
     } else {
-      console.log('API response failed, using fallback data')
+
       selectedApiKey.value = apiKey // fallback to cached data
     }
   } catch (error) {

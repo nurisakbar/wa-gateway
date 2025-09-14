@@ -334,7 +334,7 @@ const fetchAnalytics = async () => {
     const token = localStorage.getItem('auth_token')
     
     if (!token) {
-      console.log('fetchAnalytics - No token found')
+
       return
     }
     
@@ -345,9 +345,7 @@ const fetchAnalytics = async () => {
         'Content-Type': 'application/json'
       }
     })
-    
-    console.log('Analytics response:', response)
-    
+
     if (response && response.success) {
       analytics.value = response.data
       updateCharts()
@@ -357,7 +355,7 @@ const fetchAnalytics = async () => {
     
     // Handle 401 specifically
     if (error.status === 401 || error.statusCode === 401) {
-      console.log('Analytics - Token expired, logging out')
+
       const authStore = useAuthStore()
       authStore.logout()
       return
@@ -375,7 +373,7 @@ const fetchRealtimeData = async () => {
     const token = localStorage.getItem('auth_token')
     
     if (!token) {
-      console.log('fetchRealtimeData - No token found')
+
       return
     }
     
@@ -385,9 +383,7 @@ const fetchRealtimeData = async () => {
         'Content-Type': 'application/json'
       }
     })
-    
-    console.log('Realtime response:', response)
-    
+
     if (response && response.success) {
       realtimeData.value = response.data
     }
@@ -396,7 +392,7 @@ const fetchRealtimeData = async () => {
     
     // Handle 401 specifically
     if (error.status === 401 || error.statusCode === 401) {
-      console.log('Realtime - Token expired, logging out')
+
       const authStore = useAuthStore()
       authStore.logout()
       return
@@ -554,13 +550,13 @@ onMounted(async () => {
   // Check if we have a token
   const token = localStorage.getItem('auth_token')
   if (!token) {
-    console.log('Dashboard - No token found, redirecting to login')
+
     return navigateTo('/login')
   }
   
   // If we have token but no user, wait for auth initialization
   if (!authStore.user) {
-    console.log('Dashboard - Token found but no user, waiting for auth initialization...')
+
     // Wait a bit for auth to initialize
     await new Promise(resolve => setTimeout(resolve, 1000))
     
@@ -574,8 +570,7 @@ onMounted(async () => {
       }
     }
   }
-  
-  console.log('Dashboard - Auth ready, fetching analytics...')
+
   await Promise.all([
     fetchAnalytics(),
     fetchRealtimeData()

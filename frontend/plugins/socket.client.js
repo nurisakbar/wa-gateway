@@ -16,8 +16,6 @@ export default defineNuxtPlugin(() => {
     // Get auth token from localStorage or cookie
     const token = localStorage.getItem('auth_token') || useCookie('auth_token').value
     
-    console.log('Connecting to socket:', socketUrl)
-    
     socket.value = io(socketUrl, {
       transports: ['websocket', 'polling'],
       autoConnect: true,

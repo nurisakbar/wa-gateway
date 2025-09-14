@@ -113,6 +113,52 @@ const subscribeToPlan = async (req, res) => {
       currency: plan.currency
     });
 
+    // Generate invoice for the subscription (only if not free plan)
+    let invoice = null;
+    if (plan.price > 0) {
+      try {
+        const Invoice = require('../models/Invoice');
+        const invoiceNumber = await Invoice.generateInvoiceNumber();
+        
+        // Calculate due date (30 days from now)
+        const dueDate = new Date();
+        dueDate.setDate(dueDate.getDate() + 30);
+
+        invoice = await Invoice.create({
+          user_id: userId,
+          subscription_id: subscription.id,
+          invoice_number: invoiceNumber,
+          status: 'pending',
+          amount: plan.price,
+          currency: plan.currency,
+          subtotal: plan.price,
+          tax: 0,
+          discount: 0,
+          total: plan.price,
+          due_date: dueDate,
+          items: [
+            {
+              description: `${plan.name} Subscription - ${billing_cycle}`,
+              quantity: 1,
+              unit_price: plan.price,
+              total: plan.price
+            }
+          ],
+          metadata: {
+            subscription_period_start: currentPeriodStart,
+            subscription_period_end: currentPeriodEnd,
+            plan_name: plan.name,
+            billing_cycle: billing_cycle
+          }
+        });
+
+        logInfo(`Invoice generated for subscription ${subscription.id}: ${invoiceNumber}`);
+      } catch (invoiceError) {
+        logError(invoiceError, 'Failed to generate invoice for subscription');
+        // Don't fail the subscription creation if invoice generation fails
+      }
+    }
+
     logInfo(`User ${userId} subscribed to plan ${plan.name}`);
 
     res.json({
@@ -120,7 +166,8 @@ const subscribeToPlan = async (req, res) => {
       message: 'Successfully subscribed to plan',
       data: {
         subscription,
-        plan
+        plan,
+        invoice
       }
     });
   } catch (error) {

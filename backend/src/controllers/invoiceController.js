@@ -1,4 +1,4 @@
-const { Invoice, UserSubscription, User } = require('../models');
+const { Invoice, UserSubscription, User, SubscriptionPlan } = require('../models');
 const { logError, logInfo } = require('../utils/logger');
 
 // Get user's invoices
@@ -19,11 +19,11 @@ const getUserInvoices = async (req, res) => {
       include: [
         {
           model: UserSubscription,
-          as: 'UserSubscription',
+          as: 'subscription',
           include: [
             {
-              model: require('./subscriptionController').SubscriptionPlan,
-              as: 'SubscriptionPlan'
+              model: SubscriptionPlan,
+              as: 'plan'
             }
           ]
         }
@@ -67,11 +67,11 @@ const getInvoice = async (req, res) => {
       include: [
         {
           model: UserSubscription,
-          as: 'UserSubscription',
+          as: 'subscription',
           include: [
             {
-              model: require('./subscriptionController').SubscriptionPlan,
-              as: 'SubscriptionPlan'
+              model: SubscriptionPlan,
+              as: 'plan'
             }
           ]
         }
@@ -129,12 +129,13 @@ const generateInvoice = async (req, res) => {
       user_id: userId,
       subscription_id: subscription_id,
       invoice_number: invoiceNumber,
-      status: 'draft',
+      status: 'pending',
       amount: amount,
       currency: 'USD',
       subtotal: amount,
       tax: 0,
       discount: 0,
+      total: amount,
       due_date: dueDate,
       items: [
         {
@@ -196,9 +197,7 @@ const markInvoiceAsPaid = async (req, res) => {
 
     await invoice.update({
       status: 'paid',
-      paid_at: new Date(),
-      payment_method: payment_method || 'manual',
-      external_invoice_id: external_payment_id
+      paid_at: new Date()
     });
 
     logInfo(`Invoice ${invoice.invoice_number} marked as paid`, 'Invoice Paid');
@@ -230,15 +229,15 @@ const downloadInvoice = async (req, res) => {
       include: [
         {
           model: User,
-          as: 'User'
+          as: 'user'
         },
         {
           model: UserSubscription,
-          as: 'UserSubscription',
+          as: 'subscription',
           include: [
             {
-              model: require('./subscriptionController').SubscriptionPlan,
-              as: 'SubscriptionPlan'
+              model: SubscriptionPlan,
+              as: 'plan'
             }
           ]
         }
