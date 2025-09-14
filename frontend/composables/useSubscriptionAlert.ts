@@ -6,7 +6,7 @@ export const useSubscriptionAlert = () => {
     // Show a prominent toast notification
     $toast.warning({
       title: 'Langganan Diperlukan',
-      message: 'Silakan berlangganan untuk menggunakan semua fitur WA Gateway!',
+      message: 'Silakan berlangganan untuk menggunakan semua fitur KlikWhatsApp!',
       duration: 8000,
       action: {
         text: 'Pilih Paket',

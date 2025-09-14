@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # =============================================================================
-# WA Gateway - Ubuntu Server Setup Script
+# KlikWhatsApp - Ubuntu Server Setup Script
 # =============================================================================
 # Script ini akan menginstall semua dependencies yang diperlukan untuk
-# menjalankan WA Gateway di Ubuntu server
+# menjalankan KlikWhatsApp di Ubuntu server
 # =============================================================================
 
 set -e  # Exit on any error
@@ -296,7 +296,7 @@ setup_log_directories() {
 
 # Setup logrotate
 setup_logrotate() {
-    log "Setting up logrotate for WA Gateway..."
+    log "Setting up logrotate for KlikWhatsApp..."
     
     sudo tee /etc/logrotate.d/wa-gateway > /dev/null <<EOF
 /var/log/wa-gateway/*.log {
@@ -327,11 +327,11 @@ create_monitoring_script() {
     sudo tee /usr/local/bin/wa-gateway-monitor > /dev/null <<'EOF'
 #!/bin/bash
 
-# WA Gateway Monitoring Script
+# KlikWhatsApp Monitoring Script
 LOG_FILE="/var/log/wa-gateway/monitor.log"
 DATE=$(date '+%Y-%m-%d %H:%M:%S')
 
-echo "[$DATE] === WA Gateway System Status ===" >> $LOG_FILE
+echo "[$DATE] === KlikWhatsApp System Status ===" >> $LOG_FILE
 
 # Check Docker containers
 echo "[$DATE] === Docker Containers ===" >> $LOG_FILE
@@ -339,7 +339,7 @@ if [ -f /home/wagateway/wa-gateway/docker-compose.yml ]; then
     cd /home/wagateway/wa-gateway
     docker compose ps >> $LOG_FILE 2>&1
 else
-    echo "[$DATE] WA Gateway not found in /home/wagateway/wa-gateway" >> $LOG_FILE
+    echo "[$DATE] KlikWhatsApp not found in /home/wagateway/wa-gateway" >> $LOG_FILE
 fi
 
 # Check system resources
@@ -377,7 +377,7 @@ create_backup_script() {
     sudo tee /usr/local/bin/wa-gateway-backup > /dev/null <<'EOF'
 #!/bin/bash
 
-# WA Gateway Backup Script
+# KlikWhatsApp Backup Script
 BACKUP_DIR="/home/wagateway/backups"
 DATE=$(date +%Y%m%d_%H%M%S)
 LOG_FILE="/var/log/wa-gateway/backup.log"
@@ -422,7 +422,7 @@ if [ -f /home/wagateway/wa-gateway/docker-compose.yml ]; then
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] File backup failed" >> $LOG_FILE
     fi
 else
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] WA Gateway not found in /home/wagateway/wa-gateway" >> $LOG_FILE
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] KlikWhatsApp not found in /home/wagateway/wa-gateway" >> $LOG_FILE
 fi
 
 # Remove backups older than 30 days
@@ -447,7 +447,7 @@ setup_system_optimization() {
     # Optimize system limits
     sudo tee -a /etc/security/limits.conf > /dev/null <<EOF
 
-# WA Gateway optimizations
+# KlikWhatsApp optimizations
 * soft nofile 65536
 * hard nofile 65536
 * soft nproc 65536
@@ -457,7 +457,7 @@ EOF
     # Optimize kernel parameters
     sudo tee -a /etc/sysctl.conf > /dev/null <<EOF
 
-# WA Gateway kernel optimizations
+# KlikWhatsApp kernel optimizations
 net.core.somaxconn = 65535
 net.core.netdev_max_backlog = 5000
 net.ipv4.tcp_max_syn_backlog = 65535
@@ -516,7 +516,7 @@ EOF
 # Main installation function
 main() {
     echo "=========================================="
-    echo "  WA Gateway Ubuntu Server Setup Script"
+    echo "  KlikWhatsApp Ubuntu Server Setup Script"
     echo "=========================================="
     echo
     
@@ -542,7 +542,7 @@ main() {
     fi
     
     # Start installation
-    log "Starting WA Gateway server setup..."
+    log "Starting KlikWhatsApp server setup..."
     
     update_system
     install_essential_packages
@@ -582,7 +582,7 @@ main() {
     echo "Next steps:"
     echo "1. Logout and login again to apply Docker group changes"
     echo "2. Switch to user 'wagateway': su - wagateway"
-    echo "3. Clone WA Gateway repository"
+    echo "3. Clone KlikWhatsApp repository"
     echo "4. Configure environment files"
     echo "5. Deploy with Docker Compose"
     echo

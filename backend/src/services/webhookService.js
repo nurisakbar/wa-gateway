@@ -161,7 +161,7 @@ class WebhookService {
         event: 'webhook.test',
         timestamp: new Date().toISOString(),
         data: {
-          message: 'This is a test webhook from WA Gateway',
+          message: 'This is a test webhook from KlikWhatsApp',
           webhook_id: webhook.id
         }
       };

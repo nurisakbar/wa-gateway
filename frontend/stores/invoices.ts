@@ -124,7 +124,7 @@ export const useInvoiceStore = defineStore('invoices', {
         }
       } catch (error: any) {
         this.error = error.message || 'Failed to fetch invoices'
-        console.error('Error fetching invoices:', error)
+// console.error('Error fetching invoices:', error)
         throw error
       } finally {
         this.loading = false
@@ -153,7 +153,7 @@ export const useInvoiceStore = defineStore('invoices', {
         }
       } catch (error: any) {
         this.error = error.message || 'Failed to fetch invoice'
-        console.error('Error fetching invoice:', error)
+// console.error('Error fetching invoice:', error)
         throw error
       } finally {
         this.loading = false
@@ -182,7 +182,7 @@ export const useInvoiceStore = defineStore('invoices', {
         }
       } catch (error: any) {
         this.error = error.message || 'Failed to fetch invoice stats'
-        console.error('Error fetching invoice stats:', error)
+// console.error('Error fetching invoice stats:', error)
         throw error
       } finally {
         this.loading = false
@@ -219,7 +219,7 @@ export const useInvoiceStore = defineStore('invoices', {
         }
       } catch (error: any) {
         this.error = error.message || 'Failed to generate invoice'
-        console.error('Error generating invoice:', error)
+// console.error('Error generating invoice:', error)
         throw error
       } finally {
         this.loading = false
@@ -264,7 +264,7 @@ export const useInvoiceStore = defineStore('invoices', {
         }
       } catch (error: any) {
         this.error = error.message || 'Failed to mark invoice as paid'
-        console.error('Error marking invoice as paid:', error)
+// console.error('Error marking invoice as paid:', error)
         throw error
       } finally {
         this.loading = false
@@ -292,7 +292,7 @@ export const useInvoiceStore = defineStore('invoices', {
         }
       } catch (error: any) {
         this.error = error.message || 'Failed to download invoice'
-        console.error('Error downloading invoice:', error)
+// console.error('Error downloading invoice:', error)
         throw error
       } finally {
         this.loading = false

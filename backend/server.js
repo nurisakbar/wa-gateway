@@ -203,7 +203,7 @@ if (process.env.ENABLE_SWAGGER === 'true') {
 
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
     customCss: '.swagger-ui .topbar { display: none }',
-    customSiteTitle: 'WA Gateway API Documentation'
+    customSiteTitle: 'KlikWhatsApp API Documentation'
   }));
 }
 

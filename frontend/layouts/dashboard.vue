@@ -8,7 +8,7 @@
             <i class="bi bi-whatsapp fs-3 text-success"></i>
           </div>
           <div v-if="!sidebarCollapsed" class="sidebar-title">
-            <h5 class="mb-0 text-white">WA Gateway</h5>
+            <h5 class="mb-0 text-white">KlikWhatsApp</h5>
             <!-- <small class="text-muted">Dashboard</small> -->
           </div>
         </div>
@@ -236,7 +236,6 @@ const authStore = useAuthStore()
 const { user, hasActiveSubscription } = storeToRefs(authStore)
 const { $toast } = useNuxtApp()
 const currentRoute = useRoute()
-const { checkAndShowSubscriptionAlert } = useSubscriptionAlert()
 
 // Initialize auth on mount
 onMounted(async () => {
@@ -250,7 +249,7 @@ onMounted(async () => {
     try {
       await authStore.fetchUser()
     } catch (error) {
-      console.error('Layout - Failed to fetch user:', error)
+// console.error('Layout - Failed to fetch user:', error)
       // Don't logout here, let the API calls handle it
     }
   }
@@ -259,10 +258,8 @@ onMounted(async () => {
   if (token && user.value) {
     try {
       await authStore.fetchSubscription()
-      // Check and show subscription alert if needed
-      checkAndShowSubscriptionAlert()
     } catch (error) {
-      console.error('Layout - Failed to fetch subscription:', error)
+// console.error('Layout - Failed to fetch subscription:', error)
     }
   }
   

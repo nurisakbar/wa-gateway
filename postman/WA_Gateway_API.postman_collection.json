@@ -1,6 +1,6 @@
 {
   "info": {
-    "name": "WA Gateway API",
+    "name": "KlikWhatsApp API",
     "description": "Complete API collection for WhatsApp Gateway application",
     "version": "1.0.0",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
@@ -267,7 +267,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"deviceId\": \"device-uuid-here\",\n  \"to\": \"6281234567890\",\n  \"message\": \"Hello from WA Gateway!\",\n  \"type\": \"text\"\n}"
+              "raw": "{\n  \"deviceId\": \"device-uuid-here\",\n  \"to\": \"6281234567890\",\n  \"message\": \"Hello from KlikWhatsApp!\",\n  \"type\": \"text\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/messages/send",

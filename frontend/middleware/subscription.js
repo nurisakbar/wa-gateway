@@ -22,7 +22,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
         return
       }
     } catch (error) {
-      console.error('Error parsing user data:', error)
+// console.error('Error parsing user data:', error)
     }
   }
 
@@ -49,7 +49,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     }
 
   } catch (error) {
-    console.error('Error checking subscription:', error)
+// console.error('Error checking subscription:', error)
     // If there's an error checking subscription, redirect to subscription page
     return navigateTo('/subscriptions')
   }

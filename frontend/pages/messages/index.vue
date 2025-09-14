@@ -1198,7 +1198,7 @@ const uploadImage = async (file) => {
     
     return response
   } catch (error) {
-    console.error('Upload error:', error)
+// console.error('Upload error:', error)
     return {
       success: false,
       error: error.data?.message || error.message || 'Failed to upload image'

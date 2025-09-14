@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🚀 Starting WA Gateway Production Environment with Docker Compose..."
+echo "🚀 Starting KlikWhatsApp Production Environment with Docker Compose..."
 
 # Check if Docker is installed
 if ! command -v docker &> /dev/null; then
@@ -71,7 +71,7 @@ else
     docker compose up --build -d
 fi
 
-echo "✅ WA Gateway Production Environment is starting up!"
+echo "✅ KlikWhatsApp Production Environment is starting up!"
 echo "📱 Frontend: http://localhost:3000"
 echo "🔧 Backend: http://localhost:3001"
 echo "📊 API Docs: http://localhost:3001/api-docs"

@@ -518,7 +518,7 @@ onMounted(async () => {
     const result = await deviceStore.fetchDevices()
 
   } catch (error) {
-    console.error('Error loading devices:', error)
+// console.error('Error loading devices:', error)
   }
 })
 
@@ -607,7 +607,7 @@ const connectDevice = async (device) => {
       $toast.error(result.error || 'Failed to connect device')
     }
   } catch (error) {
-    console.error('Connect device error:', error)
+// console.error('Connect device error:', error)
     $toast.error('Failed to connect device')
   }
 }
@@ -696,7 +696,7 @@ const pollForQRCode = async (deviceId) => {
       attempts++
       setTimeout(poll, 3000) // Poll every 3 seconds (increased interval)
     } catch (error) {
-      console.error('Poll QR code error:', error)
+// console.error('Poll QR code error:', error)
       attempts++
       setTimeout(poll, 3000)
     }
@@ -753,7 +753,7 @@ const startStatusPolling = (deviceId) => {
       // Continue polling
 
     } catch (error) {
-      console.error('Status polling error:', error)
+// console.error('Status polling error:', error)
       statusAttempts++
       
       if (statusAttempts >= maxStatusAttempts) {
@@ -833,7 +833,7 @@ const saveDevice = async () => {
       $toast.error('Invalid operation')
     }
   } catch (error) {
-    console.error('Save device error:', error)
+// console.error('Save device error:', error)
     $toast.error('Failed to save device')
   }
 }
@@ -855,7 +855,7 @@ const deleteDevice = async (device) => {
         $toast.error(result.error || 'Failed to delete device')
       }
     } catch (error) {
-      console.error('Delete device error:', error)
+// console.error('Delete device error:', error)
       $toast.error('Failed to delete device')
     }
   }

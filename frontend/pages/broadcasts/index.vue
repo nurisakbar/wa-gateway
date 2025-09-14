@@ -441,7 +441,7 @@ const fetchBroadcasts = async () => {
       broadcasts.value = response.data.broadcasts
     }
   } catch (error) {
-    console.error('Error fetching broadcasts:', error)
+// console.error('Error fetching broadcasts:', error)
   } finally {
     loading.value = false
   }
@@ -468,7 +468,7 @@ const fetchBroadcastStats = async () => {
       totalRecipients.value = stats.total_recipients || 0
     }
   } catch (error) {
-    console.error('Error fetching broadcast stats:', error)
+// console.error('Error fetching broadcast stats:', error)
   }
 }
 
@@ -499,7 +499,7 @@ const createBroadcast = async () => {
       await refreshData()
     }
   } catch (error) {
-    console.error('Error creating broadcast:', error)
+// console.error('Error creating broadcast:', error)
     $toast.error('Failed to create broadcast')
   }
 }

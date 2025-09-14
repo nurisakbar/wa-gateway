@@ -229,7 +229,7 @@ const fetchWebhooks = async () => {
       webhooks.value = Array.isArray(raw) ? raw : (raw?.webhooks || [])
     }
   } catch (error) {
-    console.error('Error fetching webhooks:', error)
+// console.error('Error fetching webhooks:', error)
     $toast.error('Gagal memuat webhooks')
   } finally {
     loading.value = false
@@ -277,7 +277,7 @@ const saveWebhook = async () => {
       $toast.error(res.message || 'Failed to save webhook')
     }
   } catch (err) {
-    console.error('Save webhook error:', err)
+// console.error('Save webhook error:', err)
     $toast.error(err?.data?.message || err.message || 'Failed to save webhook')
   } finally {
     saving.value = false

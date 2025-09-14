@@ -458,7 +458,7 @@ const fetchAnalytics = async () => {
       generateMockData() // For demo purposes
     }
   } catch (error) {
-    console.error('Error fetching analytics:', error)
+// console.error('Error fetching analytics:', error)
     $toast.error('Gagal memuat data analytics')
   }
 }
@@ -478,7 +478,7 @@ const fetchSubscriptionData = async () => {
       subscriptionData.value = response.data
     }
   } catch (error) {
-    console.error('Error fetching subscription:', error)
+// console.error('Error fetching subscription:', error)
     // Don't show error toast for subscription, as user might not have one
   }
 }
@@ -498,7 +498,7 @@ const fetchUsageData = async () => {
       usageData.value = response.data
     }
   } catch (error) {
-    console.error('Error fetching usage:', error)
+// console.error('Error fetching usage:', error)
     // Don't show error toast for usage, as user might not have subscription
   }
 }

@@ -4,12 +4,12 @@ const options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'WA Gateway API',
+      title: 'KlikWhatsApp API',
       version: '1.0.0',
       description: 'WhatsApp Gateway API for managing WhatsApp devices, messages, contacts, and broadcasts',
       contact: {
-        name: 'WA Gateway Support',
-        email: 'support@wagateway.com'
+        name: 'KlikWhatsApp Support',
+        email: 'support@klikwhatsapp.com'
       },
       license: {
         name: 'MIT',

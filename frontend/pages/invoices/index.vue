@@ -434,7 +434,7 @@ const fetchInvoices = async () => {
       pagination.value = response.data.pagination
     }
   } catch (error) {
-    console.error('Error fetching invoices:', error)
+// console.error('Error fetching invoices:', error)
     $toast.error('Failed to load invoices')
   } finally {
     loading.value = false
@@ -456,7 +456,7 @@ const fetchInvoiceStats = async () => {
       invoiceStats.value = response.data
     }
   } catch (error) {
-    console.error('Error fetching invoice stats:', error)
+// console.error('Error fetching invoice stats:', error)
   }
 }
 
@@ -513,7 +513,7 @@ const payInvoice = async (invoice) => {
       showInvoiceModal.value = false
     }
   } catch (error) {
-    console.error('Error paying invoice:', error)
+// console.error('Error paying invoice:', error)
     $toast.error('Failed to mark invoice as paid')
   }
 }
@@ -536,7 +536,7 @@ const downloadInvoice = async (invoice) => {
 
     }
   } catch (error) {
-    console.error('Error downloading invoice:', error)
+// console.error('Error downloading invoice:', error)
     $toast.error('Failed to download invoice')
   }
 }

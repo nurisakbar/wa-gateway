@@ -1,4 +1,4 @@
-// WA Gateway Landing Page JavaScript
+// KlikWhatsApp Landing Page JavaScript
 
 document.addEventListener('DOMContentLoaded', function() {
     

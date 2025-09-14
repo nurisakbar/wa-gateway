@@ -1,7 +1,7 @@
 {
-  "name": "wa-gateway-backend",
+  "name": "klikwhatsapp-backend",
   "version": "1.0.0",
-  "description": "WhatsApp Gateway Backend API",
+  "description": "KlikWhatsApp Backend API",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -91,6 +91,6 @@
     "sequelize",
     "mysql"
   ],
-  "author": "WA Gateway Team",
+  "author": "KlikWhatsApp Team",
   "license": "MIT"
 }

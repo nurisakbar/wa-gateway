@@ -12,7 +12,7 @@
               <h5 class="mb-0 fw-bold text-dark">Ayo Berlangganan Sekarang!</h5>
             </div>
             <p class="mb-1 text-muted small">
-              Nikmati semua fitur WA Gateway tanpa batas. Dengan berlangganan, Anda bisa menambahkan device, mengirim pesan otomatis, hingga akses penuh API.
+              Nikmati semua fitur KlikWhatsApp tanpa batas. Dengan berlangganan, Anda bisa menambahkan device, mengirim pesan otomatis, hingga akses penuh API.
             </p>
             <p class="mb-0 text-dark small fw-medium">
               Jangan biarkan bisnis Anda terhambat—aktifkan paket langganan sekarang!
@@ -351,7 +351,7 @@ const fetchAnalytics = async () => {
       updateCharts()
     }
   } catch (error) {
-    console.error('Error fetching analytics:', error)
+// console.error('Error fetching analytics:', error)
     
     // Handle 401 specifically
     if (error.status === 401 || error.statusCode === 401) {
@@ -388,7 +388,7 @@ const fetchRealtimeData = async () => {
       realtimeData.value = response.data
     }
   } catch (error) {
-    console.error('Error fetching real-time data:', error)
+// console.error('Error fetching real-time data:', error)
     
     // Handle 401 specifically
     if (error.status === 401 || error.statusCode === 401) {
@@ -565,7 +565,7 @@ onMounted(async () => {
       try {
         await authStore.fetchUser()
       } catch (error) {
-        console.error('Dashboard - Failed to fetch user:', error)
+// console.error('Dashboard - Failed to fetch user:', error)
         return navigateTo('/login')
       }
     }

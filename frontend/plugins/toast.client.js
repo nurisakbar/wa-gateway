@@ -56,7 +56,7 @@ export default defineNuxtPlugin((nuxtApp) => {
 
   // Global error handler
   nuxtApp.hook('app:error', (error) => {
-    console.error('App error:', error)
+    // console.error('App error:', error)
     
     // Extract meaningful error message
     let errorMessage = 'An unexpected error occurred. Please try again.'

@@ -334,13 +334,13 @@ class NotificationService {
         <body>
           <div class="container">
             <div class="header">
-              <h1>WA Gateway</h1>
+              <h1>KlikWhatsApp</h1>
             </div>
             <div class="content">
               <p>${formattedMessage.replace(/\n/g, '<br>')}</p>
             </div>
             <div class="footer">
-              <p>This is an automated message from WA Gateway</p>
+              <p>This is an automated message from KlikWhatsApp</p>
             </div>
           </div>
         </body>

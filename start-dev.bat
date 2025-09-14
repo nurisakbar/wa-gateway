@@ -1,5 +1,5 @@
 @echo off
-echo 🚀 Starting WA Gateway Development Environment with Docker Compose...
+echo 🚀 Starting KlikWhatsApp Development Environment with Docker Compose...
 
 REM Check if Docker is installed
 docker --version >nul 2>&1
@@ -55,5 +55,5 @@ REM Start Docker Compose development environment
 docker compose -f docker-compose.dev.yml up --build
 
 echo.
-echo ✅ WA Gateway Development Environment stopped.
+echo ✅ KlikWhatsApp Development Environment stopped.
 pause 

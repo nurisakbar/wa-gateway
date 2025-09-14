@@ -62,14 +62,14 @@ export const useAuthStore = defineStore('auth', {
         const { $api } = useNuxtApp()
         const response = await $api.post('/auth/login', credentials)
         
-        console.log('Login response:', response.data)
+        // console.log('Login response:', response.data)
         
         // Backend returns { error: false, data: { user, token } }
         if (response.data && !response.data.error && response.data.data) {
           const { user, token } = response.data.data
           
-          console.log('Login successful - User:', user)
-          console.log('Login successful - Token:', token ? 'Token received' : 'No token')
+          // console.log('Login successful - User:', user)
+          // console.log('Login successful - Token:', token ? 'Token received' : 'No token')
           
           this.user = user
           this.token = token
@@ -95,14 +95,14 @@ export const useAuthStore = defineStore('auth', {
           
           return { success: true, user }
         } else {
-          console.log('Login failed - Invalid response structure')
+          // console.log('Login failed - Invalid response structure')
           return { 
             success: false, 
             error: response.data?.message || 'Login failed' 
           }
         }
       } catch (error: any) {
-        console.error('Login error:', error)
+        // console.error('Login error:', error)
         return { 
           success: false, 
           error: error.response?.data?.message || 'Login failed' 
@@ -129,7 +129,7 @@ export const useAuthStore = defineStore('auth', {
           return { success: true, message: 'Registration successful' }
         }
       } catch (error: any) {
-        console.error('Registration error:', error)
+        // console.error('Registration error:', error)
         return { 
           success: false, 
           error: error.response?.data?.message || 'Registration failed' 
@@ -140,12 +140,12 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async logout() {
-      console.log('Auth store - logout called')
+      // console.log('Auth store - logout called')
       try {
         const { $api } = useNuxtApp()
         await $api.post('/auth/logout')
       } catch (error) {
-        console.error('Logout error:', error)
+        // console.error('Logout error:', error)
       } finally {
         // Use clearAuth to ensure all storage is cleared
         this.clearAuth()
@@ -175,7 +175,7 @@ export const useAuthStore = defineStore('auth', {
           return true
         }
       } catch (error) {
-        console.error('Token refresh error:', error)
+        // console.error('Token refresh error:', error)
         this.logout()
         return false
       }
@@ -185,7 +185,7 @@ export const useAuthStore = defineStore('auth', {
       try {
         const token = localStorage.getItem('auth_token')
         if (!token) {
-          console.log('fetchUser - No token found')
+          // console.log('fetchUser - No token found')
           return false
         }
 
@@ -201,17 +201,17 @@ export const useAuthStore = defineStore('auth', {
           this.user = response.data
           this.isAuthenticated = true
           localStorage.setItem('user', JSON.stringify(response.data))
-          console.log('fetchUser - User data loaded successfully')
+          // console.log('fetchUser - User data loaded successfully')
           return true
         } else {
-          console.log('fetchUser - Invalid response:', response)
+          // console.log('fetchUser - Invalid response:', response)
           return false
         }
       } catch (error: any) {
-        console.error('fetchUser - Error:', error)
+        // console.error('fetchUser - Error:', error)
         // Only logout if it's a 401 error
         if (error.status === 401 || error.statusCode === 401) {
-          console.log('fetchUser - Token expired, logging out')
+          // console.log('fetchUser - Token expired, logging out')
           this.logout()
         }
         return false
@@ -241,7 +241,7 @@ export const useAuthStore = defineStore('auth', {
             
             return true
           } catch (error) {
-            console.error('Auth initialization error:', error)
+            // console.error('Auth initialization error:', error)
             // Clear corrupted user data but keep token
             localStorage.removeItem('user')
             this.user = null
@@ -249,17 +249,17 @@ export const useAuthStore = defineStore('auth', {
         }
         
         // If we have token but no user data, that's ok - it will be fetched
-        console.log('Auth store - Token found, user data will be fetched later')
+        // console.log('Auth store - Token found, user data will be fetched later')
         return true
       }
       
-      console.log('Auth store - No token found, clearing auth')
+      // console.log('Auth store - No token found, clearing auth')
       this.clearAuth()
       return false
     },
 
     clearAuth() {
-      console.log('Auth store - clearAuth called')
+      // console.log('Auth store - clearAuth called')
       this.user = null
       this.token = null
       this.isAuthenticated = false
@@ -319,7 +319,7 @@ export const useAuthStore = defineStore('auth', {
         }
         
         // Log other errors
-        console.error('fetchSubscription - Error:', error)
+        // console.error('fetchSubscription - Error:', error)
         this.subscription = null
         this.hasActiveSubscription = false
         return false

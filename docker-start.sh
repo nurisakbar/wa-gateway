@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# WA Gateway Docker Startup Script
-# This script helps you start WA Gateway with Docker
+# KlikWhatsApp Docker Startup Script
+# This script helps you start KlikWhatsApp with Docker
 
 set -e
 
@@ -59,7 +59,7 @@ check_env() {
 start_services() {
     local mode=$1
     
-    print_status "Starting WA Gateway in $mode mode..."
+    print_status "Starting KlikWhatsApp in $mode mode..."
     
     if [ "$mode" = "development" ]; then
         docker-compose -f docker-compose.dev.yml up -d
@@ -99,7 +99,7 @@ show_logs() {
 stop_services() {
     local mode=$1
     
-    print_status "Stopping WA Gateway services..."
+    print_status "Stopping KlikWhatsApp services..."
     
     if [ "$mode" = "development" ]; then
         docker-compose -f docker-compose.dev.yml down
@@ -114,7 +114,7 @@ stop_services() {
 restart_services() {
     local mode=$1
     
-    print_status "Restarting WA Gateway services..."
+    print_status "Restarting KlikWhatsApp services..."
     stop_services $mode
     start_services $mode
 }
@@ -136,14 +136,14 @@ cleanup() {
 
 # Function to show help
 show_help() {
-    echo "WA Gateway Docker Management Script"
+    echo "KlikWhatsApp Docker Management Script"
     echo ""
     echo "Usage: $0 [COMMAND] [MODE]"
     echo ""
     echo "Commands:"
-    echo "  start     Start WA Gateway services"
-    echo "  stop      Stop WA Gateway services"
-    echo "  restart   Restart WA Gateway services"
+    echo "  start     Start KlikWhatsApp services"
+    echo "  stop      Stop KlikWhatsApp services"
+    echo "  restart   Restart KlikWhatsApp services"
     echo "  status    Show service status"
     echo "  logs      Show service logs"
     echo "  cleanup   Remove all containers and volumes"
@@ -172,7 +172,7 @@ main() {
     case $command in
         "start")
             start_services $mode
-            print_success "WA Gateway is starting up!"
+            print_success "KlikWhatsApp is starting up!"
             print_status "Frontend: http://localhost:3000"
             print_status "Backend API: http://localhost:3001"
             print_status "API Docs: http://localhost:3001/api-docs"

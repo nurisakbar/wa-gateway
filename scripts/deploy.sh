@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # =============================================================================
-# WA Gateway - Automated Deployment Script
+# KlikWhatsApp - Automated Deployment Script
 # =============================================================================
-# Script ini akan melakukan deployment otomatis WA Gateway ke server
+# Script ini akan melakukan deployment otomatis KlikWhatsApp ke server
 # =============================================================================
 
 set -e  # Exit on any error
@@ -79,7 +79,7 @@ check_docker_compose() {
 # Get user input for configuration
 get_configuration() {
     echo "=========================================="
-    echo "  WA Gateway Deployment Configuration"
+    echo "  KlikWhatsApp Deployment Configuration"
     echo "=========================================="
     echo
     
@@ -254,7 +254,7 @@ EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
 EMAIL_USER=$SMTP_USER
 EMAIL_PASS=$SMTP_PASS
-EMAIL_FROM=WA Gateway <noreply@$DOMAIN>
+EMAIL_FROM=KlikWhatsApp <noreply@$DOMAIN>
 
 # File Upload Configuration
 UPLOAD_PATH=/app/uploads
@@ -526,7 +526,7 @@ create_deployment_info() {
     log "Creating deployment info file..."
     
     cat > deployment-info.txt <<EOF
-WA Gateway Deployment Information
+KlikWhatsApp Deployment Information
 ================================
 
 Deployment Date: $(date)
@@ -575,7 +575,7 @@ EOF
 # Main deployment function
 main() {
     echo "=========================================="
-    echo "  WA Gateway Automated Deployment"
+    echo "  KlikWhatsApp Automated Deployment"
     echo "=========================================="
     echo
     
@@ -605,7 +605,7 @@ main() {
     fi
     
     # Start deployment
-    log "Starting WA Gateway deployment..."
+    log "Starting KlikWhatsApp deployment..."
     
     setup_repository
     create_environment_files
@@ -630,7 +630,7 @@ main() {
     echo "✅ SSL certificate installed"
     echo "✅ Deployment verified"
     echo
-    echo "Your WA Gateway is now available at:"
+    echo "Your KlikWhatsApp is now available at:"
     echo "🌐 https://$DOMAIN"
     echo
     echo "Useful commands:"

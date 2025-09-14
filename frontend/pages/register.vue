@@ -23,7 +23,7 @@
                 <div class="logo-icon">
                   <i class="bi bi-whatsapp"></i>
                 </div>
-                <h1 class="logo-text">WA Gateway</h1>
+                <h1 class="logo-text">KlikWhatsApp</h1>
               </div>
               <p class="form-subtitle">Create your account</p>
             </div>
@@ -304,13 +304,6 @@ const handleRegister = async () => {
     return
   }
   
-  console.log('Form data:', {
-    username: form.username.trim(),
-    full_name: form.full_name.trim(),
-    email: form.email.trim().toLowerCase(),
-    password: form.password,
-    phone: form.phone.trim() || undefined
-  })
   
   isLoading.value = true
   
@@ -334,7 +327,7 @@ const handleRegister = async () => {
     // Redirect to login
     navigateTo('/login')
   } catch (error) {
-    console.error('Registration error:', error)
+// console.error('Registration error:', error)
     
     const { $toast } = useNuxtApp()
     

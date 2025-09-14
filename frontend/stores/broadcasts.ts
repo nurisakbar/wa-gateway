@@ -62,7 +62,7 @@ export const useBroadcastStore = defineStore('broadcasts', {
           return { success: true, broadcasts: this.broadcasts }
         }
       } catch (error: any) {
-        console.error('Fetch broadcasts error:', error)
+// console.error('Fetch broadcasts error:', error)
         this.error = error.response?.data?.message || 'Failed to fetch broadcasts'
         return { success: false, error: this.error }
       } finally {
@@ -92,7 +92,7 @@ export const useBroadcastStore = defineStore('broadcasts', {
           return { success: true, broadcast: newBroadcast }
         }
       } catch (error: any) {
-        console.error('Create broadcast error:', error)
+// console.error('Create broadcast error:', error)
         this.error = error.response?.data?.message || 'Failed to create broadcast'
         return { success: false, error: this.error }
       } finally {
@@ -116,7 +116,7 @@ export const useBroadcastStore = defineStore('broadcasts', {
           return { success: true, broadcast: updatedBroadcast }
         }
       } catch (error: any) {
-        console.error('Start broadcast error:', error)
+// console.error('Start broadcast error:', error)
         this.error = error.response?.data?.message || 'Failed to start broadcast'
         return { success: false, error: this.error }
       } finally {
@@ -140,7 +140,7 @@ export const useBroadcastStore = defineStore('broadcasts', {
           return { success: true, broadcast: updatedBroadcast }
         }
       } catch (error: any) {
-        console.error('Cancel broadcast error:', error)
+// console.error('Cancel broadcast error:', error)
         this.error = error.response?.data?.message || 'Failed to cancel broadcast'
         return { success: false, error: this.error }
       } finally {
@@ -163,7 +163,7 @@ export const useBroadcastStore = defineStore('broadcasts', {
           return { success: true }
         }
       } catch (error: any) {
-        console.error('Delete broadcast error:', error)
+// console.error('Delete broadcast error:', error)
         this.error = error.response?.data?.message || 'Failed to delete broadcast'
         return { success: false, error: this.error }
       } finally {
@@ -182,7 +182,7 @@ export const useBroadcastStore = defineStore('broadcasts', {
           return { success: true, broadcast }
         }
       } catch (error: any) {
-        console.error('Get broadcast error:', error)
+// console.error('Get broadcast error:', error)
         this.error = error.response?.data?.message || 'Failed to get broadcast'
         return { success: false, error: this.error }
       }
@@ -204,7 +204,7 @@ export const useBroadcastStore = defineStore('broadcasts', {
           return { success: true, broadcast: updatedBroadcast }
         }
       } catch (error: any) {
-        console.error('Update broadcast error:', error)
+// console.error('Update broadcast error:', error)
         this.error = error.response?.data?.message || 'Failed to update broadcast'
         return { success: false, error: this.error }
       } finally {

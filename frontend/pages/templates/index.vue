@@ -286,7 +286,7 @@ const loadTemplates = async () => {
       templates.value = response.data.templates || []
     }
   } catch (error) {
-    console.error('Error loading templates:', error)
+// console.error('Error loading templates:', error)
   } finally {
     isLoading.value = false
   }
@@ -344,7 +344,7 @@ const saveTemplate = async () => {
       $toast?.success(editingTemplate.value ? 'Template updated' : 'Template created')
     }
   } catch (error) {
-    console.error('Save template error:', error)
+// console.error('Save template error:', error)
     const { $toast } = useNuxtApp()
     $toast?.error('Failed to save template')
   }

@@ -23,7 +23,7 @@
                 <div class="logo-icon">
                   <i class="bi bi-whatsapp"></i>
                 </div>
-                <h1 class="logo-text">WA Gateway</h1>
+                <h1 class="logo-text">KlikWhatsApp</h1>
               </div>
               <p class="form-subtitle">Masukan email dan password untuk login</p>
             </div>
@@ -184,7 +184,7 @@ const handleLogin = async () => {
       $toast.error(result.error || 'Login failed')
     }
   } catch (error) {
-    console.error('Login error:', error)
+    // console.error('Login error:', error)
     $toast.error('Login failed. Please try again.')
   }
 }

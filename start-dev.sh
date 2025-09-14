@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🚀 Starting WA Gateway Development Environment with Docker Compose..."
+echo "🚀 Starting KlikWhatsApp Development Environment with Docker Compose..."
 
 # Check if Docker is installed
 if ! command -v docker &> /dev/null; then

@@ -295,7 +295,7 @@ const subscribeStatic = async (plan) => {
       await navigateTo('/dashboard')
     }
   } catch (error) {
-    console.error('Error subscribing to plan:', error)
+// console.error('Error subscribing to plan:', error)
     if (error.data?.message) {
       $toast.error(error.data.message)
     } else {
@@ -321,10 +321,10 @@ const fetchPlans = async () => {
         })
     if (response.success) {
       plans.value = response.data.plans || response.data.subscription || response.data.usage || response.data
-      console.log('Plans loaded:', plans.value.length, 'plans')
+      // console.log('Plans loaded:', plans.value.length, 'plans')
     }
   } catch (error) {
-    console.error('Error fetching plans:', error)
+// console.error('Error fetching plans:', error)
     $toast.error('Gagal memuat subscription plans')
   } finally {
     loading.value = false
@@ -348,7 +348,7 @@ const fetchCurrentSubscription = async () => {
       currentSubscription.value = response.data
     }
   } catch (error) {
-    console.error('Error fetching current subscription:', error)
+// console.error('Error fetching current subscription:', error)
   }
 }
 
@@ -403,7 +403,7 @@ const fetchUsageData = async () => {
       // Don't log anything for expected 404 responses
       return
     } else {
-      console.error('Error fetching usage data:', error)
+// console.error('Error fetching usage data:', error)
     }
   }
 }
@@ -440,7 +440,7 @@ const subscribeToPlan = async (plan) => {
       await navigateTo('/dashboard')
     }
   } catch (error) {
-    console.error('Error subscribing to plan:', error)
+// console.error('Error subscribing to plan:', error)
     $toast.error('Gagal berlangganan ke plan')
   } finally {
     subscribing.value = false
@@ -476,7 +476,7 @@ const upgradePlan = async (plan) => {
       await authStore.fetchSubscription()
     }
   } catch (error) {
-    console.error('Error upgrading plan:', error)
+// console.error('Error upgrading plan:', error)
     $toast.error('Gagal upgrade plan')
   } finally {
     subscribing.value = false
@@ -509,7 +509,7 @@ const cancelSubscription = async () => {
       await fetchCurrentSubscription()
     }
   } catch (error) {
-    console.error('Error cancelling subscription:', error)
+// console.error('Error cancelling subscription:', error)
     $toast.error('Gagal membatalkan subscription')
   }
 }
@@ -526,7 +526,7 @@ const allFeaturePlans = computed(() => {
 const filteredPlans = computed(() => {
   // For now, show all plans since database only has monthly plans
   // TODO: Add yearly plans to database or implement yearly pricing logic
-  console.log('Filtered plans:', plans.value.length, 'plans')
+  // console.log('Filtered plans:', plans.value.length, 'plans')
   return plans.value
 })
 

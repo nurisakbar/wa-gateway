@@ -26,7 +26,7 @@ export const useTemplateStore = defineStore('templates', {
           this.templates = response.data.templates || []
         }
       } catch (error: any) {
-        console.error('Fetch templates error:', error)
+// console.error('Fetch templates error:', error)
         this.error = error.data?.message || error.message || 'Failed to fetch templates'
       } finally {
         this.loading = false
@@ -55,7 +55,7 @@ export const useTemplateStore = defineStore('templates', {
           return { success: true, template: newTemplate }
         }
       } catch (error: any) {
-        console.error('Create template error:', error)
+// console.error('Create template error:', error)
         this.error = error.data?.message || error.message || 'Failed to create template'
         return { success: false, error: this.error }
       } finally {

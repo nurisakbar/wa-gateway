@@ -42,7 +42,7 @@ export const useAuth = () => {
 
       return result
     } catch (error) {
-      console.error('Login catch error:', error)
+      // // console.error('Login catch error:', error)
       
       const errorResult = {
         success: false,

@@ -194,7 +194,7 @@ const loadSettings = async () => {
       sms: false
     }
   } catch (error) {
-    console.error('Error loading settings:', error)
+// console.error('Error loading settings:', error)
     $toast.error('Failed to load settings')
   }
 }
@@ -218,7 +218,7 @@ const updateProfile = async () => {
       $toast.success('Profile updated successfully')
     }
   } catch (error) {
-    console.error('Error updating profile:', error)
+// console.error('Error updating profile:', error)
     $toast.error('Failed to update profile')
   } finally {
     isUpdatingProfile.value = false
@@ -242,7 +242,7 @@ const changePassword = async () => {
       }
     }
   } catch (error) {
-    console.error('Error changing password:', error)
+// console.error('Error changing password:', error)
     $toast.error(error.response?.data?.message || 'Failed to change password')
   } finally {
     isChangingPassword.value = false

@@ -83,7 +83,7 @@ export const useContactStore = defineStore('contacts', {
           return { success: true, contacts: this.contacts }
         }
       } catch (error: any) {
-        console.error('Fetch contacts error:', error)
+// console.error('Fetch contacts error:', error)
         this.error = error.data?.message || error.message || 'Failed to fetch contacts'
         return { success: false, error: this.error }
       } finally {
@@ -119,7 +119,7 @@ export const useContactStore = defineStore('contacts', {
           return { success: true, contact: newContact }
         }
       } catch (error: any) {
-        console.error('Create contact error:', error)
+// console.error('Create contact error:', error)
         this.error = error.data?.message || error.message || 'Failed to create contact'
         return { success: false, error: this.error }
       } finally {
@@ -152,7 +152,7 @@ export const useContactStore = defineStore('contacts', {
           return { success: true, contact: updatedContact }
         }
       } catch (error: any) {
-        console.error('Update contact error:', error)
+// console.error('Update contact error:', error)
         this.error = error.data?.message || 'Failed to update contact'
         return { success: false, error: this.error }
       } finally {
@@ -183,7 +183,7 @@ export const useContactStore = defineStore('contacts', {
           return { success: true }
         }
       } catch (error: any) {
-        console.error('Delete contact error:', error)
+// console.error('Delete contact error:', error)
         this.error = error.data?.message || 'Failed to delete contact'
         return { success: false, error: this.error }
       } finally {
@@ -217,7 +217,7 @@ export const useContactStore = defineStore('contacts', {
           }
         }
       } catch (error: any) {
-        console.error('Import contacts error:', error)
+// console.error('Import contacts error:', error)
         this.error = error.data?.message || 'Failed to import contacts'
         return { success: false, error: this.error }
       } finally {
@@ -239,7 +239,7 @@ export const useContactStore = defineStore('contacts', {
 
         return { success: true, data: response.data }
       } catch (error: any) {
-        console.error('Export contacts error:', error)
+// console.error('Export contacts error:', error)
         this.error = error.data?.message || 'Failed to export contacts'
         return { success: false, error: this.error }
       }
@@ -305,7 +305,7 @@ export const useContactStore = defineStore('contacts', {
           return { success: true, contacts: updatedContacts }
         }
       } catch (error: any) {
-        console.error('Bulk update contacts error:', error)
+// console.error('Bulk update contacts error:', error)
         this.error = error.data?.message || 'Failed to bulk update contacts'
         return { success: false, error: this.error }
       } finally {
@@ -337,7 +337,7 @@ export const useContactStore = defineStore('contacts', {
           return { success: true, deleted_count: contactIds.length }
         }
       } catch (error: any) {
-        console.error('Bulk delete contacts error:', error)
+// console.error('Bulk delete contacts error:', error)
         this.error = error.data?.message || 'Failed to bulk delete contacts'
         return { success: false, error: this.error }
       } finally {

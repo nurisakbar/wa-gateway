@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# WA Gateway Docker Runner for macOS
-# This script helps you run the entire WA Gateway application using Docker
+# KlikWhatsApp Docker Runner for macOS
+# This script helps you run the entire KlikWhatsApp application using Docker
 
 set -e
 
@@ -85,7 +85,7 @@ generate_ssl_cert() {
 
 # Build and start services
 start_services() {
-    print_status "Building and starting WA Gateway services..."
+    print_status "Building and starting KlikWhatsApp services..."
     
     # Build images
     docker-compose build
@@ -146,7 +146,7 @@ show_status() {
 
 # Stop services
 stop_services() {
-    print_status "Stopping WA Gateway services..."
+    print_status "Stopping KlikWhatsApp services..."
     docker-compose down
     print_success "Services stopped"
 }
@@ -173,10 +173,10 @@ cleanup() {
 # Main menu
 show_menu() {
     echo ""
-    echo -e "${BLUE}WA Gateway Docker Manager${NC}"
+    echo -e "${BLUE}KlikWhatsApp Docker Manager${NC}"
     echo "================================"
-    echo "1. Start WA Gateway"
-    echo "2. Stop WA Gateway"
+    echo "1. Start KlikWhatsApp"
+    echo "2. Stop KlikWhatsApp"
     echo "3. Show Status"
     echo "4. Show Logs"
     echo "5. Restart Services"

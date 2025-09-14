@@ -1,5 +1,5 @@
 @echo off
-echo 🚀 Starting WA Gateway Production Environment with Docker Compose...
+echo 🚀 Starting KlikWhatsApp Production Environment with Docker Compose...
 
 REM Check if Docker is installed
 docker --version >nul 2>&1
@@ -59,7 +59,7 @@ REM Start Docker Compose production environment in detached mode
 docker compose up --build -d
 
 echo.
-echo ✅ WA Gateway Production Environment is starting up!
+echo ✅ KlikWhatsApp Production Environment is starting up!
 echo 📱 Frontend: http://localhost:3000
 echo 🔧 Backend: http://localhost:3001
 echo 📊 API Docs: http://localhost:3001/api-docs

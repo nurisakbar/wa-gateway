@@ -470,7 +470,7 @@ const fetchApiKeys = async () => {
       apiKeys.value = Array.isArray(raw) ? raw : (raw?.apiKeys || [])
     }
   } catch (error) {
-    console.error('Error fetching API keys:', error)
+// console.error('Error fetching API keys:', error)
     $toast.error('Gagal memuat API keys')
   } finally {
     loading.value = false
@@ -507,7 +507,7 @@ const createApiKey = async () => {
 
     }
   } catch (error) {
-    console.error('Error creating API key:', error)
+// console.error('Error creating API key:', error)
     $toast.error('Gagal membuat API key')
   } finally {
     submitting.value = false
@@ -536,7 +536,7 @@ const updateApiKey = async () => {
       await fetchApiKeys()
     }
   } catch (error) {
-    console.error('Error updating API key:', error)
+// console.error('Error updating API key:', error)
     $toast.error('Gagal memperbarui API key')
   } finally {
     submitting.value = false
@@ -566,7 +566,7 @@ const deleteApiKey = async (apiKey) => {
       await fetchApiKeys()
     }
   } catch (error) {
-    console.error('Error deleting API key:', error)
+// console.error('Error deleting API key:', error)
     $toast.error('Gagal menghapus API key')
   }
 }
@@ -598,7 +598,7 @@ const regenerateApiKey = async (apiKey) => {
       showViewModal.value = true
     }
   } catch (error) {
-    console.error('Error regenerating API key:', error)
+// console.error('Error regenerating API key:', error)
     $toast.error('Gagal meregenerasi API key')
   }
 }
@@ -625,7 +625,7 @@ const toggleApiKey = async (apiKey) => {
       await fetchApiKeys()
     }
   } catch (error) {
-    console.error('Error toggling API key:', error)
+// console.error('Error toggling API key:', error)
     $toast.error('Gagal mengubah status API key')
   }
 }
@@ -644,7 +644,7 @@ const viewApiKey = async (apiKey) => {
         'Content-Type': 'application/json'
       }
     }).catch(error => {
-      console.error('Fetch error details:', error)
+// console.error('Fetch error details:', error)
       throw error
     })
 
@@ -656,7 +656,7 @@ const viewApiKey = async (apiKey) => {
       selectedApiKey.value = apiKey // fallback to cached data
     }
   } catch (error) {
-    console.error('Error fetching API key details:', error)
+// console.error('Error fetching API key details:', error)
     selectedApiKey.value = apiKey // fallback to cached data
     $toast.error('Gagal memuat detail API key')
   }
@@ -728,7 +728,7 @@ const copyToClipboard = async (text) => {
     await navigator.clipboard.writeText(text)
     $toast.success('API key berhasil disalin ke clipboard')
   } catch (error) {
-    console.error('Error copying to clipboard:', error)
+// console.error('Error copying to clipboard:', error)
     $toast.error('Gagal menyalin API key')
   }
 }

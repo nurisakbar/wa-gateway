@@ -112,7 +112,7 @@ export const useMessageStore = defineStore('messages', {
           }
         }
       } catch (error: any) {
-        console.error('Fetch messages error:', error)
+// console.error('Fetch messages error:', error)
         this.error = error.response?.data?.message || 'Failed to fetch messages'
         return { success: false, error: this.error }
       } finally {
@@ -176,7 +176,7 @@ export const useMessageStore = defineStore('messages', {
           }
         }
       } catch (error: any) {
-        console.error('Fetch sent messages error:', error)
+// console.error('Fetch sent messages error:', error)
         this.error = error.response?.data?.message || 'Failed to fetch sent messages'
         return { success: false, error: this.error }
       } finally {
@@ -240,7 +240,7 @@ export const useMessageStore = defineStore('messages', {
           }
         }
       } catch (error: any) {
-        console.error('Fetch inbox messages error:', error)
+// console.error('Fetch inbox messages error:', error)
         this.error = error.response?.data?.message || 'Failed to fetch inbox messages'
         return { success: false, error: this.error }
       } finally {
@@ -268,7 +268,7 @@ export const useMessageStore = defineStore('messages', {
           return { success: true, message: newMessage }
         }
       } catch (error: any) {
-        console.error('Send message error:', error)
+// console.error('Send message error:', error)
         this.error = error.response?.data?.message || 'Failed to send message'
         return { success: false, error: this.error }
       } finally {
@@ -293,7 +293,7 @@ export const useMessageStore = defineStore('messages', {
           return { success: true, broadcast: response.data.data.broadcast }
         }
       } catch (error: any) {
-        console.error('Send broadcast error:', error)
+// console.error('Send broadcast error:', error)
         this.error = error.response?.data?.message || 'Failed to send broadcast'
         return { success: false, error: this.error }
       } finally {
@@ -312,7 +312,7 @@ export const useMessageStore = defineStore('messages', {
           return { success: true, message }
         }
       } catch (error: any) {
-        console.error('Get message error:', error)
+// console.error('Get message error:', error)
         this.error = error.response?.data?.message || 'Failed to get message'
         return { success: false, error: this.error }
       }
@@ -333,7 +333,7 @@ export const useMessageStore = defineStore('messages', {
           return { success: true }
         }
       } catch (error: any) {
-        console.error('Delete message error:', error)
+// console.error('Delete message error:', error)
         this.error = error.response?.data?.message || 'Failed to delete message'
         return { success: false, error: this.error }
       } finally {
@@ -360,7 +360,7 @@ export const useMessageStore = defineStore('messages', {
           return { success: true, statistics: response.data.data }
         }
       } catch (error: any) {
-        console.error('Get message statistics error:', error)
+// console.error('Get message statistics error:', error)
         this.error = error.response?.data?.message || 'Failed to get message statistics'
         return { success: false, error: this.error }
       }
@@ -382,7 +382,7 @@ export const useMessageStore = defineStore('messages', {
           return { success: true, message: updatedMessage }
         }
       } catch (error: any) {
-        console.error('Resend message error:', error)
+// console.error('Resend message error:', error)
         this.error = error.response?.data?.message || 'Failed to resend message'
         return { success: false, error: this.error }
       } finally {
@@ -408,7 +408,7 @@ export const useMessageStore = defineStore('messages', {
           return { success: true, file: response.data.data.file }
         }
       } catch (error: any) {
-        console.error('Upload media error:', error)
+// console.error('Upload media error:', error)
         this.error = error.response?.data?.message || 'Failed to upload media'
         return { success: false, error: this.error }
       } finally {
@@ -488,7 +488,7 @@ export const useMessageStore = defineStore('messages', {
           return { success: true, deleted_count: messageIds.length }
         }
       } catch (error: any) {
-        console.error('Bulk delete messages error:', error)
+// console.error('Bulk delete messages error:', error)
         this.error = error.response?.data?.message || 'Failed to bulk delete messages'
         return { success: false, error: this.error }
       } finally {
@@ -516,7 +516,7 @@ export const useMessageStore = defineStore('messages', {
 
         return { success: true, data: response.data }
       } catch (error: any) {
-        console.error('Export messages error:', error)
+// console.error('Export messages error:', error)
         this.error = error.response?.data?.message || 'Failed to export messages'
         return { success: false, error: this.error }
       }
