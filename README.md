@@ -308,13 +308,25 @@ npm run dev
 ```
 
 ## 📝 Documentation
+
+### 🚀 Deployment & Production
+- **Quick Start**: Lihat file `UBUNTU_QUICK_START.md` untuk panduan cepat deployment dalam 3 langkah
+- **Ubuntu Deployment**: Lihat file `docs/UBUNTU_DEPLOYMENT.md` untuk panduan lengkap deployment ke Ubuntu
+- **SSL Setup**: Lihat file `docs/SSL_SETUP_GUIDE.md` untuk panduan setup SSL dengan Let's Encrypt
+- **Monitoring & Backup**: Lihat file `docs/MONITORING_BACKUP_GUIDE.md` untuk panduan monitoring dan backup
+- **Deployment Index**: Lihat file `docs/DEPLOYMENT_INDEX.md` untuk index semua dokumentasi deployment
+- **Deployment Summary**: Lihat file `DEPLOYMENT_SUMMARY.md` untuk ringkasan lengkap deployment
+
+### 🛠️ Development
 - **Backend API Development**: Lihat file `docs/BACKEND_API_DEVELOPMENT.md` untuk panduan pengembangan backend API-first
 - **API Documentation**: Lihat file `docs/API.md` untuk dokumentasi lengkap API endpoints
 - **Authentication System**: Lihat file `docs/AUTHENTICATION_SYSTEM.md` untuk sistem autentikasi lengkap
 - **Nuxt.js Setup**: Lihat file `docs/NUXT_SETUP.md` untuk panduan setup frontend Nuxt.js
 - **Bootstrap Setup**: Lihat file `docs/BOOTSTRAP_SETUP.md` untuk panduan setup Bootstrap 5
-- **Deployment Guide**: Lihat file `docs/DEPLOYMENT.md` untuk panduan deployment
 - **Troubleshooting**: Lihat file `docs/TROUBLESHOOTING.md` untuk troubleshooting
+
+### 🔧 Scripts & Tools
+- **Scripts Documentation**: Lihat file `scripts/README.md` untuk dokumentasi semua scripts deployment
 - **Postman Collection**: Import file `postman/WA_Gateway_API.postman_collection.json` untuk testing API
 - **Landing Page**: Lihat folder `landing-page/` untuk landing page promosi layanan
 

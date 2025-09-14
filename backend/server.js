@@ -72,6 +72,7 @@ const limiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  passOnStoreError: true, // Allow requests to continue even if the store fails
   skip: (req) => {
     // Skip rate limiting for health checks and in development for localhost
     if (req.path === '/health') return true;
@@ -84,7 +85,10 @@ const limiter = rateLimit({
 const speedLimiter = slowDown({
   windowMs: 15 * 60 * 1000, // 15 minutes
   delayAfter: NODE_ENV === 'development' ? 500 : 50, // More lenient in dev
-  delayMs: () => NODE_ENV === 'development' ? 100 : 500, // Less delay in dev
+  delayMs: (used, req) => {
+    const delayAfter = req.slowDown.limit;
+    return (used - delayAfter) * (NODE_ENV === 'development' ? 100 : 500);
+  },
   skip: (req) => {
     // Skip speed limiting for health checks and in development for localhost
     if (req.path === '/health') return true;
