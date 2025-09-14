@@ -8,9 +8,9 @@ File ini menjelaskan cara mengatur environment variables untuk aplikasi WA Gatew
 - Berisi semua variabel yang diperlukan
 - Copy file ini untuk membuat environment file yang sesuai
 
-### 2. `.env.local` - Development environment
+### 2. `.env` - Development environment
 - Untuk development lokal
-- Sudah dibuat otomatis dari `env.example`
+- File utama yang dibaca oleh Nuxt.js
 
 ### 3. `env.staging` - Staging environment
 - Untuk testing di staging server
@@ -24,9 +24,9 @@ File ini menjelaskan cara mengatur environment variables untuk aplikasi WA Gatew
 
 ### Development
 ```bash
-# File .env.local sudah dibuat otomatis
+# File .env sudah dibuat otomatis
 # Edit sesuai kebutuhan:
-nano .env.local
+nano .env
 ```
 
 ### Staging
@@ -63,7 +63,7 @@ nano .env.production
 ### Development
 ```bash
 npm run dev
-# Menggunakan .env.local
+# Menggunakan .env
 ```
 
 ### Staging

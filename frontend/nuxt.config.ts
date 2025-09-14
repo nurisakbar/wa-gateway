@@ -17,8 +17,8 @@ export default defineNuxtConfig({
   // Runtime config
   runtimeConfig: {
     public: {
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:3001/api/v1',
-      socketUrl: process.env.NUXT_PUBLIC_SOCKET_URL || 'http://localhost:3001',
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:3002/api/v1',
+      socketUrl: process.env.NUXT_PUBLIC_SOCKET_URL || 'http://localhost:3002',
       appName: process.env.NUXT_PUBLIC_APP_NAME || 'WA Gateway',
       appVersion: process.env.NUXT_PUBLIC_APP_VERSION || '1.0.0',
       apiKey: process.env.NUXT_PUBLIC_API_KEY || 'wg_b4df277cf780df75227236e35b048975708affe0d1dcc1eaa5a443d356fec3b9'
