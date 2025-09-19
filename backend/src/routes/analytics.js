@@ -16,4 +16,7 @@ router.get('/realtime', analyticsController.getRealTimeAnalytics);
 // Get API key specific analytics
 router.get('/api-key/:apiKeyId', validateIdUUID, analyticsController.getApiKeyAnalytics);
 
+// Get admin analytics (admin only)
+router.get('/admin', analyticsController.getAdminAnalytics);
+
 module.exports = router; 

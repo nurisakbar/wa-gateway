@@ -30,80 +30,157 @@
 
     <!-- Statistics Cards -->
     <div class="row mb-4">
-      <div class="col-lg-3 col-md-6 mb-3">
-        <div class="stat-card h-100">
-          <div class="stat-content">
-            <div class="stat-icon bg-primary">
-              <i class="bi bi-chat-dots"></i>
-            </div>
-            <div class="stat-info">
-              <div class="stat-number">{{ analytics.messages?.total_messages || 0 }}</div>
-              <div class="stat-label">Total Pesan</div>
-              <div class="stat-change text-success">
-                <i class="bi bi-arrow-up"></i>
-                {{ analytics.messages?.success_rate || 0 }}% success rate
+      <!-- Admin Dashboard -->
+      <template v-if="isAdmin">
+        <div class="col-lg-3 col-md-6 mb-3">
+          <div class="stat-card h-100">
+            <div class="stat-content">
+              <div class="stat-icon bg-primary">
+                <i class="bi bi-people"></i>
+              </div>
+              <div class="stat-info">
+                <div class="stat-number">{{ adminStats.totalUsers || 0 }}</div>
+                <div class="stat-label">Jumlah Pengguna</div>
+                <div class="stat-change text-muted">
+                  <i class="bi bi-person-plus"></i>
+                  {{ adminStats.newUsersThisMonth || 0 }} baru bulan ini
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div class="col-lg-3 col-md-6 mb-3">
-        <div class="stat-card h-100">
-          <div class="stat-content">
-            <div class="stat-icon bg-success">
-              <i class="bi bi-phone"></i>
-            </div>
-            <div class="stat-info">
-              <div class="stat-number">{{ analytics.devices?.connected_devices || 0 }}</div>
-              <div class="stat-label">Device Aktif</div>
-              <div class="stat-change text-muted">
-                dari {{ analytics.devices?.total_devices || 0 }} total
+        <div class="col-lg-3 col-md-6 mb-3">
+          <div class="stat-card h-100">
+            <div class="stat-content">
+              <div class="stat-icon bg-success">
+                <i class="bi bi-phone"></i>
+              </div>
+              <div class="stat-info">
+                <div class="stat-number">{{ adminStats.activeDevices || 0 }}</div>
+                <div class="stat-label">Device Aktif</div>
+                <div class="stat-change text-muted">
+                  dari {{ adminStats.totalDevices || 0 }} total
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div class="col-lg-3 col-md-6 mb-3">
-        <div class="stat-card h-100">
-          <div class="stat-content">
-            <div class="stat-icon bg-info">
-              <i class="bi bi-graph-up"></i>
-            </div>
-            <div class="stat-info">
-              <div class="stat-number">{{ analytics.api_usage?.total_requests || 0 }}</div>
-              <div class="stat-label">API Requests</div>
-              <div class="stat-change text-success">
-                <i class="bi bi-arrow-up"></i>
-                {{ analytics.api_usage?.success_rate || 0 }}% success
+        <div class="col-lg-3 col-md-6 mb-3">
+          <div class="stat-card h-100">
+            <div class="stat-content">
+              <div class="stat-icon bg-info">
+                <i class="bi bi-check-circle"></i>
+              </div>
+              <div class="stat-info">
+                <div class="stat-number">{{ adminStats.paidInvoices || 0 }}</div>
+                <div class="stat-label">Tagihan Sudah Bayar</div>
+                <div class="stat-change text-success">
+                  <i class="bi bi-arrow-up"></i>
+                  {{ adminStats.paidAmount || 0 }} IDR
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div class="col-lg-3 col-md-6 mb-3">
-        <div class="stat-card h-100">
-          <div class="stat-content">
-            <div class="stat-icon bg-warning">
-              <i class="bi bi-people"></i>
-            </div>
-            <div class="stat-info">
-              <div class="stat-number">{{ analytics.contacts?.total || 0 }}</div>
-              <div class="stat-label">Total Kontak</div>
-              <div class="stat-change text-muted">
-                <i class="bi bi-person-plus"></i>
-                {{ analytics.contacts?.new_this_month || 0 }} baru bulan ini
+        <div class="col-lg-3 col-md-6 mb-3">
+          <div class="stat-card h-100">
+            <div class="stat-content">
+              <div class="stat-icon bg-warning">
+                <i class="bi bi-clock"></i>
+              </div>
+              <div class="stat-info">
+                <div class="stat-number">{{ adminStats.unpaidInvoices || 0 }}</div>
+                <div class="stat-label">Tagihan Belum Bayar</div>
+                <div class="stat-change text-warning">
+                  <i class="bi bi-exclamation-triangle"></i>
+                  {{ adminStats.unpaidAmount || 0 }} IDR
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </template>
+
+      <!-- Regular User Dashboard -->
+      <template v-else>
+        <div class="col-lg-3 col-md-6 mb-3">
+          <div class="stat-card h-100">
+            <div class="stat-content">
+              <div class="stat-icon bg-primary">
+                <i class="bi bi-chat-dots"></i>
+              </div>
+              <div class="stat-info">
+                <div class="stat-number">{{ analytics.messages?.total_messages || 0 }}</div>
+                <div class="stat-label">Total Pesan</div>
+                <div class="stat-change text-success">
+                  <i class="bi bi-arrow-up"></i>
+                  {{ analytics.messages?.success_rate || 0 }}% success rate
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6 mb-3">
+          <div class="stat-card h-100">
+            <div class="stat-content">
+              <div class="stat-icon bg-success">
+                <i class="bi bi-phone"></i>
+              </div>
+              <div class="stat-info">
+                <div class="stat-number">{{ analytics.devices?.connected_devices || 0 }}</div>
+                <div class="stat-label">Device Aktif</div>
+                <div class="stat-change text-muted">
+                  dari {{ analytics.devices?.total_devices || 0 }} total
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6 mb-3">
+          <div class="stat-card h-100">
+            <div class="stat-content">
+              <div class="stat-icon bg-info">
+                <i class="bi bi-graph-up"></i>
+              </div>
+              <div class="stat-info">
+                <div class="stat-number">{{ analytics.api_usage?.total_requests || 0 }}</div>
+                <div class="stat-label">API Requests</div>
+                <div class="stat-change text-success">
+                  <i class="bi bi-arrow-up"></i>
+                  {{ analytics.api_usage?.success_rate || 0 }}% success
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6 mb-3">
+          <div class="stat-card h-100">
+            <div class="stat-content">
+              <div class="stat-icon bg-warning">
+                <i class="bi bi-people"></i>
+              </div>
+              <div class="stat-info">
+                <div class="stat-number">{{ analytics.contacts?.total || 0 }}</div>
+                <div class="stat-label">Total Kontak</div>
+                <div class="stat-change text-muted">
+                  <i class="bi bi-person-plus"></i>
+                  {{ analytics.contacts?.new_this_month || 0 }} baru bulan ini
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
     </div>
 
-    <!-- Charts Section -->
-    <div class="row mb-4">
+    <!-- Charts Section - Only for regular users -->
+    <div v-if="!isAdmin" class="row mb-4">
       <div class="col-lg-8 mb-3">
         <div class="card h-100">
           <div class="card-header d-flex justify-content-between align-items-center">
@@ -144,8 +221,8 @@
       </div>
     </div>
 
-    <!-- Real-time Activity & Quick Actions -->
-    <div class="row mb-4">
+    <!-- Real-time Activity & Quick Actions - Only for regular users -->
+    <div v-if="!isAdmin" class="row mb-4">
       <div class="col-lg-6 mb-3">
         <div class="card h-100">
           <div class="card-header">
@@ -305,7 +382,7 @@ definePageMeta({
 })
 
 const authStore = useAuthStore()
-const { user, hasActiveSubscription } = storeToRefs(authStore)
+const { user, hasActiveSubscription, isAdmin } = storeToRefs(authStore)
 const { $toast } = useNuxtApp()
 
 // Reactive data
@@ -314,6 +391,18 @@ const analytics = ref({
   devices: { connected_devices: 0, total_devices: 0 },
   api_usage: { total_requests: 0, success_rate: 0 },
   contacts: { total: 0, new_this_month: 0 }
+})
+
+// Admin stats data
+const adminStats = ref({
+  totalUsers: 0,
+  newUsersThisMonth: 0,
+  activeDevices: 0,
+  totalDevices: 0,
+  paidInvoices: 0,
+  paidAmount: 0,
+  unpaidInvoices: 0,
+  unpaidAmount: 0
 })
 
 const realtimeData = ref(null)
@@ -327,6 +416,41 @@ const messageChart = ref(null)
 let apiChartInstance = null
 let messageChartInstance = null
 
+// Fetch admin stats data
+const fetchAdminStats = async () => {
+  try {
+    const config = useRuntimeConfig()
+    const token = localStorage.getItem('auth_token')
+    
+    if (!token) {
+      return
+    }
+    
+    const response = await $fetch(`${config.public.apiBase}/analytics/admin`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (response && response.success) {
+      adminStats.value = response.data
+    }
+  } catch (error) {
+    console.error('Error fetching admin stats:', error)
+    
+    // Handle 401 specifically
+    if (error.status === 401 || error.statusCode === 401) {
+      const authStore = useAuthStore()
+      authStore.logout()
+      return
+    }
+    
+    // For other errors, show toast but don't logout
+    $toast.error('Gagal memuat data admin')
+  }
+}
+
 // Fetch analytics data
 const fetchAnalytics = async () => {
   try {
@@ -334,7 +458,6 @@ const fetchAnalytics = async () => {
     const token = localStorage.getItem('auth_token')
     
     if (!token) {
-
       return
     }
     
@@ -351,11 +474,10 @@ const fetchAnalytics = async () => {
       updateCharts()
     }
   } catch (error) {
-// console.error('Error fetching analytics:', error)
+    console.error('Error fetching analytics:', error)
     
     // Handle 401 specifically
     if (error.status === 401 || error.statusCode === 401) {
-
       const authStore = useAuthStore()
       authStore.logout()
       return
@@ -571,13 +693,18 @@ onMounted(async () => {
     }
   }
 
-  await Promise.all([
-    fetchAnalytics(),
-    fetchRealtimeData()
-  ])
-  
-  // Set up real-time updates
-  setInterval(fetchRealtimeData, 30000) // Update every 30 seconds
+  // Fetch data based on user role
+  if (isAdmin.value) {
+    await fetchAdminStats()
+  } else {
+    await Promise.all([
+      fetchAnalytics(),
+      fetchRealtimeData()
+    ])
+    
+    // Set up real-time updates for regular users
+    setInterval(fetchRealtimeData, 30000) // Update every 30 seconds
+  }
 })
 
 // Cleanup charts on unmount

@@ -98,6 +98,7 @@
                 <option value="">All Status</option>
                 <option value="draft">Draft</option>
                 <option value="pending">Pending</option>
+                <option value="payment_confirmed">Payment Confirmed</option>
                 <option value="paid">Paid</option>
                 <option value="failed">Failed</option>
                 <option value="cancelled">Cancelled</option>
@@ -166,6 +167,7 @@
                       :class="{
                         'bg-secondary text-white': invoice.status === 'draft',
                         'bg-warning text-dark': invoice.status === 'pending',
+                        'bg-info text-white': invoice.status === 'payment_confirmed',
                         'bg-success text-white': invoice.status === 'paid',
                         'bg-danger text-white': invoice.status === 'failed',
                         'bg-dark text-white': invoice.status === 'cancelled'
@@ -192,20 +194,21 @@
                       >
                         <i class="bi bi-eye me-1"></i><span>View</span>
                       </button>
-                      <button 
-                        v-if="invoice.status === 'pending'"
-                        class="btn btn-outline-success btn-sm" 
-                        @click="payInvoice(invoice)"
-                        title="Mark as Paid"
+                      <button
+                        v-if="isAdmin && (invoice.status === 'pending' || invoice.status === 'payment_confirmed')"
+                        class="btn btn-success btn-sm"
+                        @click="approvePayment(invoice)"
+                        title="Approve (activate subscription)"
                       >
-                        <i class="bi bi-check-circle me-1"></i><span>Pay</span>
+                        <i class="bi bi-check-circle me-1"></i>Approve
                       </button>
-                      <button 
-                        class="btn btn-outline-info btn-sm" 
-                        @click="downloadInvoice(invoice)"
-                        title="Download"
+                      <button
+                        v-if="isAdmin && invoice.status === 'payment_confirmed'"
+                        class="btn btn-outline-danger btn-sm"
+                        @click="rejectPayment(invoice)"
+                        title="Reject confirmation"
                       >
-                        <i class="bi bi-download me-1"></i><span>Download</span>
+                        <i class="bi bi-x-circle me-1"></i>Reject
                       </button>
                     </div>
                   </td>
@@ -246,102 +249,144 @@
 
   <!-- Invoice Detail Modal -->
   <div
-    class="modal fade"
+    class="modal fade invoice-modal"
     :class="{ show: showInvoiceModal }"
     :style="{ display: showInvoiceModal ? 'block' : 'none' }"
     tabindex="-1"
   >
-    <div class="modal-dialog modal-lg">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">
-            <i class="bi bi-receipt me-2"></i>
-            Invoice Details
-          </h5>
-          <button type="button" class="btn-close" @click="showInvoiceModal = false"></button>
+    <div class="modal-dialog modal-lg modal-dialog-centered" style="min-width: 1200px;">
+      <div class="modal-content border-0 shadow-lg">
+        <div class="modal-header border-0 pb-0">
+          <div class="w-100 d-flex justify-content-between align-items-start">
+            <div>
+              <h5 class="modal-title fw-bold mb-1">
+                <i class="bi bi-receipt me-2 text-primary"></i>
+                Invoice {{ selectedInvoice?.invoice_number }}
+              </h5>
+              <div class="d-flex align-items-center gap-2">
+                <span 
+                  class="badge rounded-pill px-3 py-2 text-capitalize"
+                  :class="{
+                    'bg-secondary text-white': selectedInvoice?.status === 'draft',
+                    'bg-warning text-dark': selectedInvoice?.status === 'pending',
+                    'bg-info text-white': selectedInvoice?.status === 'payment_confirmed',
+                    'bg-success text-white': selectedInvoice?.status === 'paid',
+                    'bg-danger text-white': selectedInvoice?.status === 'failed',
+                    'bg-dark text-white': selectedInvoice?.status === 'cancelled'
+                  }"
+                >
+                  {{ selectedInvoice?.status }}
+                </span>
+                <small class="text-muted">Due {{ selectedInvoice ? formatDate(selectedInvoice.due_date) : '' }}</small>
+              </div>
+            </div>
+            <button type="button" class="btn-close" @click="showInvoiceModal = false"></button>
+          </div>
         </div>
-        <div class="modal-body" v-if="selectedInvoice">
-          <div class="row">
+        <div class="modal-body pt-3" v-if="selectedInvoice">
+          <!-- Top Brand + Title -->
+          <div class="invoice-top d-flex justify-content-between align-items-center mb-3">
+            <div class="brand">
+              <div class="brand-name text-primary fw-bold">KlikWhatsApp</div>
+              <div class="brand-sub text-muted small">Messaging Platform</div>
+            </div>
+            <div class="invoice-title">INVOICE</div>
+          </div>
+
+          <!-- Company/Bill To + Facts -->
+          <div class="row g-3 mb-3">
             <div class="col-md-6">
-              <h6>Invoice Information</h6>
-              <table class="table table-sm">
+              <div class="info-block p-3">
+                <div class="fw-bold mb-1">From:</div>
+                <div>WA Gateway</div>
+                <div class="small text-muted">Jl. Perdamaian Raya No. 6</div>
+                <div class="small text-muted">+62 821‑2994‑8687</div>
+                <div class="small text-muted">support@klikwhatsapp.com</div>
+              </div>
+              <div class="info-block p-3 mt-2">
+                <div class="fw-bold mb-1">Bill to:</div>
+                <div>{{ authStore?.user?.full_name || authStore?.user?.username || 'Customer' }}</div>
+                <div class="small text-muted">{{ authStore?.user?.email || '-' }}</div>
+                <div class="small text-muted" v-if="authStore?.user?.phone">{{ authStore.user.phone }}</div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="facts-grid p-3 h-100">
+                <div class="fact">
+                  <div class="fact-label">Invoice #</div>
+                  <div class="fact-value">{{ selectedInvoice.invoice_number }}</div>
+                </div>
+                <div class="fact">
+                  <div class="fact-label">Invoice Date</div>
+                  <div class="fact-value">{{ formatDate(selectedInvoice.created_at) }}</div>
+                </div>
+                <div class="fact">
+                  <div class="fact-label">Due Date</div>
+                  <div class="fact-value">{{ formatDate(selectedInvoice.due_date) }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Items Table -->
+          <div class="items-table mb-3">
+            <div class="table-responsive">
+              <table class="table table-bordered align-middle">
+                <thead class="table-primary">
+                  <tr>
+                    <th>Item Description</th>
+                    <th class="text-end">Unit Price</th>
+                    <th class="text-center">Qty</th>
+                    <th class="text-end">Amount</th>
+                  </tr>
+                </thead>
                 <tbody>
-                  <tr>
-                    <td><strong>Invoice #:</strong></td>
-                    <td>{{ selectedInvoice.invoice_number }}</td>
+                  <tr v-for="item in (selectedInvoice.items || [])" :key="item.description">
+                    <td>{{ item.description }}</td>
+                    <td class="text-end">{{ formatCurrency(item.unit_price) }}</td>
+                    <td class="text-center">{{ item.quantity }}</td>
+                    <td class="text-end">{{ formatCurrency(item.total) }}</td>
                   </tr>
-                  <tr>
-                    <td><strong>Status:</strong></td>
-                    <td>
-                      <span 
-                        class="badge"
-                        :class="{
-                          'bg-secondary text-white': selectedInvoice.status === 'draft',
-                          'bg-warning text-dark': selectedInvoice.status === 'pending',
-                          'bg-success text-white': selectedInvoice.status === 'paid',
-                          'bg-danger text-white': selectedInvoice.status === 'failed',
-                          'bg-dark text-white': selectedInvoice.status === 'cancelled'
-                        }"
-                      >
-                        {{ selectedInvoice.status }}
-                      </span>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td><strong>Amount:</strong></td>
-                    <td>{{ formatCurrency(selectedInvoice.amount) }}</td>
-                  </tr>
-                  <tr>
-                    <td><strong>Due Date:</strong></td>
-                    <td>{{ formatDate(selectedInvoice.due_date) }}</td>
-                  </tr>
-                  <tr v-if="selectedInvoice.paid_at">
-                    <td><strong>Paid Date:</strong></td>
-                    <td>{{ formatDate(selectedInvoice.paid_at) }}</td>
+                  <tr v-if="!selectedInvoice.items || selectedInvoice.items.length === 0">
+                    <td colspan="4" class="text-center text-muted">No items</td>
                   </tr>
                 </tbody>
               </table>
             </div>
+          </div>
+
+          <!-- Totals + Payment method -->
+          <div class="row g-3">
             <div class="col-md-6">
-              <h6>Items</h6>
-              <div v-if="selectedInvoice.items && selectedInvoice.items.length > 0">
-                <div v-for="item in selectedInvoice.items" :key="item.description" class="border-bottom pb-2 mb-2">
-                  <div class="d-flex justify-content-between">
-                    <span>{{ item.description }}</span>
-                    <span>{{ formatCurrency(item.total) }}</span>
-                  </div>
-                  <small class="text-muted">Qty: {{ item.quantity }} × {{ formatCurrency(item.unit_price) }}</small>
-                </div>
+              <div class="p-3 rounded border bg-light">
+                <div class="fw-bold mb-2">Payment Method</div>
+                <div class="small text-muted">Bank: {{ selectedInvoice.metadata?.payment_details?.bank_name || 'Bank Mandiri' }}</div>
+                <div class="small text-muted">A/C Name: {{ selectedInvoice.metadata?.payment_details?.account_name || 'WAHYU SAFRIZAL' }}</div>
+                <div class="small text-muted">Account: {{ selectedInvoice.metadata?.payment_details?.account_number || '-' }}</div>
+                <div class="small text-muted" v-if="selectedInvoice.metadata?.payment_details?.whatsapp_number">WhatsApp: {{ selectedInvoice.metadata.payment_details.whatsapp_number }}</div>
+                <div class="small mt-3">Notes: Terima kasih telah melakukan pemesanan di KlikWhatsApp.</div>
               </div>
-              <div v-else class="text-muted">
-                No items found
+            </div>
+            <div class="col-md-6">
+              <div class="totals-box p-3 rounded border ms-auto">
+                <div class="d-flex justify-content-between mb-1"><span class="text-muted">Subtotal</span><span>{{ formatCurrency(selectedInvoice.subtotal || 0) }}</span></div>
+                <div class="d-flex justify-content-between mb-1"><span class="text-muted">Tax</span><span>{{ formatCurrency(selectedInvoice.tax || 0) }}</span></div>
+                <div class="d-flex justify-content-between mb-2"><span class="text-muted">Discount</span><span>-{{ formatCurrency(selectedInvoice.discount || 0) }}</span></div>
+                <hr class="my-2" />
+                <div class="d-flex justify-content-between align-items-center">
+                  <span class="fw-bold">TOTAL</span>
+                  <span class="total-amount">{{ formatCurrency(selectedInvoice.total || selectedInvoice.amount) }}</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" @click="showInvoiceModal = false">Close</button>
-          <button 
-            v-if="selectedInvoice && selectedInvoice.status === 'pending'"
-            type="button" 
-            class="btn btn-success" 
-            @click="payInvoice(selectedInvoice)"
-          >
-            <i class="bi bi-check-circle me-1"></i>
-            Mark as Paid
-          </button>
-          <button 
-            type="button" 
-            class="btn btn-primary" 
-            @click="downloadInvoice(selectedInvoice)"
-          >
-            <i class="bi bi-download me-1"></i>
-            Download
-          </button>
-        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-light" @click="showInvoiceModal = false">Close</button>
         </div>
       </div>
     </div>
+  </div>
   </div>
 </template>
 
@@ -360,6 +405,8 @@ const invoiceStats = ref({})
 const showStats = ref(true)
 const showInvoiceModal = ref(false)
 const selectedInvoice = ref(null)
+// Auth store for Bill To section
+const authStore = useAuthStore?.() || { user: null }
 
 // Filters
 const searchQuery = ref('')
@@ -423,7 +470,12 @@ const fetchInvoices = async () => {
     const config = useRuntimeConfig()
     const token = localStorage.getItem('auth_token')
     
-    const response = await $fetch(`${config.public.apiBase}/invoices?page=${pagination.value.page}&limit=${pagination.value.limit}`, {
+    // For admin, load pending confirmations across users
+    const isAdmin = ['admin', 'super_admin', 'manager'].includes(authStore?.user?.role)
+    const endpoint = isAdmin
+      ? `${config.public.apiBase}/invoices/admin/pending-confirmations?page=${pagination.value.page}&limit=${pagination.value.limit}${statusFilter.value ? `&status=${statusFilter.value}` : ''}`
+      : `${config.public.apiBase}/invoices?page=${pagination.value.page}&limit=${pagination.value.limit}`
+    const response = await $fetch(endpoint, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -487,57 +539,51 @@ const viewInvoice = (invoice) => {
   showInvoiceModal.value = true
 }
 
-const payInvoice = async (invoice) => {
-  if (!confirm(`Mark invoice ${invoice.invoice_number} as paid?`)) {
-    return
-  }
-  
+const isAdmin = computed(() => ['admin', 'super_admin', 'manager'].includes(authStore?.user?.role))
+
+const approvePayment = async (invoice) => {
+  if (!confirm(`Approve payment for ${invoice.invoice_number}? This will activate the subscription.`)) return
   try {
     const config = useRuntimeConfig()
     const token = localStorage.getItem('auth_token')
-    
-    const response = await $fetch(`${config.public.apiBase}/invoices/${invoice.id}/pay`, {
+    const response = await $fetch(`${config.public.apiBase}/invoices/${invoice.id}/approve-payment`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    if (response.success) {
+      $toast.success('Payment approved and subscription activated')
+      await refreshData()
+    }
+  } catch (error) {
+// console.error(error)
+    $toast.error('Failed to approve payment')
+  }
+}
+
+const rejectPayment = async (invoice) => {
+  const reason = prompt(`Provide a reason to reject payment for ${invoice.invoice_number}:`)
+  if (reason === null) return
+  try {
+    const config = useRuntimeConfig()
+    const token = localStorage.getItem('auth_token')
+    const response = await $fetch(`${config.public.apiBase}/invoices/${invoice.id}/reject-payment`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
-      body: {
-        payment_method: 'manual'
-      }
+      body: { reason }
     })
-    
     if (response.success) {
-      $toast.success('Invoice marked as paid successfully')
+      $toast.info('Payment confirmation rejected')
       await refreshData()
-      showInvoiceModal.value = false
     }
   } catch (error) {
-// console.error('Error paying invoice:', error)
-    $toast.error('Failed to mark invoice as paid')
-  }
-}
-
-const downloadInvoice = async (invoice) => {
-  try {
-    const config = useRuntimeConfig()
-    const token = localStorage.getItem('auth_token')
-    
-    const response = await $fetch(`${config.public.apiBase}/invoices/${invoice.id}/download`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    })
-    
-    if (response.success) {
-      // In a real implementation, this would download a PDF
-      // For now, we'll show the invoice data
-      $toast.info('Invoice download functionality would be implemented here')
-
-    }
-  } catch (error) {
-// console.error('Error downloading invoice:', error)
-    $toast.error('Failed to download invoice')
+// console.error(error)
+    $toast.error('Failed to reject payment')
   }
 }
 
@@ -636,5 +682,111 @@ onMounted(() => {
 .stat-label {
   font-size: 0.875rem;
   font-weight: 500;
+}
+
+/* Invoice modal modern styles */
+.invoice-modal .modal-content {
+  border-radius: 16px;
+}
+
+.invoice-modal .summary .amount-large {
+  font-size: 1.75rem;
+  font-weight: 800;
+}
+
+.invoice-modal .info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 1rem;
+}
+
+.invoice-modal .info-grid .label {
+  font-size: 0.75rem;
+  color: #6c757d;
+}
+
+.invoice-modal .info-grid .value {
+  font-weight: 600;
+}
+
+.invoice-modal .item-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.invoice-modal .item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px dashed #e9ecef;
+}
+
+.invoice-modal .item-row:last-child {
+  border-bottom: none;
+}
+
+.invoice-modal .item-text .item-title {
+  font-weight: 600;
+}
+
+.invoice-modal .item-text .item-sub {
+  font-size: 0.8rem;
+  color: #6c757d;
+}
+
+.invoice-modal .item-amount {
+  font-weight: 700;
+}
+
+/* New invoice layout styling */
+.invoice-modal .invoice-title {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
+.invoice-modal .brand-name {
+  font-size: 1.1rem;
+}
+
+.invoice-modal .info-block {
+  background: #ffffff;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+}
+
+.invoice-modal .facts-grid {
+  background: #ffffff;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem 1rem;
+}
+
+.invoice-modal .fact {
+  border-left: 3px solid #0d6efd;
+  padding-left: 0.75rem;
+}
+
+.invoice-modal .fact-label {
+  font-size: 0.75rem;
+  color: #6c757d;
+}
+
+.invoice-modal .fact-value {
+  font-weight: 700;
+}
+
+.invoice-modal .items-table .table {
+  border-color: #e9ecef;
+}
+
+.invoice-modal .totals-box .total-amount {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0d6efd;
 }
 </style>

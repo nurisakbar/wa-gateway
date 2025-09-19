@@ -92,7 +92,7 @@ const testConnection = async () => {
 };
 
 // Sync database (create/alter tables to match models)
-const syncDatabase = async (force = false, alter = (process.env.NODE_ENV === 'development')) => {
+const syncDatabase = async (force = false, alter = false) => {
   try {
     await sequelize.sync({ force, alter });
     console.log('✅ Database synchronized successfully.');

@@ -251,7 +251,10 @@
                     <i class="bi bi-shield me-1 text-muted"></i>Role *
                   </label>
                   <select class="form-select" id="userRole" v-model="form.role" required>
-                    <option value="user">User</option>
+                    <option value="pengguna">Pengguna</option>
+                    <option value="viewer">Viewer</option>
+                    <option value="operator">Operator</option>
+                    <option value="manager">Manager</option>
                     <option value="admin">Admin</option>
                     <option value="super_admin">Super Admin</option>
                   </select>
@@ -345,7 +348,7 @@ import { useUserManagementStore } from '~/stores/userManagement'
 // Page metadata
 definePageMeta({
   layout: 'dashboard',
-  middleware: 'auth'
+  middleware: ['auth', 'admin']
 })
 
 // Store
@@ -368,7 +371,7 @@ const form = ref({
   username: '',
   email: '',
   phone: '',
-  role: 'user',
+  role: 'pengguna',
   status: 'active',
   password: ''
 })
@@ -392,7 +395,10 @@ const formatDate = (dateString) => {
 
 const getRoleLabel = (role) => {
   const labels = {
-    'user': 'User',
+    'pengguna': 'Pengguna',
+    'viewer': 'Viewer',
+    'operator': 'Operator',
+    'manager': 'Manager',
     'admin': 'Admin', 
     'super_admin': 'Super Admin'
   }
@@ -401,7 +407,10 @@ const getRoleLabel = (role) => {
 
 const getRoleBadgeClass = (role) => {
   const classes = {
-    'user': 'bg-primary',
+    'pengguna': 'bg-primary',
+    'viewer': 'bg-info',
+    'operator': 'bg-secondary',
+    'manager': 'bg-success',
     'admin': 'bg-warning',
     'super_admin': 'bg-danger'
   }
@@ -451,7 +460,7 @@ const openCreateModal = () => {
     username: '',
     email: '',
     phone: '',
-    role: 'user',
+    role: 'pengguna',
     status: 'active',
     password: ''
   }
@@ -471,7 +480,7 @@ const closeModal = () => {
     username: '',
     email: '',
     phone: '',
-    role: 'user',
+    role: 'pengguna',
     status: 'active',
     password: ''
   }

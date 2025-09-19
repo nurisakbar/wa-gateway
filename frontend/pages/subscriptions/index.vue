@@ -235,6 +235,110 @@
         </div>
       </div>
     </div>
+
+    <!-- Payment Modal -->
+    <div class="modal fade" :class="{ show: showPaymentModal, 'd-block': showPaymentModal }" tabindex="-1" v-if="showPaymentModal">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+          <div class="modal-header bg-primary text-white border-0">
+            <h5 class="modal-title fw-bold">
+              <i class="bi bi-credit-card me-2"></i>
+              Pembayaran Langganan
+            </h5>
+            <button type="button" class="btn-close btn-close-white" @click="closePaymentModal"></button>
+          </div>
+          <div class="modal-body p-4">
+            <!-- Invoice Details -->
+            <div class="invoice-details mb-4">
+              <h6 class="fw-bold text-primary mb-3">
+                <i class="bi bi-receipt me-2"></i>
+                Detail Tagihan
+              </h6>
+              <div class="row">
+                <div class="col-md-6">
+                  <p class="mb-2"><strong>Nomor Invoice:</strong> {{ currentInvoice?.invoice_number }}</p>
+                  <p class="mb-2"><strong>Paket:</strong> {{ currentPlan?.name }}</p>
+                  <p class="mb-2"><strong>Periode:</strong> {{ currentInvoice?.metadata?.billing_cycle }}</p>
+                </div>
+                <div class="col-md-6">
+                  <p class="mb-2"><strong>Jumlah:</strong> <span class="text-primary fw-bold">Rp {{ formatCurrency(currentInvoice?.total) }}</span></p>
+                  <p class="mb-2"><strong>Jatuh Tempo:</strong> {{ formatDate(currentInvoice?.due_date) }}</p>
+                  <p class="mb-2"><strong>Status:</strong> <span class="badge bg-warning">{{ currentInvoice?.status }}</span></p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Payment Instructions -->
+            <div class="payment-instructions">
+              <h6 class="fw-bold text-success mb-3">
+                <i class="bi bi-bank me-2"></i>
+                Instruksi Pembayaran
+              </h6>
+              <div class="alert alert-info">
+                <p class="mb-3">{{ currentInvoice?.metadata?.payment_details?.payment_instructions }}</p>
+                
+                <div class="bank-details bg-light p-3 rounded">
+                  <h6 class="fw-bold mb-3">Detail Rekening:</h6>
+                  <div class="row">
+                    <div class="col-md-6">
+                      <p class="mb-2"><strong>Bank:</strong> {{ currentInvoice?.metadata?.payment_details?.bank_name }}</p>
+                      <p class="mb-2"><strong>Nama:</strong> {{ currentInvoice?.metadata?.payment_details?.account_name }}</p>
+                    </div>
+                    <div class="col-md-6">
+                      <p class="mb-2"><strong>Nomor Rekening:</strong></p>
+                      <div class="input-group">
+                        <input 
+                          type="text" 
+                          class="form-control fw-bold text-primary" 
+                          :value="currentInvoice?.metadata?.payment_details?.account_number"
+                          readonly
+                          id="accountNumber"
+                        >
+                        <button 
+                          class="btn btn-outline-primary" 
+                          type="button"
+                          @click="copyAccountNumber"
+                        >
+                          <i class="bi bi-copy"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Important Notes -->
+            <div class="important-notes">
+              <h6 class="fw-bold text-warning mb-3">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                Catatan Penting
+              </h6>
+              <ul class="list-unstyled">
+                <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Transfer sesuai nominal tagihan yang tertera</li>
+                <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Simpan bukti transfer untuk arsip pribadi</li>
+                <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Konfirmasi pembayaran dengan chat WhatsApp admin</li>
+                <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Langganan akan aktif setelah pembayaran dikonfirmasi</li>
+              </ul>
+            </div>
+          </div>
+          <div class="modal-footer bg-light border-0 p-4">
+            <button type="button" class="btn btn-outline-secondary" @click="closePaymentModal">
+              <i class="bi bi-x-circle me-1"></i>
+              Tutup
+            </button>
+            <a :href="whatsappDeepLink" target="_blank" class="btn btn-success">
+              <i class="bi bi-whatsapp me-1"></i>
+              Chat Admin via WhatsApp
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Backdrop -->
+    <div v-if="showPaymentModal" class="modal-backdrop fade show"></div>
+
   </div>
 </template>
 
@@ -254,6 +358,22 @@ const currentSubscription = ref(null)
 const usageData = ref({})
 const showYearly = ref(false)
 // Currency is now fixed to IDR only
+
+// Payment modal data
+const showPaymentModal = ref(false)
+const currentInvoice = ref(null)
+const currentPlan = ref(null)
+
+// Removed confirmation modal; WhatsApp-first flow
+
+// WhatsApp deep link with prefilled message
+const whatsappNumber = '+6282129948687'
+const whatsappDeepLink = computed(() => {
+  const invoiceNo = currentInvoice.value?.invoice_number || ''
+  const message = `Halo Admin, saya sudah transfer untuk langganan. Nomor invoice: ${invoiceNo}. Mohon verifikasi.`
+  const encoded = encodeURIComponent(message)
+  return `https://wa.me/${whatsappNumber}?text=${encoded}`
+})
 
 // Functions
 
@@ -291,8 +411,13 @@ const subscribeStatic = async (plan) => {
       const authStore = useAuthStore()
       await authStore.fetchSubscription()
       
-      // Redirect to dashboard after successful subscription
-      await navigateTo('/dashboard')
+      // Show payment details if invoice was created
+      if (response.data.invoice) {
+        openPaymentModal(response.data.invoice, plan)
+      } else {
+        // Redirect to dashboard if no payment needed (free plan)
+        await navigateTo('/dashboard')
+      }
     }
   } catch (error) {
 // console.error('Error subscribing to plan:', error)
@@ -305,6 +430,42 @@ const subscribeStatic = async (plan) => {
     subscribing.value = false
   }
 }
+
+// Payment modal functions
+const openPaymentModal = (invoice, plan) => {
+  currentInvoice.value = invoice
+  currentPlan.value = plan
+  showPaymentModal.value = true
+}
+
+const closePaymentModal = () => {
+  showPaymentModal.value = false
+  currentInvoice.value = null
+  currentPlan.value = null
+}
+
+// No-op removed handlers
+
+const copyAccountNumber = async () => {
+  try {
+    await navigator.clipboard.writeText(currentInvoice.value?.metadata?.payment_details?.account_number)
+    $toast.success('Nomor rekening berhasil disalin!')
+  } catch (error) {
+    $toast.error('Gagal menyalin nomor rekening')
+  }
+}
+
+// Replaced by direct WhatsApp link in template
+
+// Utility functions
+const formatCurrency = (amount) => {
+  if (!amount && amount !== 0) return '0'
+  return new Intl.NumberFormat('id-ID', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(amount)
+}
+
 
 // Fetch subscription plans
 const fetchPlans = async () => {
@@ -794,6 +955,7 @@ onMounted(async () => {
 
 .text-only .plan-features {
   /* Remove scroll - show all features */
+  display: block;
 }
 
 .text-only .feature-item {

@@ -60,7 +60,7 @@ const validateRegistration = [
   
   body('role')
     .optional()
-    .isIn(['super_admin', 'admin', 'manager', 'operator', 'viewer'])
+    .isIn(['super_admin', 'admin', 'manager', 'operator', 'viewer', 'pengguna'])
     .withMessage('Invalid role specified'),
   
   handleValidationErrors

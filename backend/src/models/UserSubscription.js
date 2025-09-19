@@ -24,7 +24,7 @@ const UserSubscription = sequelize.define('UserSubscription', {
     }
   },
   status: {
-    type: DataTypes.ENUM('active', 'cancelled', 'expired', 'past_due', 'trialing'),
+    type: DataTypes.ENUM('pending', 'active', 'cancelled', 'expired', 'past_due', 'trialing'),
     defaultValue: 'active',
     comment: 'Subscription status'
   },
@@ -110,12 +110,16 @@ UserSubscription.prototype.isActive = function() {
   return this.status === 'active' || this.status === 'trialing';
 };
 
+UserSubscription.prototype.isPending = function() {
+  return this.status === 'pending';
+};
+
 UserSubscription.prototype.isTrialing = function() {
   return this.status === 'trialing';
 };
 
 UserSubscription.prototype.isExpired = function() {
-  return this.status === 'expired' || this.status === 'past_due';
+  return this.status === 'expired';
 };
 
 UserSubscription.prototype.isCancelled = function() {
@@ -145,7 +149,7 @@ UserSubscription.getActiveSubscription = async function(userId) {
   return await this.findOne({
     where: { 
       user_id: userId,
-      status: ['active', 'trialing']
+      status: ['pending', 'active', 'trialing']
     },
     order: [['created_at', 'DESC']]
   });
@@ -157,7 +161,7 @@ UserSubscription.getExpiringSubscriptions = async function(days = 7) {
   
   return await this.findAll({
     where: {
-      status: ['active', 'trialing'],
+      status: ['pending', 'active', 'trialing'],
       current_period_end: {
         [require('sequelize').Op.lte]: expiryDate
       }

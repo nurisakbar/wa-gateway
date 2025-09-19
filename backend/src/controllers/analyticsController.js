@@ -1,4 +1,4 @@
-const { ApiUsage, ApiKey, User, Message, Device, sequelize } = require('../models');
+const { ApiUsage, ApiKey, User, Message, Device, Invoice, sequelize } = require('../models');
 const { logError, logInfo } = require('../utils/logger');
 const { Op } = require('sequelize');
 
@@ -431,8 +431,97 @@ const getRealTimeAnalytics = async (req, res) => {
   }
 };
 
+// Get admin analytics overview
+const getAdminAnalytics = async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
+      return res.status(403).json({
+        error: true,
+        message: 'Access denied. Admin privileges required.'
+      });
+    }
+
+    // Get total users count
+    const totalUsers = await User.count({
+      where: {
+        status: 'active'
+      }
+    });
+
+    // Get new users this month
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+    
+    const newUsersThisMonth = await User.count({
+      where: {
+        created_at: {
+          [Op.gte]: startOfMonth
+        }
+      }
+    });
+
+    // Get device stats
+    const deviceStats = await Device.findAll({
+      attributes: [
+        [sequelize.fn('COUNT', sequelize.col('id')), 'total_devices'],
+        [sequelize.fn('COUNT', sequelize.literal('CASE WHEN status = "connected" THEN 1 END')), 'active_devices']
+      ],
+      raw: true
+    });
+
+    // Get invoice stats
+    const invoiceStats = await Invoice.findAll({
+      attributes: [
+        [sequelize.fn('COUNT', sequelize.literal('CASE WHEN status = "paid" THEN 1 END')), 'paid_invoices'],
+        [sequelize.fn('SUM', sequelize.literal('CASE WHEN status = "paid" THEN amount ELSE 0 END')), 'paid_amount'],
+        [sequelize.fn('COUNT', sequelize.literal('CASE WHEN status = "pending" OR status = "overdue" THEN 1 END')), 'unpaid_invoices'],
+        [sequelize.fn('SUM', sequelize.literal('CASE WHEN status = "pending" OR status = "overdue" THEN amount ELSE 0 END')), 'unpaid_amount']
+      ],
+      raw: true
+    });
+
+    const stats = deviceStats[0] || { total_devices: 0, active_devices: 0 };
+    const invoiceData = invoiceStats[0] || { 
+      paid_invoices: 0, 
+      paid_amount: 0, 
+      unpaid_invoices: 0, 
+      unpaid_amount: 0 
+    };
+
+    const adminData = {
+      totalUsers,
+      newUsersThisMonth,
+      activeDevices: parseInt(stats.active_devices) || 0,
+      totalDevices: parseInt(stats.total_devices) || 0,
+      paidInvoices: parseInt(invoiceData.paid_invoices) || 0,
+      paidAmount: parseInt(invoiceData.paid_amount) || 0,
+      unpaidInvoices: parseInt(invoiceData.unpaid_invoices) || 0,
+      unpaidAmount: parseInt(invoiceData.unpaid_amount) || 0
+    };
+
+    logInfo('Admin analytics fetched successfully', { userId: req.user.id });
+
+    res.json({
+      error: false,
+      message: 'Admin analytics retrieved successfully',
+      success: true,
+      data: adminData
+    });
+
+  } catch (error) {
+    logError(error, 'Admin Analytics');
+    res.status(500).json({
+      error: true,
+      message: 'Failed to fetch admin analytics'
+    });
+  }
+};
+
 module.exports = {
   getUserAnalytics,
   getApiKeyAnalytics,
-  getRealTimeAnalytics
+  getRealTimeAnalytics,
+  getAdminAnalytics
 }; 

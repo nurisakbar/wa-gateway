@@ -9,7 +9,7 @@ const { generateSecureToken, formatPhoneNumber } = require('../utils/helpers');
  */
 const register = async (req, res) => {
   try {
-    const { username, email, password, full_name, phone, role = 'operator' } = req.body;
+    const { username, email, password, full_name, phone, role = 'pengguna' } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({

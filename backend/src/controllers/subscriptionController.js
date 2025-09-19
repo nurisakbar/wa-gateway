@@ -30,7 +30,7 @@ const getCurrentSubscription = async (req, res) => {
     const subscription = await UserSubscription.findOne({
       where: { 
         user_id: userId,
-        status: ['active', 'trialing']
+        status: ['pending', 'active', 'trialing']
       },
       include: [{
         model: SubscriptionPlan,
@@ -101,11 +101,11 @@ const subscribeToPlan = async (req, res) => {
     const currentPeriodEnd = new Date(now);
     currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + 1);
 
-    // Create subscription
+    // Create subscription with pending status for paid plans, active for free plans
     const subscription = await UserSubscription.create({
       user_id: userId,
       plan_id: plan.id,
-      status: 'active',
+      status: plan.price > 0 ? 'pending' : 'active',
       billing_cycle: billing_cycle,
       current_period_start: currentPeriodStart,
       current_period_end: currentPeriodEnd,
@@ -124,7 +124,7 @@ const subscribeToPlan = async (req, res) => {
         const dueDate = new Date();
         dueDate.setDate(dueDate.getDate() + 30);
 
-        invoice = await Invoice.create({
+        const invoiceData = {
           user_id: userId,
           subscription_id: subscription.id,
           invoice_number: invoiceNumber,
@@ -148,9 +148,18 @@ const subscribeToPlan = async (req, res) => {
             subscription_period_start: currentPeriodStart,
             subscription_period_end: currentPeriodEnd,
             plan_name: plan.name,
-            billing_cycle: billing_cycle
+            billing_cycle: billing_cycle,
+            payment_details: {
+              bank_name: 'Bank Mandiri',
+              account_name: 'WAHYU SAFRIZAL',
+              account_number: '1320022890280',
+              whatsapp_number: '+62 821‑2994‑8687',
+            payment_instructions: 'Silakan transfer sesuai nominal tagihan ke rekening di atas. Setelah transfer, kirim pesan WhatsApp ke +62 821‑2994‑8687 dengan menyertakan nomor invoice. Admin akan memverifikasi pembayaran Anda.'
+            }
           }
-        });
+        };
+        
+        invoice = await Invoice.create(invoiceData);
 
         logInfo(`Invoice generated for subscription ${subscription.id}: ${invoiceNumber}`);
       } catch (invoiceError) {
@@ -163,11 +172,17 @@ const subscribeToPlan = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Successfully subscribed to plan',
+      message: plan.price > 0 
+        ? 'Subscription dibuat. Silakan transfer dan konfirmasi via WhatsApp ke admin untuk aktivasi.'
+        : 'Successfully subscribed to plan',
       data: {
         subscription,
         plan,
-        invoice
+        invoice,
+        payment_instructions: plan.price > 0 ? {
+          whatsapp_number: '+62 821‑2994‑8687',
+          message: 'Setelah transfer, konfirmasi pembayaran via WhatsApp dengan menyertakan nomor invoice.'
+        } : null
       }
     });
   } catch (error) {
@@ -298,7 +313,7 @@ const getUsage = async (req, res) => {
     const subscription = await UserSubscription.findOne({
       where: { 
         user_id: userId,
-        status: ['active', 'trialing']
+        status: ['pending', 'active', 'trialing']
       },
       include: [{
         model: SubscriptionPlan,

@@ -64,8 +64,8 @@ const User = sequelize.define('User', {
     allowNull: true
   },
   role: {
-    type: DataTypes.ENUM('super_admin', 'admin', 'manager', 'operator', 'viewer'),
-    defaultValue: 'operator',
+    type: DataTypes.ENUM('super_admin', 'admin', 'manager', 'operator', 'viewer', 'pengguna'),
+    defaultValue: 'pengguna',
     allowNull: false
   },
   status: {
@@ -177,11 +177,12 @@ User.prototype.canLogin = function() {
 
 User.prototype.hasRole = function(role) {
   const roleHierarchy = {
-    'super_admin': 5,
-    'admin': 4,
-    'manager': 3,
-    'operator': 2,
-    'viewer': 1
+    'super_admin': 6,
+    'admin': 5,
+    'manager': 4,
+    'operator': 3,
+    'viewer': 2,
+    'pengguna': 1
   };
   
   const userLevel = roleHierarchy[this.role] || 0;

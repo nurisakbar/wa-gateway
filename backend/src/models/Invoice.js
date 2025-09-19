@@ -30,7 +30,7 @@ const Invoice = sequelize.define('Invoice', {
     comment: 'Human readable invoice number'
   },
   status: {
-    type: DataTypes.ENUM('draft', 'pending', 'paid', 'failed', 'cancelled'),
+    type: DataTypes.ENUM('draft', 'pending', 'payment_confirmed', 'paid', 'failed', 'cancelled'),
     defaultValue: 'draft',
     comment: 'Invoice status'
   },
@@ -73,6 +73,25 @@ const Invoice = sequelize.define('Invoice', {
     type: DataTypes.DATE,
     allowNull: true,
     comment: 'When invoice was paid'
+  },
+  payment_confirmation: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    comment: 'Payment confirmation details from user'
+  },
+  admin_confirmed_at: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    comment: 'When admin confirmed the payment'
+  },
+  admin_confirmed_by: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    references: {
+      model: 'users',
+      key: 'id'
+    },
+    comment: 'Admin user who confirmed the payment'
   },
   items: {
     type: DataTypes.JSON,
@@ -123,6 +142,14 @@ const Invoice = sequelize.define('Invoice', {
 // Instance methods
 Invoice.prototype.isPaid = function() {
   return this.status === 'paid';
+};
+
+Invoice.prototype.isPaymentConfirmed = function() {
+  return this.status === 'payment_confirmed';
+};
+
+Invoice.prototype.isPendingPayment = function() {
+  return this.status === 'pending';
 };
 
 Invoice.prototype.isOverdue = function() {

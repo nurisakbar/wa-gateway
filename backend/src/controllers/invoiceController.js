@@ -322,11 +322,251 @@ const getInvoiceStats = async (req, res) => {
   }
 };
 
+// Confirm payment by user (no longer requires uploading proof in app)
+const confirmPayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { payment_proof, transfer_amount, transfer_date, bank_name, notes } = req.body || {};
+    const userId = req.user.id;
+
+    const invoice = await Invoice.findOne({
+      where: { id, user_id: userId }
+    });
+
+    if (!invoice) {
+      return res.status(404).json({
+        success: false,
+        message: 'Invoice not found'
+      });
+    }
+
+    if (invoice.status !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invoice is not in pending status'
+      });
+    }
+
+    // Update invoice with payment confirmation
+    // Fields are optional; users now confirm via WhatsApp and app marks invoice for admin review
+    const parsedAmount = typeof transfer_amount !== 'undefined' && transfer_amount !== null && transfer_amount !== ''
+      ? parseFloat(transfer_amount)
+      : undefined;
+    const parsedDate = transfer_date ? new Date(transfer_date) : undefined;
+
+    await invoice.update({
+      status: 'payment_confirmed',
+      payment_confirmation: {
+        payment_proof: payment_proof || null,
+        transfer_amount: parsedAmount,
+        transfer_date: parsedDate,
+        bank_name: bank_name || null,
+        notes: notes || null,
+        confirmed_at: new Date(),
+        confirmed_by_user: userId
+      }
+    });
+
+    logInfo(`Payment confirmation submitted for invoice ${invoice.invoice_number} by user ${userId}`, 'Payment Confirmation');
+
+    res.json({
+      success: true,
+      message: 'Konfirmasi penerimaan transfer dicatat. Admin akan memeriksa dan mengaktifkan langganan Anda.',
+      data: invoice
+    });
+
+  } catch (error) {
+    logError(error, 'Confirm Payment Error');
+    res.status(500).json({
+      success: false,
+      message: 'Failed to confirm payment',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Admin: Get all pending payment confirmations (including pending invoices)
+const getPendingPaymentConfirmations = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, status } = req.query;
+    const offset = (page - 1) * limit;
+
+    // If status provided, filter by it; otherwise return all statuses for admin
+    const whereClause = status ? { status } : {};
+
+    const invoices = await Invoice.findAndCountAll({
+      where: whereClause,
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'username', 'email', 'full_name', 'phone']
+        },
+        {
+          model: UserSubscription,
+          as: 'subscription',
+          include: [
+            {
+              model: SubscriptionPlan,
+              as: 'plan'
+            }
+          ]
+        }
+      ],
+      order: [['created_at', 'DESC']],
+      limit: parseInt(limit),
+      offset: parseInt(offset)
+    });
+
+    res.json({
+      success: true,
+      data: {
+        invoices: invoices.rows,
+        pagination: {
+          total: invoices.count,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          totalPages: Math.ceil(invoices.count / limit)
+        }
+      }
+    });
+
+  } catch (error) {
+    logError(error, 'Get Pending Payment Confirmations Error');
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get pending payment confirmations',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Admin: Approve payment confirmation
+const approvePayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const adminId = req.user.id;
+
+    const invoice = await Invoice.findOne({
+      where: { id },
+      include: [
+        {
+          model: UserSubscription,
+          as: 'subscription'
+        }
+      ]
+    });
+
+    if (!invoice) {
+      return res.status(404).json({
+        success: false,
+        message: 'Invoice not found'
+      });
+    }
+
+    if (invoice.status !== 'payment_confirmed' && invoice.status !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invoice is not in a confirmable status'
+      });
+    }
+
+    // Update invoice status to paid
+    await invoice.update({
+      status: 'paid',
+      paid_at: new Date(),
+      admin_confirmed_at: new Date(),
+      admin_confirmed_by: adminId
+    });
+
+    // Activate the subscription
+    if (invoice.subscription) {
+      await invoice.subscription.update({
+        status: 'active'
+      });
+    }
+
+    logInfo(`Payment approved for invoice ${invoice.invoice_number} by admin ${adminId}`, 'Payment Approved');
+
+    res.json({
+      success: true,
+      message: 'Payment approved successfully. Subscription has been activated.',
+      data: invoice
+    });
+
+  } catch (error) {
+    logError(error, 'Approve Payment Error');
+    res.status(500).json({
+      success: false,
+      message: 'Failed to approve payment',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Admin: Reject payment confirmation
+const rejectPayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const adminId = req.user.id;
+
+    const invoice = await Invoice.findOne({
+      where: { id }
+    });
+
+    if (!invoice) {
+      return res.status(404).json({
+        success: false,
+        message: 'Invoice not found'
+      });
+    }
+
+    if (invoice.status !== 'payment_confirmed') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invoice is not in payment_confirmed status'
+      });
+    }
+
+    // Update invoice status back to pending
+    await invoice.update({
+      status: 'pending',
+      payment_confirmation: {
+        ...invoice.payment_confirmation,
+        rejected_at: new Date(),
+        rejected_by: adminId,
+        rejection_reason: reason
+      }
+    });
+
+    logInfo(`Payment rejected for invoice ${invoice.invoice_number} by admin ${adminId}. Reason: ${reason}`, 'Payment Rejected');
+
+    res.json({
+      success: true,
+      message: 'Payment rejected successfully.',
+      data: invoice
+    });
+
+  } catch (error) {
+    logError(error, 'Reject Payment Error');
+    res.status(500).json({
+      success: false,
+      message: 'Failed to reject payment',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 module.exports = {
   getUserInvoices,
   getInvoice,
   generateInvoice,
   markInvoiceAsPaid,
   downloadInvoice,
-  getInvoiceStats
+  getInvoiceStats,
+  confirmPayment,
+  getPendingPaymentConfirmations,
+  approvePayment,
+  rejectPayment
 }; 

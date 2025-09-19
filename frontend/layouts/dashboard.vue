@@ -16,123 +16,125 @@
 
       <div class="sidebar-content">
         <ul class="nav flex-column">
-          <li class="nav-item">
-            <NuxtLink to="/dashboard" class="nav-link" active-class="active">
-              <i class="bi bi-speedometer2 me-2"></i>
-              <span v-if="!sidebarCollapsed">Dashboard</span>
-            </NuxtLink>
-          </li>
-          <li class="nav-item">
-            <NuxtLink to="/docs/api-keys" class="nav-link" active-class="active">
-              <i class="bi bi-journal-text me-2"></i>
-              <span v-if="!sidebarCollapsed">Docs: API Keys</span>
-            </NuxtLink>
-          </li>
-          <li class="nav-item">
-            <NuxtLink to="/devices" class="nav-link" active-class="active">
-              <i class="bi bi-phone me-2"></i>
-              <span v-if="!sidebarCollapsed">Devices</span>
-            </NuxtLink>
-          </li>
-          <li class="nav-item">
-            <a 
-              href="#" 
-              class="nav-link messages-menu-link" 
-              :class="{ 'active': $route.path.startsWith('/messages') }"
-              @click.prevent="toggleMessagesSubmenu"
-            >
-              <div class="d-flex align-items-center">
-                <i class="bi bi-chat-dots me-2"></i>
-                <span v-if="!sidebarCollapsed">Messages</span>
-              </div>
-              <i v-if="!sidebarCollapsed" class="bi bi-chevron-down" :class="{ 'bi-chevron-up': messagesSubmenuOpen }"></i>
-            </a>
-            <ul v-if="!sidebarCollapsed && messagesSubmenuOpen" class="nav flex-column ms-3">
-              <li class="nav-item">
-                <NuxtLink to="/messages/send" class="nav-link submenu-link" active-class="active">
-                  <i class="bi bi-send me-2"></i>
-                  <span>Send</span>
-                </NuxtLink>
-              </li>
-              <li class="nav-item">
-                <NuxtLink to="/messages/inbox" class="nav-link submenu-link" active-class="active">
-                  <i class="bi bi-inbox me-2"></i>
-                  <span>Inbox</span>
-                </NuxtLink>
-              </li>
-            </ul>
-          </li>
-          <li class="nav-item">
-            <NuxtLink to="/contacts" class="nav-link" active-class="active">
-              <i class="bi bi-people me-2"></i>
-              <span v-if="!sidebarCollapsed">Contacts</span>
-            </NuxtLink>
-          </li>
-          <li class="nav-item">
-            <NuxtLink to="/broadcasts" class="nav-link" active-class="active">
-              <i class="bi bi-megaphone me-2"></i>
-              <span v-if="!sidebarCollapsed">Broadcasts</span>
-            </NuxtLink>
-          </li>
-          <li class="nav-item">
-            <NuxtLink to="/templates" class="nav-link" active-class="active">
-              <i class="bi bi-file-text me-2"></i>
-              <span v-if="!sidebarCollapsed">Templates</span>
-            </NuxtLink>
-          </li>
-          <li class="nav-item">
-            <NuxtLink to="/analytics" class="nav-link" active-class="active">
-              <i class="bi bi-graph-up me-2"></i>
-              <span v-if="!sidebarCollapsed">Analytics</span>
-            </NuxtLink>
-          </li>
-          <!-- API Keys menu hidden; token managed per-device -->
-          <li class="nav-item">
-            <NuxtLink to="/webhooks" class="nav-link" active-class="active">
-              <i class="bi bi-plug me-2"></i>
-              <span v-if="!sidebarCollapsed">Webhooks</span>
-            </NuxtLink>
-          </li>
-          <li class="nav-item">
-            <NuxtLink to="/subscriptions" class="nav-link" active-class="active">
-              <i class="bi bi-credit-card me-2"></i>
-              <span v-if="!sidebarCollapsed">Subscriptions</span>
-            </NuxtLink>
-          </li>
-          <li class="nav-item">
-            <a 
-              href="#" 
-              class="nav-link master-data-menu-link" 
-              :class="{ 'active': $route.path.startsWith('/master-data') }"
-              @click.prevent="toggleMasterDataMenu"
-            >
-              <div class="d-flex align-items-center">
-                <i class="bi bi-database me-2"></i>
-                <span v-if="!sidebarCollapsed">Master Data</span>
-              </div>
-              <i v-if="!sidebarCollapsed" class="bi bi-chevron-down" :class="{ 'bi-chevron-up': showMasterDataMenu }"></i>
-            </a>
-            <ul v-if="!sidebarCollapsed && showMasterDataMenu" class="nav flex-column ms-3">
-              <li class="nav-item">
-                <NuxtLink to="/master-data/subscription-plans" class="nav-link submenu-link" active-class="active">
-                  <i class="bi bi-credit-card me-2"></i>
-                  <span>Kelola Paket</span>
-                </NuxtLink>
-              </li>
-              <li class="nav-item">
-                <NuxtLink to="/master-data/users" class="nav-link submenu-link" active-class="active">
-                  <i class="bi bi-people me-2"></i>
-                  <span>Kelola Users</span>
-                </NuxtLink>
-              </li>
-            </ul>
-          </li>
-          <li class="nav-item">
-            <NuxtLink to="/invoices" class="nav-link" active-class="active">
-              <i class="bi bi-receipt me-2"></i>
-              <span v-if="!sidebarCollapsed">Invoices</span>
-            </NuxtLink>
-          </li>
+          <!-- Simplified menu for admin users -->
+          <template v-if="isAdmin">
+            <li class="nav-item">
+              <NuxtLink to="/dashboard" class="nav-link" active-class="active">
+                <i class="bi bi-speedometer2 me-2"></i>
+                <span v-if="!sidebarCollapsed">Dashboard</span>
+              </NuxtLink>
+            </li>
+            <li class="nav-item">
+              <NuxtLink to="/master-data/users" class="nav-link" active-class="active">
+                <i class="bi bi-people me-2"></i>
+                <span v-if="!sidebarCollapsed">Pengguna</span>
+              </NuxtLink>
+            </li>
+            <li class="nav-item">
+              <NuxtLink to="/master-data/subscription-plans" class="nav-link" active-class="active">
+                <i class="bi bi-credit-card me-2"></i>
+                <span v-if="!sidebarCollapsed">Paket</span>
+              </NuxtLink>
+            </li>
+            <li class="nav-item">
+              <NuxtLink to="/invoices" class="nav-link" active-class="active">
+                <i class="bi bi-receipt me-2"></i>
+                <span v-if="!sidebarCollapsed">Tagihan</span>
+              </NuxtLink>
+            </li>
+          </template>
+          
+          <!-- Full menu for non-admin users -->
+          <template v-else>
+            <li class="nav-item">
+              <NuxtLink to="/dashboard" class="nav-link" active-class="active">
+                <i class="bi bi-speedometer2 me-2"></i>
+                <span v-if="!sidebarCollapsed">Dashboard</span>
+              </NuxtLink>
+            </li>
+            <li class="nav-item">
+              <NuxtLink to="/docs/api-keys" class="nav-link" active-class="active">
+                <i class="bi bi-journal-text me-2"></i>
+                <span v-if="!sidebarCollapsed">Docs: API Keys</span>
+              </NuxtLink>
+            </li>
+            <li class="nav-item">
+              <NuxtLink to="/devices" class="nav-link" active-class="active">
+                <i class="bi bi-phone me-2"></i>
+                <span v-if="!sidebarCollapsed">Devices</span>
+              </NuxtLink>
+            </li>
+            <li class="nav-item">
+              <a 
+                href="#" 
+                class="nav-link messages-menu-link" 
+                :class="{ 'active': $route.path.startsWith('/messages') }"
+                @click.prevent="toggleMessagesSubmenu"
+              >
+                <div class="d-flex align-items-center">
+                  <i class="bi bi-chat-dots me-2"></i>
+                  <span v-if="!sidebarCollapsed">Messages</span>
+                </div>
+                <i v-if="!sidebarCollapsed" class="bi bi-chevron-down" :class="{ 'bi-chevron-up': messagesSubmenuOpen }"></i>
+              </a>
+              <ul v-if="!sidebarCollapsed && messagesSubmenuOpen" class="nav flex-column ms-3">
+                <li class="nav-item">
+                  <NuxtLink to="/messages/send" class="nav-link submenu-link" active-class="active">
+                    <i class="bi bi-send me-2"></i>
+                    <span>Send</span>
+                  </NuxtLink>
+                </li>
+                <li class="nav-item">
+                  <NuxtLink to="/messages/inbox" class="nav-link submenu-link" active-class="active">
+                    <i class="bi bi-inbox me-2"></i>
+                    <span>Inbox</span>
+                  </NuxtLink>
+                </li>
+              </ul>
+            </li>
+            <li class="nav-item">
+              <NuxtLink to="/contacts" class="nav-link" active-class="active">
+                <i class="bi bi-people me-2"></i>
+                <span v-if="!sidebarCollapsed">Contacts</span>
+              </NuxtLink>
+            </li>
+            <li class="nav-item">
+              <NuxtLink to="/broadcasts" class="nav-link" active-class="active">
+                <i class="bi bi-megaphone me-2"></i>
+                <span v-if="!sidebarCollapsed">Broadcasts</span>
+              </NuxtLink>
+            </li>
+            <li class="nav-item">
+              <NuxtLink to="/templates" class="nav-link" active-class="active">
+                <i class="bi bi-file-text me-2"></i>
+                <span v-if="!sidebarCollapsed">Templates</span>
+              </NuxtLink>
+            </li>
+            <li class="nav-item">
+              <NuxtLink to="/analytics" class="nav-link" active-class="active">
+                <i class="bi bi-graph-up me-2"></i>
+                <span v-if="!sidebarCollapsed">Analytics</span>
+              </NuxtLink>
+            </li>
+            <li class="nav-item">
+              <NuxtLink to="/webhooks" class="nav-link" active-class="active">
+                <i class="bi bi-plug me-2"></i>
+                <span v-if="!sidebarCollapsed">Webhooks</span>
+              </NuxtLink>
+            </li>
+            <li class="nav-item">
+              <NuxtLink to="/subscriptions" class="nav-link" active-class="active">
+                <i class="bi bi-credit-card me-2"></i>
+                <span v-if="!sidebarCollapsed">Subscriptions</span>
+              </NuxtLink>
+            </li>
+            <li class="nav-item">
+              <NuxtLink to="/invoices" class="nav-link" active-class="active">
+                <i class="bi bi-receipt me-2"></i>
+                <span v-if="!sidebarCollapsed">Invoices</span>
+              </NuxtLink>
+            </li>
+          </template>
         </ul>
 
       </div>
@@ -261,12 +263,10 @@
 import { storeToRefs } from 'pinia'
 
 const authStore = useAuthStore()
-const { user, hasActiveSubscription } = storeToRefs(authStore)
+const { user, hasActiveSubscription, isAdmin } = storeToRefs(authStore)
 const { $toast } = useNuxtApp()
 const currentRoute = useRoute()
 
-// Master Data menu state
-const showMasterDataMenu = ref(false)
 
 // Initialize auth on mount
 onMounted(async () => {
@@ -334,10 +334,6 @@ const getUserDisplayName = () => {
   return 'User'
 }
 
-// Toggle Master Data menu
-const toggleMasterDataMenu = () => {
-  showMasterDataMenu.value = !showMasterDataMenu.value
-}
 
 const sidebarCollapsed = ref(false)
 const pageTitle = ref('Dashboard')

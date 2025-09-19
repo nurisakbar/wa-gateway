@@ -9,7 +9,7 @@ require('dotenv').config();
 
 // Import utilities
 const { logInfo, logError, requestLogger, errorLogger } = require('./src/utils/logger');
-const { testConnection, syncDatabase } = require('./src/config/database');
+const { testConnection, syncDatabase, sequelize } = require('./src/config/database');
 
 // Import models
 const { User, Device, Message, Contact } = require('./src/models');
@@ -272,11 +272,43 @@ const startServer = async () => {
       process.exit(1);
     }
 
-    // Sync database (create tables if they don't exist)
-    if (NODE_ENV === 'development') {
-      // Alter tables to match models in development so new columns (e.g., api_keys.device_id) are created
-      await syncDatabase(false);
-      logInfo('Database synchronized successfully');
+    // Sync database (create tables if they don't exist) and ensure new columns exist
+    const shouldAlter = NODE_ENV === 'development' || process.env.DB_AUTO_ALTER === 'true'
+    if (shouldAlter) {
+      await syncDatabase(false, true);
+      logInfo('Database synchronized (alter=true) successfully');
+
+      // Ensure missing columns exist for invoices (e.g., payment_confirmation)
+      const qi = sequelize.getQueryInterface();
+      try {
+        const table = await qi.describeTable('invoices');
+        const addOps = [];
+        if (!table.payment_confirmation) {
+          addOps.push(qi.addColumn('invoices', 'payment_confirmation', {
+            type: require('sequelize').JSON,
+            allowNull: true,
+            comment: 'Payment confirmation details from user'
+          }));
+        }
+        if (!table.admin_confirmed_at) {
+          addOps.push(qi.addColumn('invoices', 'admin_confirmed_at', {
+            type: require('sequelize').DATE,
+            allowNull: true
+          }));
+        }
+        if (!table.admin_confirmed_by) {
+          addOps.push(qi.addColumn('invoices', 'admin_confirmed_by', {
+            type: require('sequelize').UUID,
+            allowNull: true
+          }));
+        }
+        if (addOps.length > 0) {
+          await Promise.all(addOps);
+          logInfo('Invoices table updated: missing columns added');
+        }
+      } catch (e) {
+        logError(e, 'Ensure invoices columns');
+      }
     }
 
     // Start HTTP server

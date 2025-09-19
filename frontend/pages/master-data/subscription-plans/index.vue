@@ -213,7 +213,7 @@
               <div class="row">
                 <div class="col-md-4 mb-3">
                   <label for="planPrice" class="form-label fw-semibold">
-                    <i class="bi bi-currency-dollar me-1 text-muted"></i>Price *
+                    <i class="bi bi-currency-exchange me-1 text-muted"></i>Price *
                   </label>
                   <input 
                     type="number" 
@@ -308,7 +308,7 @@ import { useSubscriptionPlanStore } from '~/stores/subscriptionPlans'
 // Page metadata
 definePageMeta({
   layout: 'dashboard',
-  middleware: 'auth'
+  middleware: ['auth', 'admin']
 })
 
 // Store
@@ -353,11 +353,15 @@ const filteredPlans = computed(() => {
 
 // Methods
 const formatCurrency = (amount) => {
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0
+  if (!amount && amount !== 0) return 'Rp 0'
+  
+  // Format IDR manually to ensure proper display
+  const formattedAmount = new Intl.NumberFormat('id-ID', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
   }).format(amount)
+  
+  return `Rp ${formattedAmount}`
 }
 
 const getTypeLabel = (type) => {

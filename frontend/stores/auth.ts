@@ -51,6 +51,7 @@ export const useAuthStore = defineStore('auth', {
     isManager: (state) => state.user?.role === 'manager',
     isOperator: (state) => state.user?.role === 'operator',
     isViewer: (state) => state.user?.role === 'viewer',
+    isPengguna: (state) => state.user?.role === 'pengguna',
     getSubscription: (state) => state.subscription,
     hasSubscription: (state) => state.hasActiveSubscription
   },

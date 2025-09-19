@@ -97,8 +97,8 @@ const {
  *                 type: string
  *               role:
  *                 type: string
- *                 enum: [super_admin, admin, manager, operator, viewer]
- *                 default: operator
+ *                 enum: [super_admin, admin, manager, operator, viewer, pengguna]
+ *                 default: pengguna
  *     responses:
  *       201:
  *         description: User registered successfully
