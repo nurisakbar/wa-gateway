@@ -298,20 +298,21 @@
             <div class="col-md-6">
               <div class="info-block p-3">
                 <div class="fw-bold mb-1">From:</div>
-                <div>WA Gateway</div>
-                <div class="small text-muted">Jl. Perdamaian Raya No. 6</div>
-                <div class="small text-muted">+62 821‑2994‑8687</div>
-                <div class="small text-muted">support@klikwhatsapp.com</div>
+                <div>PT Mitra Bestari Teknologi</div>
+                <div class="small text-muted">Perumahan villa Cilame indah, Bl. B Randu Kurung Hilir No.16, Cilame, Kec. Ngamprah, Kabupaten Bandung Barat, Jawa Barat 40552</div>
+                <div class="small text-muted">+62 896‑9993‑5552</div>
               </div>
-              <div class="info-block p-3 mt-2">
+              
+            </div>
+            <div class="col-md-6">
+              <div class="info-block p-3">
                 <div class="fw-bold mb-1">Bill to:</div>
                 <div>{{ authStore?.user?.full_name || authStore?.user?.username || 'Customer' }}</div>
+                <div class="small text-muted">{{ authStore?.user?.address || '-' }}</div>
                 <div class="small text-muted">{{ authStore?.user?.email || '-' }}</div>
                 <div class="small text-muted" v-if="authStore?.user?.phone">{{ authStore.user.phone }}</div>
               </div>
-            </div>
-            <div class="col-md-6">
-              <div class="facts-grid p-3 h-100">
+              <!-- <div class="facts-grid p-3 h-100">
                 <div class="fact">
                   <div class="fact-label">Invoice #</div>
                   <div class="fact-value">{{ selectedInvoice.invoice_number }}</div>
@@ -324,7 +325,7 @@
                   <div class="fact-label">Due Date</div>
                   <div class="fact-value">{{ formatDate(selectedInvoice.due_date) }}</div>
                 </div>
-              </div>
+              </div> -->
             </div>
           </div>
 

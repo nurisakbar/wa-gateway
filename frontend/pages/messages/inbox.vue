@@ -127,8 +127,8 @@
                         <i class="bi bi-x-circle me-1"></i>
                         Clear
                       </button>
-                      <span class="badge bg-primary align-self-center" v-if="filteredMessages.length !== receivedMessagesList.length">
-                        {{ filteredMessages.length }} of {{ receivedMessagesList.length }}
+                      <span class="badge bg-primary align-self-center" v-if="filteredGroups.length !== uniqueContacts">
+                        {{ filteredGroups.length }} of {{ uniqueContacts }}
                       </span>
                     </div>
                   </div>
@@ -163,7 +163,7 @@
           </div>
           
           <!-- No Filtered Results State -->
-          <div v-else-if="filteredMessages.length === 0" class="empty-state text-center py-5">
+          <div v-else-if="filteredGroups.length === 0" class="empty-state text-center py-5">
             <div class="empty-state-icon mb-4">
               <div class="phone-icon-container">
                 <i class="bi bi-search text-muted"></i>
@@ -171,7 +171,7 @@
             </div>
             <h4 class="text-dark mb-3">No messages match your filters</h4>
             <p class="text-muted mb-4 max-width-400 mx-auto">
-              Try adjusting your search criteria or clear the filters to see all received messages.
+              Try adjusting your search criteria or clear the filters to see all received message groups.
             </p>
             <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center">
               <button class="btn btn-outline-primary d-flex align-items-center justify-content-center" @click="clearFilters">
@@ -185,70 +185,84 @@
             </div>
           </div>
           
-          <!-- Messages Table -->
+          <!-- Messages Grouped Table -->
           <div v-else class="table-responsive">
             <table class="table table-hover mb-0">
               <thead class="table-light">
                 <tr>
-                  <th class="border-0 py-3 px-4">
-                    <i class="bi bi-clock me-2 text-muted"></i>Time
-                  </th>
-                  <th class="border-0 py-3 px-4">
-                    <i class="bi bi-file-text me-2 text-muted"></i>Type
-                  </th>
-                  <th class="border-0 py-3 px-4">
-                    <i class="bi bi-telephone me-2 text-muted"></i>From
-                  </th>
-                  <th class="border-0 py-3 px-4">
-                    <i class="bi bi-chat-dots me-2 text-muted"></i>Content
-                  </th>
-                  <th class="border-0 py-3 px-4">
-                    <i class="bi bi-circle me-2 text-muted"></i>Status
-                  </th>
-                  <th class="border-0 py-3 px-4">
-                    <i class="bi bi-phone me-2 text-muted"></i>Device
-                  </th>
+                  <th class="border-0 py-3 px-4"><i class="bi bi-hash me-2 text-muted"></i>No</th>
+                  <th class="border-0 py-3 px-4"><i class="bi bi-telephone me-2 text-muted"></i>From</th>
+                  <th class="border-0 py-3 px-4"><i class="bi bi-hash me-2 text-muted"></i>Count</th>
+                  <th class="border-0 py-3 px-4"><i class="bi bi-clock me-2 text-muted"></i>Last Time</th>
+                  <th class="border-0 py-3 px-4"><i class="bi bi-phone me-2 text-muted"></i>Device</th>
+                  <th class="border-0 py-3 px-4 text-end"><i class="bi bi-gear me-2 text-muted"></i>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="msg in filteredMessages" :key="msg.id" class="message-row" :class="{ 'unread-message': !msg.isRead }">
+                <tr v-for="(group, index) in filteredGroups" :key="group.from_number" class="message-row" :class="{ 'unread-message': group.anyUnread }">
+                  <td class="px-4 py-3">{{ index + 1 }}</td>
+                  <td class="px-4 py-3">{{ group.from_number }}</td>
+                  <td class="px-4 py-3">{{ group.count }}</td>
                   <td class="px-4 py-3">
-                    <small class="text-muted">{{ formatTime(msg.timestamp || msg.created_at) }}</small>
-                    <i v-if="!msg.isRead" class="bi bi-circle-fill text-primary ms-1" style="font-size: 0.5rem;"></i>
+                    <small class="text-muted">{{ formatTime(group.lastTimestamp) }}</small>
+                    <i v-if="group.anyUnread" class="bi bi-circle-fill text-primary ms-1" style="font-size: 0.5rem;"></i>
                   </td>
-                  <td class="px-4 py-3 text-capitalize">{{ msg.type }}</td>
-                  <td class="px-4 py-3">{{ msg.from_number }}</td>
-                  <td class="px-4 py-3">
-                    <div v-if="msg.type === 'text'">{{ msg.content }}</div>
-                    <div v-else-if="msg.type === 'image'">
-                      <i class="bi bi-image me-1 text-primary"></i>
-                      <small>{{ msg.filename || 'Image' }}</small>
-                    </div>
-                    <div v-else-if="msg.type === 'document'">
-                      <i class="bi bi-file-earmark-text me-1 text-danger"></i>
-                      <small>{{ msg.filename || 'Document' }}</small>
-                    </div>
-                    <div v-else-if="msg.type === 'video'">
-                      <i class="bi bi-play-circle me-1 text-success"></i>
-                      <small>{{ msg.filename || 'Video' }}</small>
-                    </div>
-                    <div v-else-if="msg.type === 'audio'">
-                      <i class="bi bi-mic me-1 text-warning"></i>
-                      <small>{{ msg.filename || 'Audio' }}</small>
-                    </div>
-                    <div v-else>{{ msg.content || 'Media message' }}</div>
-                  </td>
-                  <td class="px-4 py-3">
-                    <span class="status-badge fw-medium" :class="getStatusBadgeClass(msg.status)">
-                      <i :class="getStatusIcon(msg.status)" class="me-1"></i>{{ msg.status }}
-                    </span>
-                  </td>
-                  <td class="px-4 py-3">
-                    <small class="text-muted">{{ msg.device?.name || '-' }}</small>
+                  
+                  <td class="px-4 py-3"><small class="text-muted">{{ group.device?.name || '-' }}</small></td>
+                  <td class="px-4 py-3 text-end">
+                    <button class="btn btn-sm btn-outline-primary" @click="openConversation(group)"><i class="bi bi-eye me-1"></i>View</button>
                   </td>
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          <!-- Conversation Modal -->
+          <div class="modal fade" :class="{ show: showConversationModal }" :style="{ display: showConversationModal ? 'block' : 'none' }" tabindex="-1">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+              <div class="modal-content modern-modal">
+                <div class="modal-header gradient-header text-white">
+                  <h5 class="modal-title fw-semibold">Message From {{ selectedGroup?.from_number }}</h5>
+                  <button type="button" class="btn-close btn-close-white" @click="closeConversation"></button>
+                </div>
+                <div class="modal-body p-4">
+                  <div v-if="!selectedGroup" class="text-muted">No conversation selected</div>
+                  <div v-else class="chat-container shadow-sm" ref="chatContainer">
+                    <div v-for="m in conversationMessages" :key="m.id" class="chat-row right">
+                      <div class="message-bubble outgoing">
+                        <div class="message-content">
+                          <template v-if="m.type === 'text'">
+                            {{ m.content }}
+                          </template>
+                          <template v-else-if="m.type === 'image'">
+                            <i class="bi bi-image me-1 text-primary"></i>
+                            <small>{{ m.filename || 'Image' }}</small>
+                          </template>
+                          <template v-else-if="m.type === 'document'">
+                            <i class="bi bi-file-earmark-text me-1 text-danger"></i>
+                            <small>{{ m.filename || 'Document' }}</small>
+                          </template>
+                          <template v-else-if="m.type === 'video'">
+                            <i class="bi bi-play-circle me-1 text-success"></i>
+                            <small>{{ m.filename || 'Video' }}</small>
+                          </template>
+                          <template v-else-if="m.type === 'audio'">
+                            <i class="bi bi-mic me-1 text-warning"></i>
+                            <small>{{ m.filename || 'Audio' }}</small>
+                          </template>
+                          <template v-else>
+                            {{ m.content || 'Media message' }}
+                          </template>
+                        </div>
+                        <div class="message-meta">
+                          <small class="text-muted">{{ formatTime(m.timestamp || m.created_at) }}</small>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -264,9 +278,11 @@ definePageMeta({
 
 import { ref, computed, onMounted } from 'vue'
 import { useMessageStore } from '~/stores/messages'
+import { useDeviceStore } from '~/stores/devices'
 import { useToast } from '~/composables/useToast'
 
 const messageStore = useMessageStore()
+const deviceStore = useDeviceStore()
 const toast = useToast()
 
 // Reactive state
@@ -279,6 +295,19 @@ const readStatusFilter = ref('')
 const typeFilter = ref('')
 
 // Computed properties
+const normalizePhone = (phone) => (phone || '').replace(/[^\d]/g, '')
+
+const selfNumbers = computed(() => {
+  const numbers = new Set()
+  ;(deviceStore.getDevices || []).forEach(d => {
+    if (d && d.phone_number) {
+      const n = normalizePhone(d.phone_number)
+      if (n) numbers.add(n)
+    }
+  })
+  return numbers
+})
+
 const receivedMessagesList = computed(() => {
   return messageStore.getMessages.filter(msg => {
     // Only show incoming messages
@@ -295,49 +324,63 @@ const receivedMessagesList = computed(() => {
                              msg.from_number.match(/^\d+$/) && 
                              msg.from_number.length >= 10
     
-    return isIncoming && isNotSystemMessage && isRealPhoneNumber
+    // Exclude messages sent from our own connected device numbers
+    const fromNormalized = normalizePhone(msg.from_number)
+    const isNotFromSelf = fromNormalized && !selfNumbers.value.has(fromNormalized)
+    
+    return isIncoming && isNotSystemMessage && isRealPhoneNumber && isNotFromSelf
   })
 })
 
-const filteredMessages = computed(() => {
-  let messages = receivedMessagesList.value
+// Grouping and filters
+const groupedMessages = computed(() => {
+  const groupMap = new Map()
+  for (const msg of receivedMessagesList.value) {
+    const key = msg.from_number
+    if (!groupMap.has(key)) groupMap.set(key, [])
+    groupMap.get(key).push(msg)
+  }
+  const groups = Array.from(groupMap.entries()).map(([from, msgs]) => {
+    const sorted = [...msgs].sort((a, b) => new Date(b.timestamp || b.created_at) - new Date(a.timestamp || a.created_at))
+    const last = sorted[0]
+    return {
+      from_number: from,
+      count: msgs.length,
+      lastMessage: last,
+      lastTimestamp: last?.timestamp || last?.created_at,
+      device: last?.device,
+      anyUnread: msgs.some(m => !m.isRead),
+      messages: sorted
+    }
+  })
+  return groups.sort((a, b) => new Date(b.lastTimestamp) - new Date(a.lastTimestamp))
+})
+
+const filteredGroups = computed(() => {
+  let groups = groupedMessages.value
   
-  // Filter by search query
   if (searchQuery.value.trim()) {
     const query = searchQuery.value.toLowerCase().trim()
-    messages = messages.filter(message => {
-      if (!message) return false
-      const content = (message.content || '').toLowerCase()
-      const fromNumber = (message.from_number || '').toLowerCase()
-      const deviceName = (message.device?.name || '').toLowerCase()
-      return content.includes(query) || 
-             fromNumber.includes(query) || 
-             deviceName.includes(query)
+    groups = groups.filter(g => {
+      const lastContent = (g.lastMessage?.content || '').toLowerCase()
+      const deviceName = (g.device?.name || '').toLowerCase()
+      return g.from_number.toLowerCase().includes(query) || lastContent.includes(query) || deviceName.includes(query)
     })
   }
   
-  // Filter by read status
   if (readStatusFilter.value) {
-    messages = messages.filter(message => {
-      if (!message) return false
-      if (readStatusFilter.value === 'unread') {
-        return !message.isRead
-      } else if (readStatusFilter.value === 'read') {
-        return message.isRead
-      }
+    groups = groups.filter(g => {
+      if (readStatusFilter.value === 'unread') return g.anyUnread
+      if (readStatusFilter.value === 'read') return !g.anyUnread
       return true
     })
   }
   
-  // Filter by type
   if (typeFilter.value) {
-    messages = messages.filter(message => {
-      if (!message) return false
-      return message.type === typeFilter.value
-    })
+    groups = groups.filter(g => g.lastMessage?.type === typeFilter.value)
   }
   
-  return messages
+  return groups
 })
 
 // Statistics
@@ -414,8 +457,41 @@ const getStatusIcon = (status) => {
   return statusIcons[status] || 'bi bi-question-circle'
 }
 
+// Conversation modal state and handlers
+const showConversationModal = ref(false)
+const selectedGroup = ref(null)
+
+const openConversation = (group) => {
+  selectedGroup.value = group
+  showConversationModal.value = true
+}
+
+const closeConversation = () => {
+  showConversationModal.value = false
+  selectedGroup.value = null
+}
+
+// Auto-scroll chat to bottom when opening modal
+const chatContainer = ref(null)
+watch(() => showConversationModal.value, (open) => {
+  if (open) {
+    nextTick(() => {
+      if (chatContainer.value) {
+        chatContainer.value.scrollTop = chatContainer.value.scrollHeight
+      }
+    })
+  }
+})
+
+// Sorted conversation messages (oldest -> newest)
+const conversationMessages = computed(() => {
+  if (!selectedGroup.value) return []
+  return [...(selectedGroup.value.messages || [])].sort((a, b) => new Date(a.timestamp || a.created_at) - new Date(b.timestamp || b.created_at))
+})
+
 // Load data on mount
 onMounted(async () => {
+  await deviceStore.fetchDevices()
   await messageStore.fetchInboxMessages()
 })
 </script>
@@ -609,5 +685,67 @@ onMounted(async () => {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* Chat modal styles */
+.chat-container {
+  max-height: 50vh;
+  overflow-y: auto;
+  padding: 8px 12px;
+  background: #f8fafb;
+  border-radius: 12px;
+}
+
+.chat-row {
+  display: flex;
+  margin-bottom: 12px;
+}
+
+.chat-row.right {
+  justify-content: flex-end;
+}
+
+.message-bubble {
+  max-width: 75%;
+  padding: 10px 12px;
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+
+.message-bubble.outgoing {
+  background: #e7f1ff;
+  border: 1px solid #d4e6ff;
+}
+
+.message-content {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.95rem;
+}
+
+.message-meta {
+  margin-top: 6px;
+  text-align: right;
+}
+
+/* Modal visual style to match devices */
+.modern-modal {
+  border-radius: 14px;
+  overflow: hidden;
+  border: 0;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+}
+
+.gradient-header {
+  background: linear-gradient(135deg, #0d6efd 0%, #5aa5ff 100%);
+  padding: 14px 18px;
+}
+
+.gradient-header .modal-title {
+  color: #fff;
+}
+
+.modal-body .chat-container {
+  background: #f6f9fc;
 }
 </style>

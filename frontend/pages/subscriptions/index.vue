@@ -4,26 +4,27 @@
 
     <!-- Current Subscription Status -->
     <div v-if="currentSubscription" class="current-subscription mb-4">
-      <div class="card border-primary">
+      <div class="card current-card">
+        <span class="accent-bar"></span>
         <div class="card-body">
-          <div class="row align-items-center">
-            <div class="col-md-8">
-              <h5 class="card-title text-primary mb-2">
-                <i class="bi bi-check-circle me-2"></i>
-                Current Subscription
-              </h5>
-              <p class="card-text mb-1">
-                <strong>{{ currentSubscription.plan?.name }}</strong> - 
-                Rp {{ currentSubscription.plan?.price?.toLocaleString('id-ID') }}/{{ currentSubscription.plan?.billing_cycle }}
-              </p>
-              <p class="card-text text-muted small mb-0">
-                Next billing: {{ formatDate(currentSubscription.current_period_end) }}
-              </p>
+          <div class="row align-items-center g-3">
+            <div class="col-md-8 d-flex align-items-start gap-3">
+              <div class="status-icon">
+                <i class="bi bi-check2"></i>
+              </div>
+              <div>
+                <h5 class="card-title mb-1">Current Subscription</h5>
+                <p class="card-text mb-1 plan-line">
+                  <strong>{{ currentSubscription.plan?.name }}</strong>
+                  <span class="dot">•</span>
+                  Rp {{ currentSubscription.plan?.price?.toLocaleString('id-ID') }}/{{ currentSubscription.plan?.billing_cycle }}
+                </p>
+                <p class="card-text text-muted small mb-0">Next billing: {{ formatDate(currentSubscription.current_period_end) }}</p>
+              </div>
             </div>
             <div class="col-md-4 text-end">
-              <button class="btn btn-outline-danger btn-sm" @click="cancelSubscription">
-                <i class="bi bi-x-circle me-1"></i>
-                Cancel Subscription
+              <button class="btn btn-ghost-danger btn-sm" @click="cancelSubscription">
+                <i class="bi bi-x-circle me-1"></i> Cancel Subscription
               </button>
             </div>
           </div>
@@ -89,7 +90,16 @@
         </div>
         <div v-else class="row">
           <div v-for="plan in textOnlyPlans" :key="plan.id" class="col-lg-4 col-md-6 col-sm-12 mb-4">
-            <div class="plan-card h-100 text-only">
+            <div
+              class="plan-card h-100 text-only"
+              :class="{ 'is-current': isCurrentPlan(plan), 'popular': isPopular(plan) }"
+            >
+              <div v-if="isCurrentPlan(plan)" class="plan-ribbon current">
+                <i class="bi bi-check-circle me-1"></i> Paket Aktif
+              </div>
+              <div v-else-if="isPopular(plan)" class="plan-ribbon popular">
+                <i class="bi bi-star-fill me-1"></i> Popular
+              </div>
               <div class="plan-icon">
                 <i class="bi bi-chat-dots"></i>
               </div>
@@ -119,13 +129,17 @@
                 </div>
               </div>
               <div class="plan-actions">
-                <button 
-                  class="btn btn-outline-primary w-100"
+                <button
+                  v-if="!isCurrentPlan(plan)"
+                  class="btn btn-primary w-100 plan-cta"
                   @click="subscribeStatic(plan)"
                   :disabled="subscribing"
                 >
                   <span v-if="subscribing" class="spinner-border spinner-border-sm me-2"></span>
-                  Get Started
+                  Pilih Paket
+                </button>
+                <button v-else class="btn btn-outline-success w-100" disabled>
+                  <i class="bi bi-check2-circle me-1"></i>Paket Aktif
                 </button>
               </div>
             </div>
@@ -151,7 +165,16 @@
         </div>
         <div v-else class="row">
           <div v-for="plan in allFeaturePlans" :key="plan.id" class="col-lg-4 col-md-4 mb-4">
-            <div class="plan-card h-100 all-feature">
+            <div
+              class="plan-card h-100 all-feature"
+              :class="{ 'is-current': isCurrentPlan(plan), 'popular': isPopular(plan) }"
+            >
+              <div v-if="isCurrentPlan(plan)" class="plan-ribbon current">
+                <i class="bi bi-check-circle me-1"></i> Paket Aktif
+              </div>
+              <div v-else-if="isPopular(plan)" class="plan-ribbon popular">
+                <i class="bi bi-star-fill me-1"></i> Popular
+              </div>
               <div class="plan-icon">
                 <i class="bi bi-paperclip"></i>
               </div>
@@ -181,13 +204,17 @@
                 </div>
               </div>
               <div class="plan-actions">
-                <button 
-                  class="btn btn-outline-primary w-100"
+                <button
+                  v-if="!isCurrentPlan(plan)"
+                  class="btn btn-primary w-100 plan-cta"
                   @click="subscribeStatic(plan)"
                   :disabled="subscribing"
                 >
                   <span v-if="subscribing" class="spinner-border spinner-border-sm me-2"></span>
-                  Get Started
+                  Pilih Paket
+                </button>
+                <button v-else class="btn btn-outline-success w-100" disabled>
+                  <i class="bi bi-check2-circle me-1"></i>Paket Aktif
                 </button>
               </div>
             </div>
@@ -349,6 +376,19 @@ definePageMeta({
 })
 
 const { $toast } = useNuxtApp()
+// Helpers to mark current plan and popular plan
+const isCurrentPlan = (plan) => {
+  const sub = currentSubscription.value
+  if (!sub || !sub.plan) return false
+  return String(sub.plan.id) === String(plan.id)
+}
+
+const isPopular = (plan) => {
+  // Mark mid-tier (e.g., index 1) as popular by convention
+  const list = plan.plan_type === 'text_only' ? textOnlyPlans.value : allFeaturePlans.value
+  const idx = list.findIndex(p => String(p.id) === String(plan.id))
+  return idx === 1
+}
 
 // Reactive data
 const loading = ref(false)
@@ -788,6 +828,39 @@ onMounted(async () => {
 .subscriptions-page {
   padding: 1.5rem;
 }
+.plan-ribbon {
+  position: absolute;
+  top: 12px;
+  left: -12px;
+  padding: 0.35rem 1rem;
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.8rem;
+  transform: rotate(-6deg);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
+}
+
+.plan-ribbon.current { background: linear-gradient(135deg, #22c55e, #16a34a); }
+.plan-ribbon.popular { background: linear-gradient(135deg, #f59e0b, #d97706); }
+
+.plan-card.is-current {
+  border-color: #22c55e;
+  box-shadow: 0 10px 30px rgba(34,197,94,0.15);
+}
+
+.plan-card.is-current .amount { color: #16a34a; }
+.plan-card.is-current .plan-icon i { color: #16a34a; }
+
+.plan-cta {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  border: none;
+}
+
+.plan-cta:hover {
+  filter: brightness(1.05);
+}
 
 
 
@@ -925,6 +998,63 @@ onMounted(async () => {
 .current-subscription {
   background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
   border-radius: 1rem;
+}
+
+.current-card {
+  position: relative;
+  border: 1px solid #cfe7ff;
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+  box-shadow: 0 6px 18px rgba(13, 110, 253, 0.08);
+  border-radius: 14px;
+}
+
+.current-card .accent-bar {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  background: linear-gradient(180deg, #3b82f6, #8b5cf6);
+  border-top-left-radius: 14px;
+  border-bottom-left-radius: 14px;
+}
+
+.current-card .card-title {
+  color: #1f3b73;
+  font-weight: 700;
+}
+
+.current-card .plan-line {
+  color: #2c3e50;
+}
+
+.current-card .plan-line .dot {
+  margin: 0 6px;
+  color: #94a3b8;
+}
+
+.status-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #e0fbea, #f0fff4);
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+}
+
+.btn-ghost-danger {
+  color: #dc3545;
+  background: transparent;
+  border: 1px solid rgba(220, 53, 69, 0.25);
+}
+
+.btn-ghost-danger:hover {
+  background: rgba(220, 53, 69, 0.06);
+  border-color: rgba(220, 53, 69, 0.45);
 }
 
 /* Section Header Styling */
