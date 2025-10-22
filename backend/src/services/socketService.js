@@ -306,9 +306,30 @@ class SocketService {
 
     // Emit to device room
     this.emitToDevice(deviceId, 'connection_status', {
+      deviceId,
       status,
       qrCode
     });
+
+    // Backward-compatibility events for existing frontend listeners
+    try {
+      if (status === 'qr_ready' && qrCode) {
+        this.emitToUserRoom(userId, 'device:qr', {
+          deviceId,
+          qrCode
+        });
+        this.emitToDevice(deviceId, 'device:qr', {
+          deviceId,
+          qrCode
+        });
+      } else if (status === 'connected') {
+        this.emitToUserRoom(userId, 'device:connected', { deviceId });
+        this.emitToDevice(deviceId, 'device:connected', { deviceId });
+      } else if (status === 'disconnected') {
+        this.emitToUserRoom(userId, 'device:disconnected', { deviceId });
+        this.emitToDevice(deviceId, 'device:disconnected', { deviceId });
+      }
+    } catch (_) { /* noop */ }
 
     // Trigger webhooks based on status
     if (status === 'connected') {

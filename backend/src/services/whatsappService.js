@@ -43,6 +43,17 @@ class WhatsAppService {
         throw new Error('Device does not belong to user');
       }
 
+      // Check if device is already connecting or connected
+      const existingConnection = this.connections.get(deviceId);
+      if (existingConnection) {
+        logInfo(`Device ${deviceId} already has an active connection, cleaning up first...`);
+        try {
+          await this.disconnectDevice(deviceId);
+        } catch (cleanupError) {
+          logWarn(`Error during cleanup of existing connection: ${cleanupError.message}`);
+        }
+      }
+
       // Update device status to connecting
       logInfo(`Updating device status to 'connecting': ${deviceId}`);
       await device.updateStatus('connecting');
@@ -64,11 +75,12 @@ class WhatsAppService {
       const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
       logInfo(`Auth state loaded successfully for session: ${sessionId}`);
 
-      // Create WhatsApp socket
+      // Create WhatsApp socket with improved configuration
       logInfo(`Creating WhatsApp socket for device: ${deviceId}`);
       const sock = makeWASocket({
         auth: state,
         printQRInTerminal: false,
+        browser: ['KlikWhatsApp', 'Chrome', '1.0.0'],
         logger: {
           level: 'silent', // Suppress Baileys logs
           child: () => ({
@@ -86,7 +98,15 @@ class WhatsAppService {
           warn: () => {},
           error: () => {},
           fatal: () => {}
-        }
+        },
+        // Add connection timeout and retry settings
+        connectTimeoutMs: 60000,
+        keepAliveIntervalMs: 30000,
+        retryRequestDelayMs: 250,
+        maxMsgRetryCount: 5,
+        // Ensure QR code generation
+        generateHighQualityLinkPreview: true,
+        markOnlineOnConnect: false
       });
       logInfo(`WhatsApp socket created successfully for device: ${deviceId}`);
 
@@ -100,7 +120,9 @@ class WhatsAppService {
         saveCreds,
         qrCode: null,
         isConnected: false,
-        lastActivity: new Date()
+        lastActivity: new Date(),
+        qrGenerated: false,
+        connectionStartTime: new Date()
       };
 
       this.connections.set(deviceId, connectionInfo);
@@ -139,9 +161,22 @@ class WhatsAppService {
 
         if (qr) {
           try {
-            // Generate QR code
-            const qrCode = await qrcode.toDataURL(qr);
+            logInfo(`QR code received for device: ${deviceId}, generating data URL...`);
+            
+            // Generate QR code with better options
+            const qrCode = await qrcode.toDataURL(qr, {
+              errorCorrectionLevel: 'M',
+              type: 'image/png',
+              quality: 0.92,
+              margin: 1,
+              color: {
+                dark: '#000000',
+                light: '#FFFFFF'
+              }
+            });
+            
             connectionInfo.qrCode = qrCode;
+            connectionInfo.qrGenerated = true;
             await this.updateDeviceQR(deviceId, qrCode);
             
             // Get device info for socket notification
@@ -155,9 +190,23 @@ class WhatsAppService {
               });
             }
             
-            logInfo(`QR code generated for device: ${deviceId}`);
+            logInfo(`QR code generated and stored for device: ${deviceId}`);
           } catch (qrError) {
             logError(qrError, `Error generating QR code for device: ${deviceId}`);
+            // Try to emit error status
+            try {
+              const device = await Device.findByPk(deviceId);
+              if (device) {
+                await socketService.handleDeviceConnection({
+                  userId: device.user_id,
+                  deviceId,
+                  status: 'error',
+                  error: 'Failed to generate QR code'
+                });
+              }
+            } catch (emitError) {
+              logError(emitError, `Error emitting QR generation failure for device: ${deviceId}`);
+            }
           }
         }
 

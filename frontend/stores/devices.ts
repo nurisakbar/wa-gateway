@@ -316,17 +316,17 @@ export const useDeviceStore = defineStore('devices', {
             device.status = 'connecting'
           }
           
-          // Step 2: Wait longer for QR code to be generated (Baileys takes time)
+          // Step 2: Wait for QR code to be generated (Baileys takes time)
           // console.log('Waiting for QR code generation...')
-          await new Promise(resolve => setTimeout(resolve, 5000))
+          await new Promise(resolve => setTimeout(resolve, 10000)) // Increased wait time to 10 seconds
           
           // Step 3: Try to get QR code with retries
           let qrResponse = null
           let qrCodeAvailable = false
           
-          for (let attempt = 1; attempt <= 3; attempt++) {
+          for (let attempt = 1; attempt <= 8; attempt++) { // Increased retry attempts to 8
             try {
-              // console.log(`QR code attempt ${attempt}/3...`)
+              // console.log(`QR code attempt ${attempt}/5...`)
               const { $api } = useNuxtApp()
               qrResponse = await $api.get(`/devices/${deviceId}/qr`)
               
@@ -340,7 +340,7 @@ export const useDeviceStore = defineStore('devices', {
               } else if (qrResponse.status === 202) {
                 // QR code is being generated, wait and retry
                 // console.log(`QR code being generated, retry after ${qrResponse.data.data.retry_after || 3} seconds`)
-                if (attempt < 3) {
+                if (attempt < 8) {
                   await new Promise(resolve => setTimeout(resolve, (qrResponse.data.data.retry_after || 3) * 1000))
                 }
               } else if (qrResponse.status === 400 && qrResponse.data.data?.connected) {
@@ -348,8 +348,8 @@ export const useDeviceStore = defineStore('devices', {
                 // console.log('Device is already connected!')
                 return { success: true, qrCode: null, message: 'Device is already connected!' }
               } else {
-                // console.log(`QR code not ready yet, attempt ${attempt}/3`)
-                if (attempt < 3) {
+                // console.log(`QR code not ready yet, attempt ${attempt}/8`)
+                if (attempt < 8) {
                   await new Promise(resolve => setTimeout(resolve, 3000)) // Wait 3 seconds between attempts
                 }
               }
@@ -357,9 +357,12 @@ export const useDeviceStore = defineStore('devices', {
               // console.log(`QR API attempt ${attempt} failed, trying $fetch...`)
               try {
                 const token = localStorage.getItem('auth_token')
-                qrResponse = await $fetch(`${config.public.apiBase}/devices/${deviceId}/qr`, {
+                // Use raw to access HTTP status
+                const raw = await $fetch.raw(`${config.public.apiBase}/devices/${deviceId}/qr`, {
                   headers: token ? { 'Authorization': `Bearer ${token}` } : {}
                 })
+                // Normalize to axios-like shape
+                qrResponse = { status: raw.status, data: raw._data }
                 
                 // console.log('QR fetch response:', qrResponse)
                 
@@ -370,7 +373,7 @@ export const useDeviceStore = defineStore('devices', {
                 } else if (qrResponse.status === 202) {
                   // QR code is being generated, wait and retry
                   // console.log(`QR code being generated (fetch), retry after ${qrResponse.data.data.retry_after || 3} seconds`)
-                  if (attempt < 3) {
+                  if (attempt < 8) {
                     await new Promise(resolve => setTimeout(resolve, (qrResponse.data.data.retry_after || 3) * 1000))
                   }
                 } else if (qrResponse.status === 400 && qrResponse.data.data?.connected) {
@@ -380,7 +383,7 @@ export const useDeviceStore = defineStore('devices', {
                 }
               } catch (fetchError) {
                 // console.log(`QR fetch attempt ${attempt} failed:`, fetchError)
-                if (attempt < 3) {
+                if (attempt < 8) {
                   await new Promise(resolve => setTimeout(resolve, 3000))
                 }
               }

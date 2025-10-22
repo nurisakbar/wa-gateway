@@ -234,6 +234,9 @@
                       <i v-else-if="device && device.status === 'disconnected'" class="bi bi-x-circle me-1"></i>
                       <i v-else-if="device && device.status === 'error'" class="bi bi-exclamation-triangle me-1"></i>
                       {{ getStatusText(device && device.status ? device.status : 'disconnected') }}
+                      <span v-if="device && device.status === 'connecting' && isDeviceStuck(device)" class="ms-1 text-warning">
+                        <i class="bi bi-exclamation-triangle" title="Device appears to be stuck"></i>
+                      </span>
                     </span>
                   </td>
                   <td class="px-4 py-3">
@@ -288,6 +291,17 @@
                           <span class="visually-hidden">Loading...</span>
                         </div>
                         <span class="d-none d-sm-inline">Connecting...</span>
+                      </button>
+                      
+                      <!-- Reset Stuck Device -->
+                      <button
+                        v-if="device && device.status === 'connecting' && isDeviceStuck(device)"
+                        class="btn btn-warning btn-sm d-flex align-items-center"
+                        @click="resetStuckDevice(device)"
+                        title="Reset stuck device"
+                      >
+                        <i class="bi bi-arrow-clockwise me-1"></i>
+                        <span class="d-none d-sm-inline">Reset</span>
                       </button>
                       
                       <!-- Edit Button -->
@@ -513,14 +527,52 @@ const statusFilter = ref('')
 
 // Load devices on mount
 onMounted(async () => {
-
   try {
     const result = await deviceStore.fetchDevices()
-
+    
+    // Set up socket event listeners for real-time updates
+    setupSocketListeners()
   } catch (error) {
-// console.error('Error loading devices:', error)
+    // console.error('Error loading devices:', error)
   }
 })
+
+// Set up socket event listeners
+const setupSocketListeners = () => {
+  // Listen for QR code events
+  window.addEventListener('device:qr', (event) => {
+    const { deviceId, qrCode } = event.detail
+    // console.log('QR code received via socket:', deviceId)
+    
+    // Find the device and show QR modal
+    const device = deviceStore.getDevices.find(d => d && d.id === deviceId)
+    if (device && qrCode) {
+      qrCode.value = qrCode
+      showQRModal.value = true
+      $toast.success('QR code received! Please scan with WhatsApp.')
+    }
+  })
+  
+  // Listen for device connection events
+  window.addEventListener('device:connected', (event) => {
+    const { deviceId } = event.detail
+    // console.log('Device connected via socket:', deviceId)
+    
+    // Update device status and close QR modal
+    deviceStore.updateDeviceStatus(deviceId, 'connected')
+    closeQRModal()
+    $toast.success('Device connected successfully!')
+  })
+  
+  // Listen for device disconnection events
+  window.addEventListener('device:disconnected', (event) => {
+    const { deviceId } = event.detail
+    // console.log('Device disconnected via socket:', deviceId)
+    
+    deviceStore.updateDeviceStatus(deviceId, 'disconnected')
+    $toast.info('Device disconnected')
+  })
+}
 
 // Cleanup on unmount
 onUnmounted(() => {
@@ -566,6 +618,17 @@ const hasActiveFilters = computed(() => {
 const refreshDevices = async () => {
   await deviceStore.fetchDevices()
   $toast.success('Devices refreshed')
+  
+  // Check for stuck devices and reset them
+  const stuckDevices = deviceStore.getDevices.filter(d => 
+    d && d.status === 'connecting' && 
+    d.last_activity && 
+    new Date(d.last_activity).getTime() < Date.now() - 300000 // 5 minutes ago
+  )
+  
+  if (stuckDevices.length > 0) {
+    $toast.warn(`Found ${stuckDevices.length} device(s) stuck in connecting state. Consider reconnecting them.`)
+  }
 }
 
 // Clear filters
@@ -599,8 +662,8 @@ const connectDevice = async (device) => {
       } else {
 
         $toast.info(result.message || 'Connection initiated, QR code will be available shortly')
-        // Poll for QR code
-        await pollForQRCode(device.id)
+        // Poll for QR code with timeout
+        await pollForQRCodeWithTimeout(device.id)
       }
     } else {
 
@@ -616,15 +679,48 @@ const connectDevice = async (device) => {
 let pollingInProgress = false
 let statusPollingInterval = null
 
+// Poll for QR code with timeout
+const pollForQRCodeWithTimeout = async (deviceId) => {
+  const timeout = 120000 // 2 minutes timeout
+  const startTime = Date.now()
+  
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      if (pollingInProgress) {
+        pollingInProgress = false
+        $toast.error('QR code generation timed out. Please try connecting again.')
+        reject(new Error('QR code generation timeout'))
+      }
+    }, timeout)
+    
+    const poll = async () => {
+      if (Date.now() - startTime > timeout) {
+        clearTimeout(timeoutId)
+        return
+      }
+      
+      try {
+        await pollForQRCode(deviceId)
+        clearTimeout(timeoutId)
+        resolve()
+      } catch (error) {
+        clearTimeout(timeoutId)
+        reject(error)
+      }
+    }
+    
+    poll()
+  })
+}
+
 const pollForQRCode = async (deviceId) => {
   // Prevent multiple polling
   if (pollingInProgress) {
-
     return
   }
   
   pollingInProgress = true
-  const maxAttempts = 15 // Increase attempts
+  const maxAttempts = 30 // Increased attempts for better reliability
   let attempts = 0
   
   $toast.info('Waiting for QR code generation...')
@@ -637,7 +733,6 @@ const pollForQRCode = async (deviceId) => {
     }
     
     try {
-
       const config = useRuntimeConfig()
       const token = localStorage.getItem('auth_token')
       
@@ -646,15 +741,21 @@ const pollForQRCode = async (deviceId) => {
         const { $api } = useNuxtApp()
         response = await $api.get(`/devices/${deviceId}/qr`)
       } catch (apiError) {
-        response = await $fetch(`${config.public.apiBase}/devices/${deviceId}/qr`, {
+        // Use raw to get status code with $fetch
+        response = await $fetch.raw(`${config.public.apiBase}/devices/${deviceId}/qr`, {
           headers: token ? { 'Authorization': `Bearer ${token}` } : {}
         })
       }
 
+      // Normalize axios/$fetch responses
+      const respStatus = response.status ?? 200
+      const respData = response.data?.data ?? response._data?.data ?? response.data ?? response._data ?? {}
+      const respSuccess = response.data?.success ?? response._data?.success ?? response.success ?? false
+
       // Handle different response scenarios
-      if (response.data.success && response.data.data.qr_code) {
+      if (respSuccess && respData.qr_code) {
         // QR code is available
-        qrCode.value = response.data.data.qr_code
+        qrCode.value = respData.qr_code
         showQRModal.value = true
         $toast.success('QR code generated successfully')
         pollingInProgress = false
@@ -662,41 +763,59 @@ const pollForQRCode = async (deviceId) => {
         // Start polling for device status to detect connection
         startStatusPolling(deviceId)
         return
-      } else if (response.status === 202) {
+      } else if (respStatus === 202) {
         // QR code is being generated, retry after suggested delay
-
-        if (attempts === 5) {
+        const retryAfter = respData?.retry_after || 3 // Reduced default wait time
+        const timeElapsed = respData?.time_elapsed || 0
+        const maxWaitTime = respData?.max_wait_time || 120
+        
+        if (attempts === 3) {
           $toast.info('QR code is being generated, please wait...')
         } else if (attempts === 10) {
-          $toast.warn('QR code generation taking longer than expected...')
+          $toast.warn(`QR code generation taking longer than expected... (${timeElapsed}s elapsed)`)
+        } else if (attempts === 20) {
+          $toast.warn(`QR code generation is taking longer than usual. This may be due to WhatsApp server load. (${timeElapsed}s elapsed)`)
         }
+        
+        // Check if we're approaching timeout
+        if (timeElapsed > maxWaitTime * 0.8) {
+          $toast.warn(`QR generation is taking longer than usual. If this continues, please try reconnecting.`)
+        }
+        
         attempts++
-        setTimeout(poll, (response.data.data.retry_after || 3) * 1000)
+        setTimeout(poll, retryAfter * 1000)
         return
-      } else if (response.status === 400 && response.data.data?.connected) {
+      } else if (respStatus === 400 && respData?.connected) {
         // Device is already connected
         $toast.success('Device is already connected!')
         pollingInProgress = false
         return
-      } else if (response.status === 400 && response.data.data?.needs_connection_init) {
+      } else if (respStatus === 400 && respData?.needs_connection_init) {
         // Need to initialize connection first
         $toast.error('Please click Connect button first to initialize the device')
         pollingInProgress = false
         return
       } else {
         // QR code not ready yet
-
-        if (attempts === 5) {
+        if (attempts === 3) {
           $toast.info('Still waiting for QR code...')
         } else if (attempts === 10) {
           $toast.warn('QR code taking longer than expected...')
+        } else if (attempts === 20) {
+          $toast.warn('QR code generation is taking longer than usual. This may be due to WhatsApp server load.')
         }
       }
       
       attempts++
-      setTimeout(poll, 3000) // Poll every 3 seconds (increased interval)
+      setTimeout(poll, 3000) // Poll every 3 seconds (reduced interval for faster response)
     } catch (error) {
-// console.error('Poll QR code error:', error)
+      // console.error('Poll QR code error:', error)
+      // Handle network errors more gracefully
+      if (attempts < 5) {
+        $toast.warn('Network error, retrying...')
+      } else if (attempts < 10) {
+        $toast.warn('Still experiencing network issues, please check your connection...')
+      }
       attempts++
       setTimeout(poll, 3000)
     }
@@ -926,6 +1045,44 @@ const formatDate = (dateString) => {
 const isValidPhoneNumber = (phone) => {
   const phoneRegex = /^\+?[1-9]\d{1,14}$/
   return phoneRegex.test(phone.replace(/\s/g, ''))
+}
+
+// Check if device is stuck in connecting state
+const isDeviceStuck = (device) => {
+  if (!device || device.status !== 'connecting') return false
+  
+  // Check if device has been connecting for more than 5 minutes
+  const lastActivity = device.last_activity ? new Date(device.last_activity) : new Date()
+  const now = new Date()
+  const timeDiff = now.getTime() - lastActivity.getTime()
+  
+  return timeDiff > 300000 // 5 minutes
+}
+
+// Reset stuck device
+const resetStuckDevice = async (device) => {
+  if (!device || !device.id) {
+    $toast.error('Invalid device data')
+    return
+  }
+  
+  const deviceName = device.name || 'Unknown Device'
+  if (confirm(`Are you sure you want to reset "${deviceName}"? This will stop the current connection attempt.`)) {
+    try {
+      // First try to disconnect the device
+      await deviceStore.disconnectDevice(device.id)
+      
+      // Wait a moment for the disconnect to complete
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      
+      // Refresh devices to get updated status
+      await deviceStore.fetchDevices()
+      
+      $toast.success('Device reset successfully. You can now try connecting again.')
+    } catch (error) {
+      $toast.error('Failed to reset device. Please try again.')
+    }
+  }
 }
 </script>
 

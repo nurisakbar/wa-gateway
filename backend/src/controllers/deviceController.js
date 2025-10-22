@@ -437,13 +437,45 @@ class DeviceController {
 
       // If no QR code available, check if device is in connecting state
       if (device.status === 'connecting' || connectionStatus.status === 'connecting') {
+        // Check if connection has been trying for too long (more than 2 minutes)
+        const connectionStartTime = connectionStatus.connectionStartTime || new Date(device.updated_at);
+        const timeSinceStart = Date.now() - new Date(connectionStartTime).getTime();
+        const maxWaitTime = 120000; // 2 minutes
+        
+        if (timeSinceStart > maxWaitTime) {
+          logWarn(`Device ${deviceId} has been connecting for too long (${Math.round(timeSinceStart/1000)}s), resetting...`);
+          try {
+            await whatsappService.disconnectDevice(deviceId);
+            await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+            await whatsappService.initializeConnection(deviceId, userId);
+          } catch (resetError) {
+            logError(resetError, `Error resetting stuck device ${deviceId}`);
+          }
+        } else {
+          // Best-effort: if service doesn't have an active connection yet, (re)initialize it
+          try {
+            if (connectionStatus.status === 'disconnected') {
+              logInfo(`No active WA connection for ${deviceId} while status is connecting. Re-initializing...`);
+              await whatsappService.initializeConnection(deviceId, userId);
+            } else if (!connectionStatus.qrCode && !connectionStatus.connected) {
+              // Try to trigger a QR refresh by reconnecting
+              logInfo(`Active connection found but QR not ready for ${deviceId}. Attempting soft reconnect...`);
+              try { await whatsappService.reconnectDevice(deviceId); } catch (_) { /* ignore */ }
+            }
+          } catch (reinitErr) {
+            logWarn(`Re-initialization attempt failed for device ${deviceId}: ${reinitErr?.message || reinitErr}`);
+          }
+        }
+        
         logInfo(`Device ${deviceId} is connecting but QR code not ready yet`);
         return res.status(202).json({
           success: false,
           message: 'QR code is being generated. Please wait a moment and try again.',
           data: {
             status: 'connecting',
-            retry_after: 3 // seconds
+            retry_after: 3, // Reduced to 3 seconds for faster polling
+            time_elapsed: Math.round(timeSinceStart / 1000),
+            max_wait_time: Math.round(maxWaitTime / 1000)
           }
         });
       }

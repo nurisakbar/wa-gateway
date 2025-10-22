@@ -117,6 +117,29 @@ export default defineNuxtPlugin(() => {
       window.dispatchEvent(new CustomEvent('device:ready', { detail: data }))
     })
 
+    // New unified events from backend
+    socket.value.on('device_status', (data) => {
+      // Normalize to existing custom events
+      if (data?.status === 'qr_ready' && data?.qrCode) {
+        window.dispatchEvent(new CustomEvent('device:qr', { detail: { deviceId: data.deviceId, qrCode: data.qrCode } }))
+      } else if (data?.status === 'connected') {
+        window.dispatchEvent(new CustomEvent('device:connected', { detail: { deviceId: data.deviceId } }))
+      } else if (data?.status === 'disconnected') {
+        window.dispatchEvent(new CustomEvent('device:disconnected', { detail: { deviceId: data.deviceId } }))
+      }
+    })
+
+    socket.value.on('connection_status', (data) => {
+      // Some emissions are to the device room; mirror to window events
+      if (data?.status === 'qr_ready' && data?.qrCode) {
+        window.dispatchEvent(new CustomEvent('device:qr', { detail: { deviceId: data.deviceId, qrCode: data.qrCode } }))
+      } else if (data?.status === 'connected') {
+        window.dispatchEvent(new CustomEvent('device:connected', { detail: { deviceId: data.deviceId } }))
+      } else if (data?.status === 'disconnected') {
+        window.dispatchEvent(new CustomEvent('device:disconnected', { detail: { deviceId: data.deviceId } }))
+      }
+    })
+
     // Contact events
     socket.value.on('contact:updated', (data) => {
       // console.log('Contact updated:', data)
