@@ -572,13 +572,16 @@ class WhatsAppService {
     try {
       const connection = this.connections.get(deviceId);
       if (!connection) {
+        logInfo(`Device ${deviceId} not in connections map, updating status to disconnected`);
+        await this.updateDeviceStatus(deviceId, 'disconnected');
         return { success: true, message: 'Device not connected' };
       }
 
-      const { sock } = connection;
+      const { sock, sessionPath } = connection;
 
       // Close connection gracefully
       try {
+        logInfo(`Logging out device: ${deviceId}`);
         await sock.logout();
         sock.end();
       } catch (logoutError) {
@@ -594,21 +597,60 @@ class WhatsAppService {
             // Ignore end errors
           }
         } else {
-          throw logoutError;
+          logWarn(`Logout error for device ${deviceId}: ${logoutError.message}`);
+          // Force end the socket anyway
+          try {
+            sock.end();
+          } catch (endError) {
+            // Ignore end errors
+          }
         }
+      }
+
+      // Clean up session files to prevent conflicts
+      try {
+        if (sessionPath && fs.existsSync(sessionPath)) {
+          logInfo(`Cleaning up session files for device: ${deviceId}`);
+          // Remove session files to ensure clean reconnection
+          const files = fs.readdirSync(sessionPath);
+          for (const file of files) {
+            const filePath = path.join(sessionPath, file);
+            try {
+              fs.unlinkSync(filePath);
+            } catch (unlinkError) {
+              logWarn(`Could not remove session file ${file}: ${unlinkError.message}`);
+            }
+          }
+          // Remove the session directory
+          try {
+            fs.rmdirSync(sessionPath);
+          } catch (rmdirError) {
+            logWarn(`Could not remove session directory: ${rmdirError.message}`);
+          }
+        }
+      } catch (cleanupError) {
+        logWarn(`Error cleaning up session files for device ${deviceId}: ${cleanupError.message}`);
       }
 
       // Remove from connections map
       this.connections.delete(deviceId);
 
-      // Update device status
+      // Update device status and clear QR code
       await this.updateDeviceStatus(deviceId, 'disconnected');
+      await this.clearDeviceQR(deviceId);
 
-      logInfo(`Device disconnected: ${deviceId}`);
+      logInfo(`Device disconnected and cleaned up: ${deviceId}`);
       return { success: true, message: 'Device disconnected successfully' };
 
     } catch (error) {
       logError(error, `Error disconnecting device: ${deviceId}`);
+      // Ensure device is marked as disconnected even if cleanup fails
+      try {
+        await this.updateDeviceStatus(deviceId, 'disconnected');
+        this.connections.delete(deviceId);
+      } catch (fallbackError) {
+        logError(fallbackError, `Error in fallback disconnect for device: ${deviceId}`);
+      }
       throw error;
     }
   }
@@ -680,6 +722,19 @@ class WhatsAppService {
       }
     } catch (error) {
       logError(error, `Error updating device QR code: ${deviceId}`);
+    }
+  }
+
+  // Clear device QR code
+  async clearDeviceQR(deviceId) {
+    try {
+      const device = await Device.findByPk(deviceId);
+      if (device) {
+        await device.clearQRCode();
+        logInfo(`QR code cleared for device: ${deviceId}`);
+      }
+    } catch (error) {
+      logError(error, `Error clearing QR code for device: ${deviceId}`);
     }
   }
 

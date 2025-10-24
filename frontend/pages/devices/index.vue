@@ -539,10 +539,16 @@ onMounted(async () => {
 
 // Set up socket event listeners
 const setupSocketListeners = () => {
+  console.log('Setting up socket listeners for device events')
+  
+  // Check socket connection status
+  const { $socket } = useNuxtApp()
+  console.log('Socket connection status:', $socket.isConnected)
+  
   // Listen for QR code events
   window.addEventListener('device:qr', (event) => {
     const { deviceId, qrCode } = event.detail
-    // console.log('QR code received via socket:', deviceId)
+    console.log('QR code received via socket:', deviceId)
     
     // Find the device and show QR modal
     const device = deviceStore.getDevices.find(d => d && d.id === deviceId)
@@ -556,12 +562,28 @@ const setupSocketListeners = () => {
   // Listen for device connection events
   window.addEventListener('device:connected', (event) => {
     const { deviceId } = event.detail
-    // console.log('Device connected via socket:', deviceId)
+    console.log('Device connected via socket:', deviceId)
     
     // Update device status and close QR modal
     deviceStore.updateDeviceStatus(deviceId, 'connected')
     closeQRModal()
     $toast.success('Device connected successfully!')
+    
+    // Refresh devices list to get latest data
+    deviceStore.fetchDevices()
+  })
+  
+  // Also listen for connection_status events (alternative event name)
+  window.addEventListener('connection_status', (event) => {
+    const { deviceId, status } = event.detail
+    console.log('Connection status received:', deviceId, status)
+    
+    if (status === 'connected') {
+      deviceStore.updateDeviceStatus(deviceId, 'connected')
+      closeQRModal()
+      $toast.success('Device connected successfully!')
+      deviceStore.fetchDevices()
+    }
   })
   
   // Listen for device disconnection events
@@ -640,37 +662,37 @@ const clearFilters = () => {
 
 // Connect device
 const connectDevice = async (device) => {
-
   // Prevent multiple clicks
   if (deviceStore.isLoading) {
-
+    $toast.warn('Connection already in progress, please wait...')
     return
   }
   
   try {
-
     $toast.info('Initializing device connection...')
 
     const result = await deviceStore.connectDevice(device.id)
 
     if (result.success) {
       if (result.qrCode) {
-
         qrCode.value = result.qrCode
         showQRModal.value = true
         $toast.success('QR code generated successfully')
       } else {
-
         $toast.info(result.message || 'Connection initiated, QR code will be available shortly')
-        // Poll for QR code with timeout
-        await pollForQRCodeWithTimeout(device.id)
+        // Poll for QR code with improved timeout handling
+        try {
+          await pollForQRCodeWithTimeout(device.id)
+        } catch (timeoutError) {
+          // Handle timeout gracefully
+          $toast.warn('QR code generation is taking longer than expected. Please try refreshing the page.')
+        }
       }
     } else {
-
       $toast.error(result.error || 'Failed to connect device')
     }
   } catch (error) {
-// console.error('Connect device error:', error)
+    console.error('Connect device error:', error)
     $toast.error('Failed to connect device')
   }
 }
@@ -681,14 +703,14 @@ let statusPollingInterval = null
 
 // Poll for QR code with timeout
 const pollForQRCodeWithTimeout = async (deviceId) => {
-  const timeout = 120000 // 2 minutes timeout
+  const timeout = 60000 // Reduced to 1 minute timeout
   const startTime = Date.now()
   
   return new Promise((resolve, reject) => {
     const timeoutId = setTimeout(() => {
       if (pollingInProgress) {
         pollingInProgress = false
-        $toast.error('QR code generation timed out. Please try connecting again.')
+        $toast.warn('QR code generation is taking longer than expected. Please try refreshing the page.')
         reject(new Error('QR code generation timeout'))
       }
     }, timeout)
@@ -720,7 +742,7 @@ const pollForQRCode = async (deviceId) => {
   }
   
   pollingInProgress = true
-  const maxAttempts = 30 // Increased attempts for better reliability
+  const maxAttempts = 20 // Reduced attempts for faster timeout
   let attempts = 0
   
   $toast.info('Waiting for QR code generation...')
@@ -846,11 +868,14 @@ const startStatusPolling = (deviceId) => {
       
       if (device && device.status === 'connected') {
         // Device is connected! Close QR modal and show success
-
+        console.log('Device connected via polling:', deviceId)
         $toast.success('Device connected successfully!')
         closeQRModal()
         clearInterval(statusPollingInterval)
         statusPollingInterval = null
+        
+        // Update device store status
+        deviceStore.updateDeviceStatus(deviceId, 'connected')
         return
       } else if (device && device.status === 'error') {
         // Device connection failed

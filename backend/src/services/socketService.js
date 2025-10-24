@@ -297,6 +297,8 @@ class SocketService {
   async handleDeviceConnection(deviceData) {
     const { userId, deviceId, status, qrCode } = deviceData;
     
+    logInfo(`Handling device connection: ${deviceId} - ${status} for user: ${userId}`);
+    
     // Emit to user
     this.emitToUserRoom(userId, 'device_status', {
       deviceId,
@@ -314,6 +316,7 @@ class SocketService {
     // Backward-compatibility events for existing frontend listeners
     try {
       if (status === 'qr_ready' && qrCode) {
+        logInfo(`Emitting QR event for device: ${deviceId}`);
         this.emitToUserRoom(userId, 'device:qr', {
           deviceId,
           qrCode
@@ -323,13 +326,17 @@ class SocketService {
           qrCode
         });
       } else if (status === 'connected') {
+        logInfo(`Emitting connected event for device: ${deviceId}`);
         this.emitToUserRoom(userId, 'device:connected', { deviceId });
         this.emitToDevice(deviceId, 'device:connected', { deviceId });
       } else if (status === 'disconnected') {
+        logInfo(`Emitting disconnected event for device: ${deviceId}`);
         this.emitToUserRoom(userId, 'device:disconnected', { deviceId });
         this.emitToDevice(deviceId, 'device:disconnected', { deviceId });
       }
-    } catch (_) { /* noop */ }
+    } catch (error) {
+      logError(error, `Error emitting backward-compatibility events for device: ${deviceId}`);
+    }
 
     // Trigger webhooks based on status
     if (status === 'connected') {
