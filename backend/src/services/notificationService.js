@@ -6,11 +6,20 @@ class NotificationService {
     this.emailTransporter = null;
     this.notificationQueue = [];
     this.isProcessing = false;
+    this.emailEnabled = false;
     this.initializeEmailTransporter();
   }
 
   // Initialize email transporter
   async initializeEmailTransporter() {
+    // Check if SMTP is configured
+    if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+      logInfo('SMTP email not configured, email notifications will be disabled');
+      this.emailEnabled = false;
+      this.emailTransporter = null;
+      return;
+    }
+
     try {
       this.emailTransporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST,
@@ -24,10 +33,12 @@ class NotificationService {
 
       // Verify connection
       await this.emailTransporter.verify();
+      this.emailEnabled = true;
       logInfo('Email transporter initialized successfully');
     } catch (error) {
       logError(error, 'Failed to initialize email transporter');
       this.emailTransporter = null;
+      this.emailEnabled = false;
     }
   }
 
@@ -117,8 +128,29 @@ class NotificationService {
 
     notification.status = 'processing';
 
+    // Filter out email channel if SMTP is not enabled
+    const enabledChannels = channels.filter(channel => {
+      if (channel === 'email' && !this.emailEnabled) {
+        logInfo(`Email channel skipped for notification ${notification.id} - SMTP not configured`);
+        return false;
+      }
+      return true;
+    });
+
+    // If no channels are available, mark as skipped
+    if (enabledChannels.length === 0) {
+      notification.status = 'skipped';
+      notification.skipped_reason = 'No enabled channels available';
+      logInfo(`Notification skipped: ${notification.id} - No enabled channels`, {
+        type,
+        recipient,
+        original_channels: channels
+      });
+      return;
+    }
+
     // Process each channel
-    for (const channel of channels) {
+    for (const channel of enabledChannels) {
       try {
         switch (channel) {
           case 'email':
@@ -150,15 +182,19 @@ class NotificationService {
     logInfo(`Notification processed: ${notification.id}`, {
       type,
       recipient,
-      channels,
+      channels: enabledChannels,
       status: notification.status
     });
   }
 
   // Send email notification
   async sendEmailNotification(notification) {
-    if (!this.emailTransporter) {
-      throw new Error('Email transporter not available');
+    if (!this.emailEnabled || !this.emailTransporter) {
+      logInfo('Email notification skipped - SMTP not configured or disabled', {
+        recipient: notification.recipient,
+        subject: notification.subject
+      });
+      return { success: false, reason: 'Email transporter not available', channel: 'email' };
     }
 
     const { recipient, subject, message, data } = notification;
@@ -167,21 +203,26 @@ class NotificationService {
     const emailContent = this.formatEmailContent(message, data);
     const emailSubject = this.formatEmailSubject(subject, data);
 
-    // Send email
-    const result = await this.emailTransporter.sendMail({
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
-      to: recipient,
-      subject: emailSubject,
-      html: emailContent.html,
-      text: emailContent.text
-    });
+    try {
+      // Send email
+      const result = await this.emailTransporter.sendMail({
+        from: process.env.SMTP_FROM || process.env.SMTP_USER,
+        to: recipient,
+        subject: emailSubject,
+        html: emailContent.html,
+        text: emailContent.text
+      });
 
-    logInfo(`Email sent: ${result.messageId}`, {
-      to: recipient,
-      subject: emailSubject
-    });
+      logInfo(`Email sent: ${result.messageId}`, {
+        to: recipient,
+        subject: emailSubject
+      });
 
-    return result;
+      return result;
+    } catch (error) {
+      logError(error, 'Failed to send email notification');
+      throw error;
+    }
   }
 
   // Send push notification
