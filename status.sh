@@ -22,11 +22,11 @@ echo ""
 echo -e "${BLUE}Backend Status:${NC}"
 
 # Check PM2
-if command -v pm2 >/dev/null 2>&1 && pm2 list | grep -q "klikwhatsapp-backend"; then
-    PM2_STATUS=$(pm2 jlist | grep -o '"name":"klikwhatsapp-backend"[^}]*"pm2_env":{"status":"[^"]*"' | grep -o '"status":"[^"]*"' | cut -d'"' -f4)
+if command -v pm2 >/dev/null 2>&1 && pm2 list | grep -q "wa-gateway-be"; then
+    PM2_STATUS=$(pm2 jlist | grep -o '"name":"wa-gateway-be"[^}]*"pm2_env":{"status":"[^"]*"' | grep -o '"status":"[^"]*"' | cut -d'"' -f4)
     if [ "$PM2_STATUS" = "online" ]; then
-        echo -e "  Status: ${GREEN}Running with PM2${NC}"
-        pm2 info klikwhatsapp-backend | grep -E "(status|uptime|memory|cpu)" | head -5
+        echo -e "  Status: ${GREEN}Running with PM2 (wa-gateway-be)${NC}"
+        pm2 info wa-gateway-be | grep -E "(status|uptime|memory|cpu)" | head -5
     else
         echo -e "  Status: ${RED}Stopped (PM2)${NC}"
     fi
@@ -64,19 +64,31 @@ echo ""
 # Check Frontend
 echo -e "${BLUE}Frontend Status:${NC}"
 
-if [ -f ".frontend.pid" ]; then
-    FRONTEND_PID=$(cat .frontend.pid)
-    if ps -p $FRONTEND_PID > /dev/null 2>&1; then
-        echo -e "  Status: ${GREEN}Running${NC} (PID: $FRONTEND_PID)"
+# Check PM2
+if command -v pm2 >/dev/null 2>&1 && pm2 list | grep -q "wa-gateway-fe"; then
+    PM2_STATUS=$(pm2 jlist | grep -o '"name":"wa-gateway-fe"[^}]*"pm2_env":{"status":"[^"]*"' | grep -o '"status":"[^"]*"' | cut -d'"' -f4)
+    if [ "$PM2_STATUS" = "online" ]; then
+        echo -e "  Status: ${GREEN}Running with PM2 (wa-gateway-fe)${NC}"
+        pm2 info wa-gateway-fe | grep -E "(status|uptime|memory|cpu)" | head -5
     else
-        echo -e "  Status: ${RED}Stopped${NC}"
+        echo -e "  Status: ${RED}Stopped (PM2)${NC}"
     fi
 else
-    # Check if process exists
-    if pgrep -f "nuxt.*dev" > /dev/null 2>&1 || pgrep -f "nuxt.*preview" > /dev/null 2>&1; then
-        echo -e "  Status: ${GREEN}Running${NC} (process found)"
+    # Check using PID file
+    if [ -f ".frontend.pid" ]; then
+        FRONTEND_PID=$(cat .frontend.pid)
+        if ps -p $FRONTEND_PID > /dev/null 2>&1; then
+            echo -e "  Status: ${GREEN}Running${NC} (PID: $FRONTEND_PID)"
+        else
+            echo -e "  Status: ${RED}Stopped${NC}"
+        fi
     else
-        echo -e "  Status: ${RED}Stopped${NC}"
+        # Check if process exists
+        if pgrep -f "nuxt.*dev" > /dev/null 2>&1 || pgrep -f "nuxt.*preview" > /dev/null 2>&1; then
+            echo -e "  Status: ${GREEN}Running${NC} (process found)"
+        else
+            echo -e "  Status: ${RED}Stopped${NC}"
+        fi
     fi
 fi
 

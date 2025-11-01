@@ -66,11 +66,11 @@ if [ "$USE_PM2" = "true" ]; then
         npm install -g pm2
     fi
     
-    echo -e "${GREEN}Starting backend with PM2...${NC}"
+    echo -e "${GREEN}Starting backend with PM2 (wa-gateway-be)...${NC}"
     if [ -f "ecosystem.config.js" ]; then
         pm2 start ecosystem.config.js --env $MODE
     else
-        pm2 start server.js --name klikwhatsapp-backend --env $MODE
+        pm2 start server.js --name wa-gateway-be --env $MODE
     fi
     pm2 save
 else
@@ -94,8 +94,8 @@ sleep 5
 
 # Check if backend is running
 if [ "$USE_PM2" = "true" ]; then
-    if pm2 list | grep -q "klikwhatsapp-backend.*online"; then
-        echo -e "${GREEN}✓ Backend is running with PM2${NC}"
+    if pm2 list | grep -q "wa-gateway-be.*online"; then
+        echo -e "${GREEN}✓ Backend is running with PM2 (wa-gateway-be)${NC}"
     else
         echo -e "${YELLOW}⚠ Backend might not be running properly${NC}"
     fi
@@ -122,15 +122,28 @@ if [ ! -d "node_modules" ]; then
     npm install
 fi
 
-echo -e "${GREEN}Starting frontend...${NC}"
-if [ "$MODE" = "production" ]; then
-    npm run build
-    npm run preview &
+if [ "$USE_PM2" = "true" ]; then
+    # Start with PM2
+    echo -e "${GREEN}Starting frontend with PM2 (wa-gateway-fe)...${NC}"
+    if [ "$MODE" = "production" ]; then
+        npm run build
+        pm2 start npm --name wa-gateway-fe -- run preview
+    else
+        pm2 start npm --name wa-gateway-fe -- run dev
+    fi
+    pm2 save
 else
-    npm run dev &
+    # Start with npm
+    echo -e "${GREEN}Starting frontend...${NC}"
+    if [ "$MODE" = "production" ]; then
+        npm run build
+        npm run preview &
+    else
+        npm run dev &
+    fi
+    FRONTEND_PID=$!
+    echo $FRONTEND_PID > ../.frontend.pid
 fi
-FRONTEND_PID=$!
-echo $FRONTEND_PID > ../.frontend.pid
 
 cd ..
 
@@ -146,17 +159,25 @@ echo -e "${GREEN}========================================${NC}"
 echo ""
 echo -e "${BLUE}Backend:${NC}"
 if [ "$USE_PM2" = "true" ]; then
-    echo -e "  Status: ${GREEN}Running with PM2${NC}"
+    echo -e "  Status: ${GREEN}Running with PM2 (wa-gateway-be)${NC}"
     echo -e "  Monitor: ${YELLOW}pm2 monit${NC}"
-    echo -e "  Logs: ${YELLOW}pm2 logs klikwhatsapp-backend${NC}"
+    echo -e "  Logs: ${YELLOW}pm2 logs wa-gateway-be${NC}"
+    echo -e "  URL: ${YELLOW}http://localhost:3001${NC}"
 else
     echo -e "  Status: ${GREEN}Running${NC} (PID: $BACKEND_PID)"
     echo -e "  URL: ${YELLOW}http://localhost:3001${NC}"
 fi
 echo ""
 echo -e "${BLUE}Frontend:${NC}"
-echo -e "  Status: ${GREEN}Running${NC} (PID: $FRONTEND_PID)"
-echo -e "  URL: ${YELLOW}http://localhost:3000${NC}"
+if [ "$USE_PM2" = "true" ]; then
+    echo -e "  Status: ${GREEN}Running with PM2 (wa-gateway-fe)${NC}"
+    echo -e "  Monitor: ${YELLOW}pm2 monit${NC}"
+    echo -e "  Logs: ${YELLOW}pm2 logs wa-gateway-fe${NC}"
+    echo -e "  URL: ${YELLOW}http://localhost:3000${NC}"
+else
+    echo -e "  Status: ${GREEN}Running${NC} (PID: $FRONTEND_PID)"
+    echo -e "  URL: ${YELLOW}http://localhost:3000${NC}"
+fi
 echo ""
 echo -e "${BLUE}Management:${NC}"
 echo -e "  Stop: ${YELLOW}./stop.sh${NC}"
