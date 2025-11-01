@@ -67,6 +67,12 @@ if ! command_exists pm2; then
 fi
 
 echo -e "${GREEN}Starting backend with PM2 (wa-gateway-be)...${NC}"
+# Stop and delete existing process if any
+if pm2 list | grep -q "wa-gateway-be"; then
+    echo -e "${YELLOW}Stopping existing wa-gateway-be process...${NC}"
+    pm2 delete wa-gateway-be 2>/dev/null || pm2 stop wa-gateway-be 2>/dev/null || true
+    sleep 2
+fi
 if [ -f "ecosystem.config.js" ]; then
     pm2 start ecosystem.config.js --env $MODE
 else
@@ -104,6 +110,12 @@ fi
 
 # Start with PM2 (always use PM2 for background execution)
 echo -e "${GREEN}Starting frontend with PM2 (wa-gateway-fe)...${NC}"
+# Stop and delete existing process if any
+if pm2 list | grep -q "wa-gateway-fe"; then
+    echo -e "${YELLOW}Stopping existing wa-gateway-fe process...${NC}"
+    pm2 delete wa-gateway-fe 2>/dev/null || pm2 stop wa-gateway-fe 2>/dev/null || true
+    sleep 2
+fi
 if [ "$MODE" = "production" ]; then
     # Build for production if not already built
     if [ ! -d ".output" ]; then

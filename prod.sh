@@ -41,6 +41,13 @@ if [ ! -d "node_modules" ]; then
     npm install --production
 fi
 
+# Stop and delete existing process if any
+if pm2 list | grep -q "wa-gateway-be"; then
+    echo -e "${YELLOW}Stopping existing wa-gateway-be process...${NC}"
+    pm2 delete wa-gateway-be 2>/dev/null || pm2 stop wa-gateway-be 2>/dev/null || true
+    sleep 2
+fi
+
 # Start backend with PM2
 if [ -f "ecosystem.config.js" ]; then
     pm2 start ecosystem.config.js --env production
@@ -72,6 +79,13 @@ fi
 if [ ! -d ".output" ]; then
     echo -e "${YELLOW}Building frontend for production...${NC}"
     npm run build
+fi
+
+# Stop and delete existing process if any
+if pm2 list | grep -q "wa-gateway-fe"; then
+    echo -e "${YELLOW}Stopping existing wa-gateway-fe process...${NC}"
+    pm2 delete wa-gateway-fe 2>/dev/null || pm2 stop wa-gateway-fe 2>/dev/null || true
+    sleep 2
 fi
 
 # Start frontend with PM2

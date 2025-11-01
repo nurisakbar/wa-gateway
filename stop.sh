@@ -23,18 +23,17 @@ echo -e "${BLUE}[1/2] Stopping Backend...${NC}"
 
 # Check if using PM2
 if command -v pm2 >/dev/null 2>&1; then
-    # Check for backend app (wa-gateway-be)
+    # Check for backend app (wa-gateway-be) - handle all instances
     if pm2 jlist 2>/dev/null | grep -q '"name":"wa-gateway-be"'; then
         echo -e "${YELLOW}Stopping backend with PM2 (wa-gateway-be)...${NC}"
-        # Check if force delete is requested
-        if [ "$1" = "--delete" ] || [ "$1" = "-d" ]; then
-            pm2 delete wa-gateway-be 2>/dev/null || true
-            echo -e "${GREEN}✓ Backend stopped and removed (PM2)${NC}"
-        else
-            pm2 stop wa-gateway-be 2>/dev/null || true
-            echo -e "${GREEN}✓ Backend stopped (PM2) - can be restarted with 'pm2 start wa-gateway-be'${NC}"
-        fi
+        # Delete all instances with this name (handles duplicates)
+        pm2 delete wa-gateway-be 2>/dev/null || true
+        # Also delete by ID if still exists (handle orphaned processes)
+        pm2 jlist 2>/dev/null | grep -o '"name":"wa-gateway-be".*"pm_id":[0-9]*' | grep -o '"pm_id":[0-9]*' | cut -d'"' -f4 | while read id; do
+            pm2 delete $id 2>/dev/null || true
+        done
         pm2 save 2>/dev/null || true
+        echo -e "${GREEN}✓ Backend stopped and removed (PM2)${NC}"
     else
         # Check for other backend app names as fallback
         BACKEND_APPS=$(pm2 jlist 2>/dev/null | grep -o '"name":"[^"]*"' | grep -E "(wa-gateway-be|wa-gateway.*backend|klikwhatsapp-backend)" | cut -d'"' -f4)
@@ -88,18 +87,17 @@ echo -e "${BLUE}[2/2] Stopping Frontend...${NC}"
 
 # Check if using PM2
 if command -v pm2 >/dev/null 2>&1; then
-    # Check for frontend app (wa-gateway-fe)
+    # Check for frontend app (wa-gateway-fe) - handle all instances
     if pm2 jlist 2>/dev/null | grep -q '"name":"wa-gateway-fe"'; then
         echo -e "${YELLOW}Stopping frontend with PM2 (wa-gateway-fe)...${NC}"
-        # Check if force delete is requested
-        if [ "$1" = "--delete" ] || [ "$1" = "-d" ]; then
-            pm2 delete wa-gateway-fe 2>/dev/null || true
-            echo -e "${GREEN}✓ Frontend stopped and removed (PM2)${NC}"
-        else
-            pm2 stop wa-gateway-fe 2>/dev/null || true
-            echo -e "${GREEN}✓ Frontend stopped (PM2) - can be restarted with 'pm2 start wa-gateway-fe'${NC}"
-        fi
+        # Delete all instances with this name (handles duplicates)
+        pm2 delete wa-gateway-fe 2>/dev/null || true
+        # Also delete by ID if still exists (handle orphaned processes)
+        pm2 jlist 2>/dev/null | grep -o '"name":"wa-gateway-fe".*"pm_id":[0-9]*' | grep -o '"pm_id":[0-9]*' | cut -d'"' -f4 | while read id; do
+            pm2 delete $id 2>/dev/null || true
+        done
         pm2 save 2>/dev/null || true
+        echo -e "${GREEN}✓ Frontend stopped and removed (PM2)${NC}"
     else
         # Check for other frontend app names as fallback
         FRONTEND_APPS=$(pm2 jlist 2>/dev/null | grep -o '"name":"[^"]*"' | grep -E "(wa-gateway-fe|wa-gateway.*frontend)" | cut -d'"' -f4)
