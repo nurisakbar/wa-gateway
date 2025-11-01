@@ -99,8 +99,4 @@ sleep 2
 
 # Start application
 echo -e "${BLUE}Starting application...${NC}"
-if [ "$MODE" = "production" ]; then
-    ./prod.sh
-else
-    ./start.sh $MODE false
-fi
+./start.sh $MODE
