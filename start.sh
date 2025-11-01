@@ -12,6 +12,7 @@ set -e  # Exit on any error
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+RED='\033[0;31m'
 NC='\033[0m' # No Color
 
 # Configuration
@@ -19,6 +20,78 @@ BACKEND_DIR="./backend"
 FRONTEND_DIR="./frontend"
 MODE=${1:-dev}  # dev or production (default: dev)
 USE_PM2=${2:-false}  # true untuk menggunakan PM2 (default: false)
+
+# Global variables untuk cleanup
+BACKEND_PID=""
+FRONTEND_PID=""
+
+# Cleanup function untuk Ctrl+C
+cleanup() {
+    echo ""
+    echo -e "${YELLOW}========================================${NC}"
+    echo -e "${YELLOW}  Cleaning up processes...${NC}"
+    echo -e "${YELLOW}========================================${NC}"
+    
+    # Handle PM2 processes
+    if [ "$USE_PM2" = "true" ] && command -v pm2 >/dev/null 2>&1; then
+        echo -e "${YELLOW}Stopping PM2 processes...${NC}"
+        if pm2 list | grep -q "wa-gateway-be"; then
+            pm2 stop wa-gateway-be 2>/dev/null || true
+            pm2 delete wa-gateway-be 2>/dev/null || true
+        fi
+        if pm2 list | grep -q "wa-gateway-fe"; then
+            pm2 stop wa-gateway-fe 2>/dev/null || true
+            pm2 delete wa-gateway-fe 2>/dev/null || true
+        fi
+        pm2 save 2>/dev/null || true
+    fi
+    
+    # Stop backend (non-PM2)
+    if [ "$USE_PM2" != "true" ]; then
+        if [ -n "$BACKEND_PID" ] && ps -p $BACKEND_PID > /dev/null 2>&1; then
+            echo -e "${YELLOW}Stopping backend (PID: $BACKEND_PID)...${NC}"
+            kill $BACKEND_PID 2>/dev/null || true
+            sleep 1
+            # Force kill jika masih running
+            if ps -p $BACKEND_PID > /dev/null 2>&1; then
+                kill -9 $BACKEND_PID 2>/dev/null || true
+            fi
+        fi
+    fi
+    
+    # Stop frontend (non-PM2)
+    if [ "$USE_PM2" != "true" ]; then
+        if [ -n "$FRONTEND_PID" ] && ps -p $FRONTEND_PID > /dev/null 2>&1; then
+            echo -e "${YELLOW}Stopping frontend (PID: $FRONTEND_PID)...${NC}"
+            kill $FRONTEND_PID 2>/dev/null || true
+            sleep 1
+            # Force kill jika masih running
+            if ps -p $FRONTEND_PID > /dev/null 2>&1; then
+                kill -9 $FRONTEND_PID 2>/dev/null || true
+            fi
+        fi
+    fi
+    
+    # Cleanup PID files
+    rm -f .backend.pid .frontend.pid
+    
+    # Kill any remaining node processes terkait (only if not using PM2)
+    if [ "$USE_PM2" != "true" ]; then
+        echo -e "${YELLOW}Killing any remaining processes...${NC}"
+        pkill -f "node.*server.js" 2>/dev/null || true
+        pkill -f "nodemon.*server.js" 2>/dev/null || true
+        pkill -f "nuxt.*dev" 2>/dev/null || true
+        pkill -f "nuxt.*preview" 2>/dev/null || true
+        sleep 1
+    fi
+    
+    echo -e "${GREEN}✓ Cleanup completed${NC}"
+    echo ""
+    exit 0
+}
+
+# Trap SIGINT (Ctrl+C) dan SIGTERM
+trap cleanup SIGINT SIGTERM
 
 echo -e "${BLUE}========================================${NC}"
 echo -e "${BLUE}  WA Gateway - Starting Application${NC}"
@@ -186,6 +259,23 @@ echo -e "  Logs: ${YELLOW}tail -f backend/logs/*.log${NC}"
 echo ""
 echo -e "${YELLOW}Press Ctrl+C to stop both services${NC}"
 echo ""
+echo -e "${BLUE}Note: If ports are still in use after Ctrl+C, run: ${YELLOW}./cleanup-ports.sh${NC}"
+echo ""
 
-# Keep script running
-wait
+# Keep script running - wait for processes
+if [ "$USE_PM2" = "true" ]; then
+    # With PM2, services run in background, so we can exit
+    echo -e "${BLUE}Services are running with PM2 in background.${NC}"
+    echo -e "${BLUE}To monitor, use: ${YELLOW}pm2 monit${NC} or ${YELLOW}pm2 logs${NC}"
+    echo -e "${BLUE}To stop, run: ${YELLOW}./stop.sh${NC} or ${YELLOW}pm2 stop all${NC}"
+    echo ""
+    echo -e "${GREEN}✓ Safe to close terminal - services will continue running${NC}"
+    echo ""
+    # Exit immediately since PM2 handles everything
+    exit 0
+else
+    # Wait for background processes (non-PM2 mode)
+    echo -e "${YELLOW}Note: In development mode, services run in foreground.${NC}"
+    echo -e "${YELLOW}Press Ctrl+C to stop all services.${NC}"
+    wait
+fi

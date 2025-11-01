@@ -26,10 +26,15 @@ if command -v pm2 >/dev/null 2>&1; then
     # Check for backend app (wa-gateway-be)
     if pm2 jlist 2>/dev/null | grep -q '"name":"wa-gateway-be"'; then
         echo -e "${YELLOW}Stopping backend with PM2 (wa-gateway-be)...${NC}"
-        pm2 stop wa-gateway-be 2>/dev/null || true
-        pm2 delete wa-gateway-be 2>/dev/null || true
+        # Check if force delete is requested
+        if [ "$1" = "--delete" ] || [ "$1" = "-d" ]; then
+            pm2 delete wa-gateway-be 2>/dev/null || true
+            echo -e "${GREEN}✓ Backend stopped and removed (PM2)${NC}"
+        else
+            pm2 stop wa-gateway-be 2>/dev/null || true
+            echo -e "${GREEN}✓ Backend stopped (PM2) - can be restarted with 'pm2 start wa-gateway-be'${NC}"
+        fi
         pm2 save 2>/dev/null || true
-        echo -e "${GREEN}✓ Backend stopped (PM2)${NC}"
     else
         # Check for other backend app names as fallback
         BACKEND_APPS=$(pm2 jlist 2>/dev/null | grep -o '"name":"[^"]*"' | grep -E "(wa-gateway-be|wa-gateway.*backend|klikwhatsapp-backend)" | cut -d'"' -f4)
@@ -86,10 +91,15 @@ if command -v pm2 >/dev/null 2>&1; then
     # Check for frontend app (wa-gateway-fe)
     if pm2 jlist 2>/dev/null | grep -q '"name":"wa-gateway-fe"'; then
         echo -e "${YELLOW}Stopping frontend with PM2 (wa-gateway-fe)...${NC}"
-        pm2 stop wa-gateway-fe 2>/dev/null || true
-        pm2 delete wa-gateway-fe 2>/dev/null || true
+        # Check if force delete is requested
+        if [ "$1" = "--delete" ] || [ "$1" = "-d" ]; then
+            pm2 delete wa-gateway-fe 2>/dev/null || true
+            echo -e "${GREEN}✓ Frontend stopped and removed (PM2)${NC}"
+        else
+            pm2 stop wa-gateway-fe 2>/dev/null || true
+            echo -e "${GREEN}✓ Frontend stopped (PM2) - can be restarted with 'pm2 start wa-gateway-fe'${NC}"
+        fi
         pm2 save 2>/dev/null || true
-        echo -e "${GREEN}✓ Frontend stopped (PM2)${NC}"
     else
         # Check for other frontend app names as fallback
         FRONTEND_APPS=$(pm2 jlist 2>/dev/null | grep -o '"name":"[^"]*"' | grep -E "(wa-gateway-fe|wa-gateway.*frontend)" | cut -d'"' -f4)
@@ -148,4 +158,8 @@ echo ""
 echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}  Application Stopped Successfully!${NC}"
 echo -e "${GREEN}========================================${NC}"
+echo ""
+echo -e "${BLUE}Note:${NC}"
+echo -e "  To stop and remove from PM2 permanently: ${YELLOW}./stop.sh --delete${NC}"
+echo -e "  To restart: ${YELLOW}./restart.sh production${NC} or ${YELLOW}./prod.sh${NC}"
 echo ""
