@@ -5,6 +5,13 @@
 
 set -e
 
+# Get script directory and project root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+# Change to project root directory
+cd "$PROJECT_ROOT"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -88,10 +95,10 @@ start_services() {
     print_status "Building and starting KlikWhatsApp services..."
     
     # Build images
-    docker-compose build
+    docker-compose -f "$SCRIPT_DIR/docker-compose.yml" build
     
     # Start services
-    docker-compose up -d
+    docker-compose -f "$SCRIPT_DIR/docker-compose.yml" up -d
     
     print_success "Services started successfully"
 }
@@ -102,13 +109,13 @@ wait_for_services() {
     
     # Wait for MySQL
     print_status "Waiting for MySQL..."
-    while ! docker-compose exec -T mysql mysqladmin ping -h"localhost" --silent; do
+    while ! docker-compose -f "$SCRIPT_DIR/docker-compose.yml" exec -T mysql mysqladmin ping -h"localhost" --silent; do
         sleep 2
     done
     
     # Wait for Redis
     print_status "Waiting for Redis..."
-    while ! docker-compose exec -T redis redis-cli ping; do
+    while ! docker-compose -f "$SCRIPT_DIR/docker-compose.yml" exec -T redis redis-cli ping; do
         sleep 2
     done
     
@@ -130,7 +137,7 @@ wait_for_services() {
 # Show service status
 show_status() {
     print_status "Service Status:"
-    docker-compose ps
+    docker-compose -f "$SCRIPT_DIR/docker-compose.yml" ps
     
     echo ""
     print_status "Access URLs:"
@@ -147,14 +154,14 @@ show_status() {
 # Stop services
 stop_services() {
     print_status "Stopping KlikWhatsApp services..."
-    docker-compose down
+    docker-compose -f "$SCRIPT_DIR/docker-compose.yml" down
     print_success "Services stopped"
 }
 
 # Show logs
 show_logs() {
     print_status "Showing logs (Press Ctrl+C to exit)..."
-    docker-compose logs -f
+    docker-compose -f "$SCRIPT_DIR/docker-compose.yml" logs -f
 }
 
 # Clean up everything
@@ -163,7 +170,7 @@ cleanup() {
     read -r response
     if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
         print_status "Cleaning up..."
-        docker-compose down -v --rmi all
+        docker-compose -f "$SCRIPT_DIR/docker-compose.yml" down -v --rmi all
         print_success "Cleanup completed"
     else
         print_status "Cleanup cancelled"

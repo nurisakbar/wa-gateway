@@ -7,6 +7,10 @@
 # Sistem akan berjalan di background dan tetap aktif setelah terminal ditutup
 # =============================================================================
 
+# Get script directory and project root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
 # Colors
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -28,6 +32,7 @@ fi
 
 # Start backend
 echo -e "${BLUE}[1/2] Starting Backend...${NC}"
+cd "$PROJECT_ROOT"
 cd backend
 
 if [ ! -f "package.json" ]; then
@@ -55,13 +60,14 @@ else
     pm2 start server.js --name wa-gateway-be --env production
 fi
 
-cd ..
+cd "$PROJECT_ROOT"
 
 # Wait a moment for backend to start
 sleep 3
 
 # Start frontend
 echo -e "${BLUE}[2/2] Starting Frontend...${NC}"
+cd "$PROJECT_ROOT"
 cd frontend
 
 if [ ! -f "package.json" ]; then
@@ -91,7 +97,7 @@ fi
 # Start frontend with PM2
 pm2 start npm --name wa-gateway-fe -- run preview
 
-cd ..
+cd "$PROJECT_ROOT"
 
 # Save PM2 process list
 pm2 save

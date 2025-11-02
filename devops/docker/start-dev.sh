@@ -16,11 +16,18 @@ fi
 
 echo "✅ Docker and Docker Compose are available"
 
+# Get script directory and project root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+# Change to project root
+cd "$PROJECT_ROOT"
+
 # Check if .env file exists, if not create from example
 if [ ! -f ".env" ]; then
-    if [ -f "docker.env.example" ]; then
+    if [ -f "$SCRIPT_DIR/docker.env.example" ]; then
         echo "📝 Creating .env file from docker.env.example..."
-        cp docker.env.example .env
+        cp "$SCRIPT_DIR/docker.env.example" .env
         echo "✅ .env file created. Please review and modify if needed."
     else
         echo "⚠️  No .env file found. Creating basic .env file..."
@@ -48,9 +55,9 @@ cleanup() {
     echo ""
     echo "🛑 Stopping Docker Compose services..."
     if command -v docker-compose &> /dev/null; then
-        docker-compose -f docker-compose.dev.yml down
+        docker-compose -f "$SCRIPT_DIR/docker-compose.dev.yml" down
     else
-        docker compose -f docker-compose.dev.yml down
+        docker compose -f "$SCRIPT_DIR/docker-compose.dev.yml" down
     fi
     echo "✅ Docker Compose services stopped"
     exit 0
@@ -62,7 +69,7 @@ trap cleanup SIGINT
 # Start Docker Compose development environment
 echo "🐳 Starting Docker Compose development environment..."
 if command -v docker-compose &> /dev/null; then
-    docker-compose -f docker-compose.dev.yml up --build
+    docker-compose -f "$SCRIPT_DIR/docker-compose.dev.yml" up --build
 else
-    docker compose -f docker-compose.dev.yml up --build
+    docker compose -f "$SCRIPT_DIR/docker-compose.dev.yml" up --build
 fi 

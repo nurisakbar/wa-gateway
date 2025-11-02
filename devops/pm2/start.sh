@@ -15,9 +15,13 @@ BLUE='\033[0;34m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
+# Get script directory and project root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
 # Configuration
-BACKEND_DIR="./backend"
-FRONTEND_DIR="./frontend"
+BACKEND_DIR="$PROJECT_ROOT/backend"
+FRONTEND_DIR="$PROJECT_ROOT/frontend"
 MODE=${1:-dev}  # dev or production (default: dev)
 # Note: All modes run in background with PM2
 
@@ -47,6 +51,7 @@ fi
 
 # Start Backend
 echo -e "${BLUE}[1/2] Starting Backend...${NC}"
+cd "$PROJECT_ROOT"
 cd "$BACKEND_DIR"
 
 if [ ! -f "package.json" ]; then
@@ -80,7 +85,7 @@ else
 fi
 pm2 save
 
-cd ..
+cd "$PROJECT_ROOT"
 
 # Wait for backend to start
 echo -e "${BLUE}Waiting for backend to start...${NC}"
@@ -95,6 +100,7 @@ fi
 
 # Start Frontend
 echo -e "${BLUE}[2/2] Starting Frontend...${NC}"
+cd "$PROJECT_ROOT"
 cd "$FRONTEND_DIR"
 
 if [ ! -f "package.json" ]; then
@@ -128,7 +134,7 @@ else
 fi
 pm2 save
 
-cd ..
+cd "$PROJECT_ROOT"
 
 # Wait for frontend to start
 echo -e "${BLUE}Waiting for frontend to start...${NC}"

@@ -5,6 +5,13 @@
 
 set -e
 
+# Get script directory and project root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+# Change to project root directory
+cd "$PROJECT_ROOT"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -46,9 +53,13 @@ check_docker() {
 
 # Check if .env file exists
 check_env() {
-    if [ ! -f .env ]; then
+    if [ ! -f "$PROJECT_ROOT/.env" ]; then
         print_warning ".env file not found. Creating from template..."
-        cp docker.env.example .env
+        if [ -f "$PROJECT_ROOT/devops/docker/docker.env.example" ]; then
+            cp "$PROJECT_ROOT/devops/docker/docker.env.example" "$PROJECT_ROOT/.env"
+        else
+            cp "$SCRIPT_DIR/docker.env.example" "$PROJECT_ROOT/.env"
+        fi
         print_success ".env file created. Please review and modify if needed."
     else
         print_success ".env file found"
@@ -62,9 +73,9 @@ start_services() {
     print_status "Starting KlikWhatsApp in $mode mode..."
     
     if [ "$mode" = "development" ]; then
-        docker-compose -f docker-compose.dev.yml up -d
+        docker-compose -f "$SCRIPT_DIR/docker-compose.dev.yml" up -d
     else
-        docker-compose up -d
+        docker-compose -f "$SCRIPT_DIR/docker-compose.yml" up -d
     fi
     
     print_success "Services started successfully!"
@@ -75,9 +86,9 @@ show_status() {
     print_status "Checking service status..."
     
     if [ "$1" = "development" ]; then
-        docker-compose -f docker-compose.dev.yml ps
+        docker-compose -f "$SCRIPT_DIR/docker-compose.dev.yml" ps
     else
-        docker-compose ps
+        docker-compose -f "$SCRIPT_DIR/docker-compose.yml" ps
     fi
 }
 
@@ -89,9 +100,9 @@ show_logs() {
     print_status "Showing logs for $service..."
     
     if [ "$mode" = "development" ]; then
-        docker-compose -f docker-compose.dev.yml logs -f $service
+        docker-compose -f "$SCRIPT_DIR/docker-compose.dev.yml" logs -f $service
     else
-        docker-compose logs -f $service
+        docker-compose -f "$SCRIPT_DIR/docker-compose.yml" logs -f $service
     fi
 }
 
@@ -102,9 +113,9 @@ stop_services() {
     print_status "Stopping KlikWhatsApp services..."
     
     if [ "$mode" = "development" ]; then
-        docker-compose -f docker-compose.dev.yml down
+        docker-compose -f "$SCRIPT_DIR/docker-compose.dev.yml" down
     else
-        docker-compose down
+        docker-compose -f "$SCRIPT_DIR/docker-compose.yml" down
     fi
     
     print_success "Services stopped successfully!"
@@ -125,8 +136,8 @@ cleanup() {
     read -r response
     if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
         print_status "Cleaning up Docker resources..."
-        docker-compose down -v --remove-orphans
-        docker-compose -f docker-compose.dev.yml down -v --remove-orphans
+        docker-compose -f "$SCRIPT_DIR/docker-compose.yml" down -v --remove-orphans
+        docker-compose -f "$SCRIPT_DIR/docker-compose.dev.yml" down -v --remove-orphans
         docker system prune -f
         print_success "Cleanup completed!"
     else
