@@ -409,6 +409,49 @@ export const useDeviceStore = defineStore('devices', {
       }
     },
 
+    async stopConnection(deviceId: string) {
+      // Stop ongoing connection attempt
+      this.loading = true
+      this.error = null
+      try {
+        const config = useRuntimeConfig()
+        
+        // Try using $api first, fallback to $fetch
+        let response
+        try {
+          const { $api } = useNuxtApp()
+          response = await $api.post(`/devices/${deviceId}/disconnect`)
+        } catch (apiError) {
+          const token = localStorage.getItem('auth_token')
+          response = await $fetch(`${config.public.apiBase}/devices/${deviceId}/disconnect`, {
+            method: 'POST',
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+          })
+        }
+        
+        if (response.data?.success || response.success) {
+          // Update device status to disconnected
+          const device = this.devices.find(d => d.id === deviceId)
+          if (device) {
+            device.status = 'disconnected'
+          }
+          return { success: true, message: 'Connection stopped successfully' }
+        } else {
+          return { success: false, error: response.data?.message || 'Failed to stop connection' }
+        }
+      } catch (error: any) {
+        this.error = error.response?.data?.message || error.data?.message || 'Failed to stop connection'
+        // Still update status locally even if API fails
+        const device = this.devices.find(d => d.id === deviceId)
+        if (device) {
+          device.status = 'disconnected'
+        }
+        return { success: false, error: this.error }
+      } finally {
+        this.loading = false
+      }
+    },
+
     async disconnectDevice(deviceId: string) {
       this.loading = true
       this.error = null

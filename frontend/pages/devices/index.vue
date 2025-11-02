@@ -280,29 +280,30 @@
                         <span class="d-none d-sm-inline">Disconnect</span>
                       </button>
                       
-                      <!-- Connecting Status -->
-                      <button
-                        v-if="device && device.status === 'connecting'"
-                        class="btn btn-info btn-sm d-flex align-items-center"
-                        disabled
-                        title="Connecting to WhatsApp..."
-                      >
-                        <div class="spinner-border spinner-border-sm me-1" role="status">
-                          <span class="visually-hidden">Loading...</span>
-                        </div>
-                        <span class="d-none d-sm-inline">Connecting...</span>
-                      </button>
-                      
-                      <!-- Reset Stuck Device -->
-                      <button
-                        v-if="device && device.status === 'connecting' && isDeviceStuck(device)"
-                        class="btn btn-warning btn-sm d-flex align-items-center"
-                        @click="resetStuckDevice(device)"
-                        title="Reset stuck device"
-                      >
-                        <i class="bi bi-arrow-clockwise me-1"></i>
-                        <span class="d-none d-sm-inline">Reset</span>
-                      </button>
+                      <!-- Connecting Status with Stop Button -->
+                      <template v-if="device && device.status === 'connecting'">
+                        <button
+                          class="btn btn-info btn-sm d-flex align-items-center me-1"
+                          disabled
+                          title="Connecting to WhatsApp..."
+                        >
+                          <div class="spinner-border spinner-border-sm me-1" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                          </div>
+                          <span class="d-none d-sm-inline">Connecting...</span>
+                        </button>
+                        
+                        <!-- Stop Connection Button -->
+                        <button
+                          class="btn btn-danger btn-sm d-flex align-items-center"
+                          @click="stopConnection(device)"
+                          :disabled="deviceStore.isLoading"
+                          title="Stop Connection and try again"
+                        >
+                          <i class="bi bi-stop-circle me-1"></i>
+                          <span class="d-none d-sm-inline">Stop</span>
+                        </button>
+                      </template>
                       
                       <!-- Edit Button -->
                       <button
@@ -475,11 +476,20 @@
           <div class="modal-footer bg-light border-0 p-4">
             <button
               type="button"
+              class="btn btn-danger"
+              @click="stopConnectionFromQR(selectedDevice)"
+              :disabled="deviceStore.isLoading"
+            >
+              <i class="bi bi-stop-circle me-1"></i>
+              Stop Connection
+            </button>
+            <button
+              type="button"
               class="btn btn-outline-secondary"
               @click="closeQRModal"
             >
               <i class="bi bi-x-circle me-1"></i>
-              Cancel
+              Close
             </button>
           </div>
         </div>
@@ -547,13 +557,14 @@ const setupSocketListeners = () => {
   
   // Listen for QR code events
   window.addEventListener('device:qr', (event) => {
-    const { deviceId, qrCode } = event.detail
+    const { deviceId, qrCode: receivedQR } = event.detail
     console.log('QR code received via socket:', deviceId)
     
     // Find the device and show QR modal
     const device = deviceStore.getDevices.find(d => d && d.id === deviceId)
-    if (device && qrCode) {
-      qrCode.value = qrCode
+    if (device && receivedQR) {
+      qrCode.value = receivedQR
+      selectedDevice.value = device // Store device reference for stop button
       showQRModal.value = true
       $toast.success('QR code received! Please scan with WhatsApp.')
     }
@@ -668,7 +679,25 @@ const connectDevice = async (device) => {
     return
   }
   
+  // If device is already connecting, ask to stop first
+  if (device && device.status === 'connecting') {
+    if (confirm('Device is already connecting. Do you want to stop current connection and start a new one?')) {
+      await stopConnection(device)
+      // Wait a moment before retrying
+      await new Promise(resolve => setTimeout(resolve, 2000))
+    } else {
+      return
+    }
+  }
+  
   try {
+    // Clear any existing polling before starting new connection
+    if (statusPollingInterval) {
+      clearInterval(statusPollingInterval)
+      statusPollingInterval = null
+    }
+    pollingInProgress = false
+    
     $toast.info('Initializing device connection...')
 
     const result = await deviceStore.connectDevice(device.id)
@@ -676,6 +705,7 @@ const connectDevice = async (device) => {
     if (result.success) {
       if (result.qrCode) {
         qrCode.value = result.qrCode
+        selectedDevice.value = device // Store device reference for stop button
         showQRModal.value = true
         $toast.success('QR code generated successfully')
       } else {
@@ -778,6 +808,11 @@ const pollForQRCode = async (deviceId) => {
       if (respSuccess && respData.qr_code) {
         // QR code is available
         qrCode.value = respData.qr_code
+        // Find and store device reference for stop button
+        const device = deviceStore.getDevices.find(d => d && d.id === deviceId)
+        if (device) {
+          selectedDevice.value = device
+        }
         showQRModal.value = true
         $toast.success('QR code generated successfully')
         pollingInProgress = false
@@ -908,6 +943,58 @@ const startStatusPolling = (deviceId) => {
   }, 5000) // Poll every 5 seconds
 }
 
+// Stop connection (for devices that are connecting)
+const stopConnection = async (device) => {
+  if (!device || !device.id) {
+    $toast.error('Invalid device data')
+    return
+  }
+  
+  if (!confirm(`Stop connection for "${device.name || 'Unknown Device'}"?`)) {
+    return
+  }
+  
+  try {
+    // Stop any ongoing polling
+    if (statusPollingInterval) {
+      clearInterval(statusPollingInterval)
+      statusPollingInterval = null
+    }
+    
+    // Stop QR code polling if any
+    pollingInProgress = false
+    
+    // Close QR modal if open
+    closeQRModal()
+    
+    // Call API to stop connection
+    const result = await deviceStore.stopConnection(device.id)
+    
+    if (result.success) {
+      $toast.success('Connection stopped. You can try connecting again.')
+      
+      // Refresh devices to get updated status
+      await deviceStore.fetchDevices()
+    } else {
+      $toast.error(result.error || 'Failed to stop connection')
+    }
+  } catch (error) {
+    console.error('Stop connection error:', error)
+    $toast.error('Failed to stop connection')
+    
+    // Still update local state
+    deviceStore.updateDeviceStatus(device.id, 'disconnected')
+    closeQRModal()
+    
+    // Clear polling intervals
+    if (statusPollingInterval) {
+      clearInterval(statusPollingInterval)
+      statusPollingInterval = null
+    }
+    pollingInProgress = false
+  }
+}
+
 // Disconnect device
 const disconnectDevice = async (device) => {
   try {
@@ -1029,6 +1116,22 @@ const closeModal = () => {
   errors.value = { name: '', phone_number: '' }
 }
 
+// Stop connection from QR modal
+const stopConnectionFromQR = async (device) => {
+  if (!device || !device.id) {
+    // Try to find device from current connecting devices
+    const connectingDevice = deviceStore.getDevices.find(d => d && d.status === 'connecting')
+    if (connectingDevice) {
+      await stopConnection(connectingDevice)
+    } else {
+      $toast.warn('No active connection to stop')
+      closeQRModal()
+    }
+  } else {
+    await stopConnection(device)
+  }
+}
+
 // Close QR modal
 const closeQRModal = () => {
   showQRModal.value = false
@@ -1039,6 +1142,11 @@ const closeQRModal = () => {
     clearInterval(statusPollingInterval)
     statusPollingInterval = null
   }
+  
+  // Stop QR code polling
+  pollingInProgress = false
+  
+  // Don't stop connection when just closing modal - user might want to scan QR
 }
 
 // Utility functions

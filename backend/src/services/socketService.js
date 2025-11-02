@@ -13,35 +13,119 @@ class SocketService {
 
   // Initialize Socket.io server
   initialize(server) {
-    this.io = new Server(server, {
-      cors: {
-        origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
-        methods: ['GET', 'POST'],
-        credentials: true
-      },
-      transports: ['websocket', 'polling']
-    });
+    // Parse CORS origins - support multiple origins
+    let corsOrigins = ['http://localhost:3000'];
+    if (process.env.CORS_ORIGIN) {
+      if (process.env.CORS_ORIGIN.includes(',')) {
+        corsOrigins = process.env.CORS_ORIGIN.split(',').map(origin => origin.trim());
+      } else {
+        corsOrigins = [process.env.CORS_ORIGIN.trim()];
+      }
+    }
+    
+    // Add CORS_ORIGINS from env if exists
+    if (process.env.CORS_ORIGINS) {
+      const additionalOrigins = process.env.CORS_ORIGINS.split(',').map(origin => origin.trim());
+      corsOrigins = [...new Set([...corsOrigins, ...additionalOrigins])]; // Remove duplicates
+    }
 
-    // Authentication middleware
-    this.io.use(this.authenticateSocket.bind(this));
+    // Use polling only to avoid WebSocket issues, or allow websocket if explicitly enabled
+    const enableWebsocket = process.env.SOCKET_ENABLE_WEBSOCKET === 'true';
+    const transports = enableWebsocket ? ['polling', 'websocket'] : ['polling'];
 
-    // Connection handler
-    this.io.on('connection', this.handleConnection.bind(this));
+    logInfo(`Initializing Socket.io with CORS origins: ${corsOrigins.join(', ')}`);
+    logInfo(`Socket.io transports: ${transports.join(', ')}`);
 
-    logInfo('Socket.io server initialized');
+    try {
+      this.io = new Server(server, {
+        cors: {
+          origin: function(origin, callback) {
+            // Allow requests with no origin (like mobile apps or curl requests)
+            if (!origin) {
+              return callback(null, true);
+            }
+            
+            // Check if origin is in allowed list
+            if (corsOrigins.includes(origin) || corsOrigins.includes('*')) {
+              callback(null, true);
+            } else {
+              // In development, be more permissive
+              if (process.env.NODE_ENV === 'development') {
+                logInfo(`Allowing origin in development: ${origin}`);
+                callback(null, true);
+              } else {
+                callback(new Error('Not allowed by CORS'));
+              }
+            }
+          },
+          methods: ['GET', 'POST', 'OPTIONS'],
+          credentials: true,
+          allowedHeaders: ['Authorization', 'Content-Type']
+        },
+        transports: transports,
+        allowEIO3: true, // Backward compatibility with Socket.io v3 clients
+        pingTimeout: 60000,
+        pingInterval: 25000,
+        connectTimeout: 45000,
+        // Better error handling - close connection gracefully on errors
+        cleanupEmptyChildNamespaces: true,
+        // Disable perMessageDeflate for better compatibility
+        perMessageDeflate: false,
+        // Ensure only allowed transports are used
+        allowUpgrades: enableWebsocket // Only allow upgrade if websocket is enabled
+      });
+
+      // Error handler for Socket.io engine
+      this.io.engine.on('connection_error', (error) => {
+        // Silently handle "Transport unknown" errors - they're usually harmless
+        if (error.message && error.message.includes('Transport unknown')) {
+          logInfo(`Socket.io transport error (handled gracefully): ${error.message}`);
+        } else {
+          logError(error, 'Socket.io connection error');
+        }
+      });
+
+      // Handle transport errors more gracefully
+      this.io.engine.on('upgrade', (transport) => {
+        logInfo(`Socket.io transport upgraded to: ${transport.name}`);
+      });
+
+      this.io.engine.on('upgradeError', (error) => {
+        // Silently handle transport upgrade errors
+        if (error.message && error.message.includes('Transport unknown')) {
+          logInfo(`Socket.io transport upgrade error (handled gracefully): ${error.message}`);
+        } else {
+          logError(error, 'Socket.io transport upgrade error');
+        }
+      });
+
+      // Authentication middleware
+      this.io.use(this.authenticateSocket.bind(this));
+
+      // Connection handler
+      this.io.on('connection', this.handleConnection.bind(this));
+
+      logInfo('Socket.io server initialized successfully');
+    } catch (error) {
+      logError(error, 'Failed to initialize Socket.io server');
+      throw error;
+    }
   }
 
   // Authenticate socket connection
   async authenticateSocket(socket, next) {
     try {
-      const token = socket.handshake.auth.token || socket.handshake.headers.authorization;
+      // Try multiple sources for token: auth object, headers, or query params
+      const token = socket.handshake.auth.token || 
+                    socket.handshake.headers.authorization ||
+                    socket.handshake.query.token;
       
       if (!token) {
         return next(new Error('Authentication token required'));
       }
 
       // Remove 'Bearer ' prefix if present
-      const cleanToken = token.replace('Bearer ', '');
+      const cleanToken = typeof token === 'string' ? token.replace('Bearer ', '') : token;
       
       // Verify JWT token
       const decoded = jwt.verify(cleanToken, process.env.JWT_SECRET);
@@ -53,6 +137,12 @@ class SocketService {
       next();
     } catch (error) {
       logError(error, 'Socket authentication failed');
+      // Provide more specific error message
+      if (error.name === 'JsonWebTokenError') {
+        return next(new Error('Invalid authentication token'));
+      } else if (error.name === 'TokenExpiredError') {
+        return next(new Error('Authentication token expired'));
+      }
       next(new Error('Authentication failed'));
     }
   }
@@ -62,57 +152,112 @@ class SocketService {
     const userId = socket.userId;
     const userRole = socket.userRole;
 
-    logInfo(`Socket connected: ${socket.id} for user: ${userId}`);
+    try {
+      logInfo(`Socket connected: ${socket.id} for user: ${userId}, transport: ${socket.conn.transport.name}`);
 
-    // Store user connection
-    this.connectedUsers.set(userId, socket);
-    
-    // Join user's personal room
-    const userRoom = `user:${userId}`;
-    socket.join(userRoom);
-    this.userRooms.set(userId, userRoom);
+      // Store user connection
+      this.connectedUsers.set(userId, socket);
+      
+      // Join user's personal room
+      const userRoom = `user:${userId}`;
+      socket.join(userRoom);
+      this.userRooms.set(userId, userRoom);
 
-    // Join role-based room
-    const roleRoom = `role:${userRole}`;
-    socket.join(roleRoom);
+      // Join role-based room
+      const roleRoom = `role:${userRole}`;
+      socket.join(roleRoom);
 
-    // Send connection confirmation
-    socket.emit('connected', {
-      userId,
-      userRole,
-      socketId: socket.id,
-      timestamp: new Date().toISOString()
-    });
+      // Send connection confirmation
+      socket.emit('connected', {
+        userId,
+        userRole,
+        socketId: socket.id,
+        transport: socket.conn.transport.name,
+        timestamp: new Date().toISOString()
+      });
 
-    // Handle device connection
-    socket.on('join_device', (deviceId) => {
-      this.handleDeviceJoin(socket, deviceId);
-    });
+      // Handle device connection
+      socket.on('join_device', (deviceId) => {
+        try {
+          this.handleDeviceJoin(socket, deviceId);
+        } catch (error) {
+          logError(error, `Error handling join_device for user: ${userId}`);
+        }
+      });
 
-    // Handle device disconnection
-    socket.on('leave_device', (deviceId) => {
-      this.handleDeviceLeave(socket, deviceId);
-    });
+      // Handle device disconnection
+      socket.on('leave_device', (deviceId) => {
+        try {
+          this.handleDeviceLeave(socket, deviceId);
+        } catch (error) {
+          logError(error, `Error handling leave_device for user: ${userId}`);
+        }
+      });
 
-    // Handle typing indicator
-    socket.on('typing', (data) => {
-      this.handleTyping(socket, data);
-    });
+      // Handle typing indicator
+      socket.on('typing', (data) => {
+        try {
+          this.handleTyping(socket, data);
+        } catch (error) {
+          logError(error, `Error handling typing for user: ${userId}`);
+        }
+      });
 
-    // Handle message read receipt
-    socket.on('message_read', (data) => {
-      this.handleMessageRead(socket, data);
-    });
+      // Handle message read receipt
+      socket.on('message_read', (data) => {
+        try {
+          this.handleMessageRead(socket, data);
+        } catch (error) {
+          logError(error, `Error handling message_read for user: ${userId}`);
+        }
+      });
 
-    // Handle disconnect
-    socket.on('disconnect', (reason) => {
-      this.handleDisconnect(socket, reason);
-    });
+      // Handle disconnect
+      socket.on('disconnect', (reason) => {
+        try {
+          this.handleDisconnect(socket, reason);
+        } catch (error) {
+          logError(error, `Error handling disconnect for user: ${userId}`);
+        }
+      });
 
-    // Handle error
-    socket.on('error', (error) => {
-      logError(error, `Socket error for user: ${userId}`);
-    });
+      // Handle transport upgrade (only if websocket enabled)
+      if (process.env.SOCKET_ENABLE_WEBSOCKET === 'true') {
+        socket.conn.on('upgrade', () => {
+          logInfo(`Socket transport upgraded to: ${socket.conn.transport.name} for user: ${userId}`);
+        });
+      }
+
+      // Handle transport errors - catch and log but don't disconnect
+      socket.conn.on('error', (error) => {
+        // Silently handle WebSocket close errors and transport unknown errors
+        const errorMsg = error.message || String(error);
+        if (errorMsg.includes('WebSocket was closed') || 
+            errorMsg.includes('Transport unknown')) {
+          // These are expected and handled gracefully
+          logInfo(`Socket transport error (handled gracefully) for user: ${userId}`);
+        } else {
+          logError(error, `Socket transport error for user: ${userId}`);
+        }
+        // Don't disconnect on transport errors - let Socket.io handle retry
+      });
+
+      // Handle error
+      socket.on('error', (error) => {
+        // Silently handle WebSocket errors
+        if (error.message && !error.message.includes('WebSocket was closed')) {
+          logError(error, `Socket error for user: ${userId}`);
+        }
+      });
+    } catch (error) {
+      logError(error, `Error in handleConnection for socket: ${socket.id}`);
+      // Try to gracefully disconnect if there's a critical error
+      try {
+        socket.disconnect(true);
+      } catch (disconnectError) {
+        // Ignore disconnect errors
+      }
+    }
   }
 
   // Handle device join

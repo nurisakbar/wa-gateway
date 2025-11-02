@@ -29,6 +29,11 @@ const Invoice = sequelize.define('Invoice', {
     unique: true,
     comment: 'Human readable invoice number'
   },
+  external_invoice_id: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    comment: 'External invoice ID from payment gateway'
+  },
   status: {
     type: DataTypes.ENUM('draft', 'pending', 'payment_confirmed', 'paid', 'failed', 'cancelled'),
     defaultValue: 'draft',
