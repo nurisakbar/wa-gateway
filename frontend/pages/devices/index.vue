@@ -399,7 +399,7 @@
                   :class="{ 'is-invalid': errors.phone_number }"
                   id="devicePhone"
                   v-model="deviceForm.phone_number"
-                  placeholder="+1234567890"
+                  placeholder="6281234567890"
                 />
                 <div class="invalid-feedback" v-if="errors.phone_number">
                   {{ errors.phone_number }}
@@ -525,6 +525,20 @@ const errors = ref({
 const searchQuery = ref('')
 const statusFilter = ref('')
 
+// Function to join device rooms
+const joinDeviceRooms = () => {
+  const { $socket } = useNuxtApp()
+  if ($socket && $socket.isConnected) {
+    const devices = deviceStore.getDevices
+    devices.forEach(device => {
+      if (device && device.id) {
+        console.log('Joining device room:', device.id)
+        $socket.emit('device:join', { deviceId: device.id })
+      }
+    })
+  }
+}
+
 // Load devices on mount
 onMounted(async () => {
   try {
@@ -532,8 +546,20 @@ onMounted(async () => {
     
     // Set up socket event listeners for real-time updates
     setupSocketListeners()
+    
+    // Join device rooms for all devices to receive real-time updates
+    joinDeviceRooms()
+    
+    // Watch for socket connection changes and join rooms when connected
+    const { $socket } = useNuxtApp()
+    watch(() => $socket?.isConnected, (isConnected) => {
+      if (isConnected) {
+        console.log('Socket connected, joining device rooms...')
+        joinDeviceRooms()
+      }
+    }, { immediate: true })
   } catch (error) {
-    // console.error('Error loading devices:', error)
+    console.error('Error loading devices:', error)
   }
 })
 
@@ -575,13 +601,33 @@ const setupSocketListeners = () => {
   
   // Also listen for connection_status events (alternative event name)
   window.addEventListener('connection_status', (event) => {
-    const { deviceId, status } = event.detail
-    console.log('Connection status received:', deviceId, status)
+    const { deviceId, status, error } = event.detail
+    console.log('Connection status received:', deviceId, status, error)
     
     if (status === 'connected') {
       deviceStore.updateDeviceStatus(deviceId, 'connected')
       closeQRModal()
       $toast.success('Device connected successfully!')
+      deviceStore.fetchDevices()
+    } else if (status === 'error') {
+      deviceStore.updateDeviceStatus(deviceId, 'error')
+      closeQRModal()
+      const errorMsg = error || 'Failed to connect device. Please try again.'
+      $toast.error(errorMsg)
+      deviceStore.fetchDevices()
+    }
+  })
+  
+  // Listen for device_status events
+  window.addEventListener('device_status', (event) => {
+    const { deviceId, status, error } = event.detail
+    console.log('Device status received:', deviceId, status, error)
+    
+    if (status === 'error') {
+      deviceStore.updateDeviceStatus(deviceId, 'error')
+      closeQRModal()
+      const errorMsg = error || 'Failed to connect device. Please try again.'
+      $toast.error(errorMsg)
       deviceStore.fetchDevices()
     }
   })
@@ -670,6 +716,13 @@ const connectDevice = async (device) => {
   
   try {
     $toast.info('Initializing device connection...')
+
+    // Join device room for real-time updates
+    const { $socket } = useNuxtApp()
+    if ($socket && $socket.isConnected) {
+      console.log('Joining device room:', device.id)
+      $socket.emit('device:join', { deviceId: device.id })
+    }
 
     const result = await deviceStore.connectDevice(device.id)
 

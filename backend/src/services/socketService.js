@@ -89,8 +89,20 @@ class SocketService {
       this.handleDeviceJoin(socket, deviceId);
     });
 
+    // Handle device connection (alternative event name for frontend compatibility)
+    socket.on('device:join', (data) => {
+      const deviceId = data?.deviceId || data;
+      this.handleDeviceJoin(socket, deviceId);
+    });
+
     // Handle device disconnection
     socket.on('leave_device', (deviceId) => {
+      this.handleDeviceLeave(socket, deviceId);
+    });
+
+    // Handle device disconnection (alternative event name for frontend compatibility)
+    socket.on('device:leave', (data) => {
+      const deviceId = data?.deviceId || data;
       this.handleDeviceLeave(socket, deviceId);
     });
 
@@ -295,22 +307,24 @@ class SocketService {
 
   // Handle device connection status
   async handleDeviceConnection(deviceData) {
-    const { userId, deviceId, status, qrCode } = deviceData;
+    const { userId, deviceId, status, qrCode, error } = deviceData;
     
-    logInfo(`Handling device connection: ${deviceId} - ${status} for user: ${userId}`);
+    logInfo(`Handling device connection: ${deviceId} - ${status} for user: ${userId}${error ? ` - Error: ${error}` : ''}`);
     
     // Emit to user
     this.emitToUserRoom(userId, 'device_status', {
       deviceId,
       status,
-      qrCode
+      qrCode,
+      error
     });
 
     // Emit to device room
     this.emitToDevice(deviceId, 'connection_status', {
       deviceId,
       status,
-      qrCode
+      qrCode,
+      error
     });
 
     // Backward-compatibility events for existing frontend listeners

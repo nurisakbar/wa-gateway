@@ -46,9 +46,27 @@ class WhatsAppService {
       // Check if device is already connecting or connected
       const existingConnection = this.connections.get(deviceId);
       if (existingConnection) {
-        logInfo(`Device ${deviceId} already has an active connection, cleaning up first...`);
+        // Check if connection is still active and connected
+        if (existingConnection.isConnected) {
+          logWarn(`Device ${deviceId} is already connected, cannot initialize new connection`);
+          throw new Error('Device is already connected');
+        }
+        
+        // If connecting, check how long it's been connecting
+        const connectingDuration = Date.now() - existingConnection.connectionStartTime.getTime();
+        const connectingTimeout = 120000; // 2 minutes
+        
+        if (device.status === 'connecting' && connectingDuration < connectingTimeout) {
+          logInfo(`Device ${deviceId} is still connecting (${Math.round(connectingDuration/1000)}s), waiting...`);
+          // Don't disconnect, just return the existing connection
+          return { success: true, sessionId: existingConnection.sessionId, alreadyConnecting: true };
+        }
+        
+        logInfo(`Device ${deviceId} has stale connection, cleaning up first...`);
         try {
           await this.disconnectDevice(deviceId);
+          // Wait a bit for cleanup to complete
+          await new Promise(resolve => setTimeout(resolve, 500));
         } catch (cleanupError) {
           logWarn(`Error during cleanup of existing connection: ${cleanupError.message}`);
         }
@@ -75,38 +93,75 @@ class WhatsAppService {
       const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
       logInfo(`Auth state loaded successfully for session: ${sessionId}`);
 
-      // Create WhatsApp socket with improved configuration
+      // Create WhatsApp socket with Baileys 7.x compatible configuration
       logInfo(`Creating WhatsApp socket for device: ${deviceId}`);
       const sock = makeWASocket({
         auth: state,
         printQRInTerminal: false,
+        // Browser identification - required for Baileys 7.x
         browser: ['KlikWhatsApp', 'Chrome', '1.0.0'],
+        
+        // Logger - Baileys 7.x expects proper logger structure
         logger: {
-          level: 'silent', // Suppress Baileys logs
+          level: 'silent', // Use silent and handle manually
           child: () => ({
             level: 'silent',
             trace: () => {},
             debug: () => {},
             info: () => {},
-            warn: () => {},
-            error: () => {},
-            fatal: () => {}
+            warn: (msg, meta) => {
+              logWarn(`Baileys warn [${deviceId}]: ${msg}`, meta);
+            },
+            error: (msg, meta) => {
+              logError(new Error(`Baileys error [${deviceId}]: ${msg}`), 'Baileys', meta);
+            },
+            fatal: (msg, meta) => {
+              logError(new Error(`Baileys fatal [${deviceId}]: ${msg}`), 'Baileys', meta);
+            }
           }),
           trace: () => {},
           debug: () => {},
           info: () => {},
-          warn: () => {},
-          error: () => {},
-          fatal: () => {}
+          warn: (msg, meta) => {
+            logWarn(`Baileys warn [${deviceId}]: ${msg}`, meta);
+          },
+          error: (msg, meta) => {
+            logError(new Error(`Baileys error [${deviceId}]: ${msg}`), 'Baileys', meta);
+          },
+          fatal: (msg, meta) => {
+            logError(new Error(`Baileys fatal [${deviceId}]: ${msg}`), 'Baileys', meta);
+          }
         },
-        // Add connection timeout and retry settings
-        connectTimeoutMs: 60000,
-        keepAliveIntervalMs: 30000,
+        
+        // Connection settings for Baileys 7.x
+        connectTimeoutMs: 120000, // 2 minutes
+        defaultQueryTimeoutMs: 60000, // 1 minute for queries
+        keepAliveIntervalMs: 10000, // 10 seconds
+        
+        // Message retry settings
         retryRequestDelayMs: 250,
         maxMsgRetryCount: 5,
-        // Ensure QR code generation
-        generateHighQualityLinkPreview: true,
-        markOnlineOnConnect: false
+        
+        // QR code timeout - important for connection
+        qrTimeout: 120000, // 2 minutes
+        
+        // Connection behavior
+        markOnlineOnConnect: false,
+        
+        // Message handling - Baileys 7.x requires proper implementation
+        shouldSyncHistoryMessage: () => false,
+        shouldIgnoreJid: (jid) => false,
+        
+        // getMessage - Required in Baileys 7.x to handle message decryption
+        // Return undefined to skip message fetching during connection
+        getMessage: async (key) => {
+          // During connection, don't try to fetch messages
+          // This helps avoid connection issues
+          return undefined;
+        },
+        
+        // Additional Baileys 7.x options
+        generateHighQualityLinkPreview: true
       });
       logInfo(`WhatsApp socket created successfully for device: ${deviceId}`);
 
@@ -154,14 +209,33 @@ class WhatsAppService {
   setupEventHandlers(connectionInfo) {
     const { sock, deviceId } = connectionInfo;
 
-    // Connection update handler
+    // Connection update handler - Baileys 7.x compatible
     sock.ev.on('connection.update', async (update) => {
       try {
-        const { connection, lastDisconnect, qr } = update;
+        const { connection, lastDisconnect, qr, isNewLogin, isOnline, receiveTimeout } = update;
 
+        // Enhanced logging for debugging
+        logInfo(`[${deviceId}] Connection update:`, {
+          connection,
+          isOnline,
+          isNewLogin,
+          hasQR: !!qr,
+          hasLastDisconnect: !!lastDisconnect,
+          receiveTimeout
+        });
+
+        if (lastDisconnect) {
+          logWarn(`[${deviceId}] Last disconnect info:`, {
+            error: lastDisconnect.error?.message,
+            output: lastDisconnect.error?.output,
+            statusCode: lastDisconnect.error?.output?.statusCode
+          });
+        }
+
+        // Handle QR code - Baileys 7.x may send QR multiple times
         if (qr) {
           try {
-            logInfo(`QR code received for device: ${deviceId}, generating data URL...`);
+            logInfo(`[${deviceId}] QR code received, length: ${qr.length}, generating data URL...`);
             
             // Generate QR code with better options
             const qrCode = await qrcode.toDataURL(qr, {
@@ -175,8 +249,12 @@ class WhatsAppService {
               }
             });
             
+            logInfo(`[${deviceId}] QR code generated successfully, length: ${qrCode.length}`);
+            
             connectionInfo.qrCode = qrCode;
             connectionInfo.qrGenerated = true;
+            connectionInfo.lastQRTime = new Date();
+            
             await this.updateDeviceQR(deviceId, qrCode);
             
             // Get device info for socket notification
@@ -188,11 +266,14 @@ class WhatsAppService {
                 status: 'qr_ready',
                 qrCode
               });
+              logInfo(`[${deviceId}] QR code notification sent to frontend`);
+            } else {
+              logWarn(`[${deviceId}] Device not found when sending QR code notification`);
             }
             
-            logInfo(`QR code generated and stored for device: ${deviceId}`);
+            logInfo(`[${deviceId}] QR code process completed successfully`);
           } catch (qrError) {
-            logError(qrError, `Error generating QR code for device: ${deviceId}`);
+            logError(qrError, `[${deviceId}] Error generating QR code`);
             // Try to emit error status
             try {
               const device = await Device.findByPk(deviceId);
@@ -205,19 +286,72 @@ class WhatsAppService {
                 });
               }
             } catch (emitError) {
-              logError(emitError, `Error emitting QR generation failure for device: ${deviceId}`);
+              logError(emitError, `[${deviceId}] Error emitting QR generation failure`);
             }
           }
         }
 
         if (connection === 'close') {
           try {
+            const statusCode = lastDisconnect?.error?.output?.statusCode;
             const shouldReconnect = (lastDisconnect?.error instanceof Boom) && 
-              lastDisconnect.error.output?.statusCode !== DisconnectReason.loggedOut;
+              statusCode !== DisconnectReason.loggedOut;
 
-            if (shouldReconnect) {
+            logWarn(`[${deviceId}] ========== CONNECTION CLOSED ==========`);
+            logWarn(`[${deviceId}] Status code: ${statusCode}`);
+            logWarn(`[${deviceId}] Error message:`, lastDisconnect?.error?.message || 'No error');
+            logWarn(`[${deviceId}] Should reconnect: ${shouldReconnect}`);
+            
+            // Check if device was in the middle of pairing (had QR generated)
+            const wasPairing = connectionInfo.qrGenerated && !connectionInfo.isConnected;
+            if (wasPairing) {
+              logWarn(`[${deviceId}] Connection closed during QR pairing process!`);
+            }
+
+            // Handle different disconnect reasons
+            if (statusCode === DisconnectReason.loggedOut) {
+              logInfo(`Device ${deviceId} logged out, clearing session...`);
+              // Remove connection but keep session for re-authentication
+              this.connections.delete(deviceId);
+              await this.updateDeviceStatus(deviceId, 'disconnected');
+              
+              const device = await Device.findByPk(deviceId);
+              if (device) {
+                await socketService.handleDeviceConnection({
+                  userId: device.user_id,
+                  deviceId,
+                  status: 'disconnected'
+                });
+              }
+            } else if (statusCode === DisconnectReason.badSession) {
+              logWarn(`Bad session for device ${deviceId}, clearing and allowing reconnect...`);
+              // Clear bad session but don't delete connection info immediately
+              connectionInfo.isConnected = false;
+              connectionInfo.qrCode = null;
+              await this.updateDeviceStatus(deviceId, 'error');
+              
+              const device = await Device.findByPk(deviceId);
+              if (device) {
+                await socketService.handleDeviceConnection({
+                  userId: device.user_id,
+                  deviceId,
+                  status: 'error',
+                  error: 'Session invalid, please try connecting again'
+                });
+              }
+              
+              // Remove connection to allow fresh start
+              this.connections.delete(deviceId);
+            } else if (shouldReconnect) {
               logWarn(`Connection closed for device: ${deviceId}, attempting to reconnect...`);
-              await this.reconnectDevice(deviceId);
+              // Don't delete connection yet, let reconnect handle it
+              try {
+                await this.reconnectDevice(deviceId);
+              } catch (reconnectError) {
+                logError(reconnectError, `Reconnection failed for device: ${deviceId}`);
+                await this.updateDeviceStatus(deviceId, 'error');
+                this.connections.delete(deviceId);
+              }
             } else {
               logInfo(`Connection closed for device: ${deviceId}, not reconnecting`);
               await this.updateDeviceStatus(deviceId, 'disconnected');
@@ -236,14 +370,41 @@ class WhatsAppService {
             }
           } catch (closeError) {
             logError(closeError, `Error handling connection close for device: ${deviceId}`);
+            // Ensure connection is removed on error
+            try {
+              this.connections.delete(deviceId);
+              await this.updateDeviceStatus(deviceId, 'error');
+            } catch (cleanupError) {
+              logError(cleanupError, `Error in cleanup after connection close error`);
+            }
           }
         }
 
+        // Handle connection open - Baileys 7.x compatible
         if (connection === 'open') {
           try {
+            logInfo(`[${deviceId}] ========== CONNECTION OPENED ==========`);
+            logInfo(`[${deviceId}] Connection details: isOnline=${isOnline}, isNewLogin=${isNewLogin}`);
+            
+            // Save credentials one more time to ensure they're persisted
+            try {
+              await connectionInfo.saveCreds();
+              logInfo(`[${deviceId}] Credentials saved after connection open`);
+            } catch (credsError) {
+              logWarn(`[${deviceId}] Could not save credentials after open (non-critical):`, credsError.message);
+            }
+            
             connectionInfo.isConnected = true;
             connectionInfo.qrCode = null;
+            connectionInfo.qrGenerated = false;
+            
+            // Clear QR code from database
+            await this.clearDeviceQR(deviceId);
+            logInfo(`[${deviceId}] QR code cleared from database`);
+            
+            // Update device status to connected
             await this.updateDeviceStatus(deviceId, 'connected');
+            logInfo(`[${deviceId}] Device status updated to connected`);
             
             // Get device info for socket notification
             const device = await Device.findByPk(deviceId);
@@ -253,12 +414,35 @@ class WhatsAppService {
                 deviceId,
                 status: 'connected'
               });
+              logInfo(`[${deviceId}] Connection notification sent to frontend`);
+            } else {
+              logWarn(`[${deviceId}] Device not found when sending connection notification`);
             }
             
-            logInfo(`WhatsApp connected for device: ${deviceId}`);
+            logInfo(`[${deviceId}] ========== CONNECTION PROCESS COMPLETE ==========`);
           } catch (openError) {
-            logError(openError, `Error handling connection open for device: ${deviceId}`);
+            logError(openError, `[${deviceId}] Error handling connection open`);
+            // Emit error status
+            try {
+              const device = await Device.findByPk(deviceId);
+              if (device) {
+                await socketService.handleDeviceConnection({
+                  userId: device.user_id,
+                  deviceId,
+                  status: 'error',
+                  error: 'Connection opened but failed to update status'
+                });
+              }
+            } catch (emitError) {
+              logError(emitError, `[${deviceId}] Error emitting connection open error`);
+            }
           }
+        }
+
+        // Handle connection state changes - Baileys 7.x may use 'connecting' state
+        if (connection === 'connecting') {
+          logInfo(`Device ${deviceId} is connecting...`);
+          // Don't change status here, wait for 'open' or QR
         }
 
       } catch (error) {
@@ -266,13 +450,34 @@ class WhatsAppService {
       }
     });
 
-    // Credentials update handler
+    // Credentials update handler - Critical for connection after QR scan
     sock.ev.on('creds.update', async () => {
       try {
+        logInfo(`[${deviceId}] Credentials update event received, saving...`);
         await connectionInfo.saveCreds();
-        logInfo(`Credentials saved for device: ${deviceId}`);
+        logInfo(`[${deviceId}] Credentials saved successfully`);
+        
+        // Update device status after credentials saved (means pairing is progressing)
+        const device = await Device.findByPk(deviceId);
+        if (device && device.status === 'connecting') {
+          logInfo(`[${deviceId}] Device is pairing, credentials saved - waiting for connection open...`);
+        }
       } catch (error) {
-        logError(error, `Error saving credentials for device: ${deviceId}`);
+        logError(error, `[${deviceId}] Error saving credentials`);
+        // This is critical - if credentials can't be saved, connection will fail
+        try {
+          const device = await Device.findByPk(deviceId);
+          if (device) {
+            await socketService.handleDeviceConnection({
+              userId: device.user_id,
+              deviceId,
+              status: 'error',
+              error: 'Failed to save credentials after QR scan'
+            });
+          }
+        } catch (emitError) {
+          logError(emitError, `[${deviceId}] Error emitting credentials save failure`);
+        }
       }
     });
 
@@ -607,10 +812,13 @@ class WhatsAppService {
         }
       }
 
-      // Clean up session files to prevent conflicts
+      // Check device status before cleaning up session
       try {
-        if (sessionPath && fs.existsSync(sessionPath)) {
-          logInfo(`Cleaning up session files for device: ${deviceId}`);
+        const device = await Device.findByPk(deviceId);
+        const shouldCleanupSession = device && device.status !== 'connecting';
+        
+        if (shouldCleanupSession && sessionPath && fs.existsSync(sessionPath)) {
+          logInfo(`Cleaning up session files for device: ${deviceId} (status: ${device.status})`);
           // Remove session files to ensure clean reconnection
           const files = fs.readdirSync(sessionPath);
           for (const file of files) {
@@ -627,9 +835,11 @@ class WhatsAppService {
           } catch (rmdirError) {
             logWarn(`Could not remove session directory: ${rmdirError.message}`);
           }
+        } else if (device && device.status === 'connecting') {
+          logInfo(`Skipping session cleanup for device ${deviceId} - still connecting`);
         }
       } catch (cleanupError) {
-        logWarn(`Error cleaning up session files for device ${deviceId}: ${cleanupError.message}`);
+        logWarn(`Error checking device status before cleanup: ${cleanupError.message}`);
       }
 
       // Remove from connections map
