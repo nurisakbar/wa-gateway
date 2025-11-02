@@ -98,7 +98,7 @@ export default defineNuxtPlugin(() => {
 
     // Device events
     socket.value.on('device:connected', (data) => {
-      // console.log('Device connected:', data)
+      console.log('Device connected event (direct):', data)
       window.dispatchEvent(new CustomEvent('device:connected', { detail: data }))
     })
 
@@ -120,23 +120,37 @@ export default defineNuxtPlugin(() => {
     // New unified events from backend
     socket.value.on('device_status', (data) => {
       // Normalize to existing custom events
+      console.log('Device status received:', data)
       if (data?.status === 'qr_ready' && data?.qrCode) {
+        console.log('QR ready event (device_status):', data.deviceId)
         window.dispatchEvent(new CustomEvent('device:qr', { detail: { deviceId: data.deviceId, qrCode: data.qrCode } }))
       } else if (data?.status === 'connected') {
+        console.log('Device connected event (device_status):', data.deviceId)
         window.dispatchEvent(new CustomEvent('device:connected', { detail: { deviceId: data.deviceId } }))
       } else if (data?.status === 'disconnected') {
+        console.log('Device disconnected event (device_status):', data.deviceId)
         window.dispatchEvent(new CustomEvent('device:disconnected', { detail: { deviceId: data.deviceId } }))
+      } else if (data?.status === 'error') {
+        console.log('Device error event (device_status):', data.deviceId, data.error)
+        window.dispatchEvent(new CustomEvent('device_status', { detail: { deviceId: data.deviceId, status: 'error', error: data.error } }))
       }
     })
 
     socket.value.on('connection_status', (data) => {
       // Some emissions are to the device room; mirror to window events
+      console.log('Connection status received:', data)
       if (data?.status === 'qr_ready' && data?.qrCode) {
+        console.log('QR ready event:', data.deviceId)
         window.dispatchEvent(new CustomEvent('device:qr', { detail: { deviceId: data.deviceId, qrCode: data.qrCode } }))
       } else if (data?.status === 'connected') {
+        console.log('Device connected event:', data.deviceId)
         window.dispatchEvent(new CustomEvent('device:connected', { detail: { deviceId: data.deviceId } }))
       } else if (data?.status === 'disconnected') {
+        console.log('Device disconnected event:', data.deviceId)
         window.dispatchEvent(new CustomEvent('device:disconnected', { detail: { deviceId: data.deviceId } }))
+      } else if (data?.status === 'error') {
+        console.log('Device error event:', data.deviceId, data.error)
+        window.dispatchEvent(new CustomEvent('connection_status', { detail: { deviceId: data.deviceId, status: 'error', error: data.error } }))
       }
     })
 
