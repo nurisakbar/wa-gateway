@@ -41,6 +41,7 @@ const whitelist = [
   'http://127.0.0.1:3000',
   'http://103.125.181.245:3000',
   'http://wafe.klikmedis.com',
+  'https://app.klinikcrm.id',
   // Tambahkan origins dari environment variables
   ...(process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : [])
 ]

@@ -13,9 +13,26 @@ class SocketService {
 
   // Initialize Socket.io server
   initialize(server) {
+    // CORS whitelist untuk Socket.io (sama dengan Express CORS)
+    const socketWhitelist = [
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
+      'http://103.125.181.245:3000',
+      'http://wafe.klikmedis.com',
+      'https://app.klinikcrm.id',
+      ...(process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : [])
+    ];
+
     this.io = new Server(server, {
       cors: {
-        origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+        origin: (origin, callback) => {
+          // izinkan kalau origin ada di whitelist atau origin null
+          if (!origin || socketWhitelist.indexOf(origin) !== -1) {
+            callback(null, true);
+          } else {
+            callback(new Error('Not allowed by CORS'));
+          }
+        },
         methods: ['GET', 'POST'],
         credentials: true
       },
