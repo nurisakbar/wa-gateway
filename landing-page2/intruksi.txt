@@ -1,0 +1,59 @@
+# Instruction for GitHub Copilot / AI Assistant
+# Project: Landing Page for Klinik CRM SaaS
+
+## 🎯 GOAL
+Create a modern, responsive landing page for a SaaS product called “CRM Klinik”.
+The goal is to attract clinic owners by showing how this CRM helps increase patient loyalty, automate follow-ups, and integrate with the existing RME system.
+
+## 🧩 TECH STACK
+- Use: HTML5, Bootstrap 5.3, and Font Awesome icons
+- Style: clean, professional, healthcare-oriented (white, blue, and green tones)
+- Font: use "Poppins" or similar sans-serif font
+- All text in Bahasa Indonesia
+
+## 🏗️ PAGE STRUCTURE
+
+### 1. Hero Section
+- Large headline: “Bangun Loyalitas Pasien Tanpa Ribet”
+- Subheadline: “Kelola hubungan pasien, otomatisasi follow-up, dan pantau performa klinik Anda — semuanya terintegrasi langsung dengan sistem RME.”
+- CTA Button: “Coba Sekarang Gratis”
+- Add illustration or image placeholder on the right side (optional)
+
+### 2. Section: Mengapa Klinik Anda Butuh CRM Ini
+Add 5 cards with icons and short text:
+1. Tingkatkan Loyalitas Pasien
+2. Otomatisasi Follow-up Tanpa Repot
+3. Terintegrasi dengan RME
+4. Pantau Performa Klinik Secara Real-Time
+5. Buat Tim Anda Lebih Produktif
+
+### 3. Section: Fitur Utama
+Use a grid or icon list:
+- Kirim pesan WhatsApp otomatis
+- Segmentasi pasien (baru, lama, tidak aktif)
+- Reminder kontrol & follow-up otomatis
+- Integrasi penuh dengan sistem RME
+- Laporan loyalitas dan pertumbuhan pasien
+- Multi-user & multi-cabang
+
+### 4. Section: Testimoni
+Add a testimonial card:
+> “Setelah pakai CRM ini, pasien lama yang dulu jarang datang jadi aktif kontrol lagi. Semua pesan follow-up otomatis, jadi tim marketing nggak kewalahan.”
+> — dr. Rina, Pemilik Klinik Sehat Sentosa
+
+### 5. Section: Call to Action (CTA)
+Headline: “Siap Meningkatkan Loyalitas Pasien Anda?”
+Text: “Ubah cara klinik Anda berinteraksi dengan pasien — lebih personal, otomatis, dan terukur.”
+Button: “Jadwalkan Demo Sekarang”
+
+## 🖌️ DESIGN STYLE
+- Soft shadow and rounded corners for cards
+- Use Bootstrap grid system
+- Responsive for mobile & desktop
+- Simple scroll animation (fade-in)
+- Consistent spacing between sections
+
+## ⚙️ NOTES
+- Include navigation bar with logo placeholder and menu items: Home, Fitur, Testimoni, Demo
+- Add footer with © [current year] CRM Klinik — All rights reserved
+- Don’t include backend or form submission, static page only

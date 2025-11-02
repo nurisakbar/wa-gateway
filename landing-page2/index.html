@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="CRM Klinik - Bangun Loyalitas Pasien Tanpa Ribet. Kelola hubungan pasien, otomatisasi follow-up, dan pantau performa klinik Anda.">
+    <title>CRM Klinik - Solusi Digital untuk Klinik Modern</title>
+    
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts - Poppins -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-blue: #1E88E5;
+            --primary-green: #4CAF50;
+            --dark-blue: #1565C0;
+            --light-blue: #E3F2FD;
+            --light-green: #E8F5E9;
+            --text-dark: #212529;
+            --text-muted: #6c757d;
+            --white: #ffffff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            color: var(--text-dark);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Navigation */
+        .navbar {
+            padding: 1rem 0;
+            background: var(--white) !important;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: var(--primary-blue) !important;
+        }
+
+        .navbar-brand i {
+            color: var(--primary-green);
+        }
+
+        .nav-link {
+            font-weight: 500;
+            color: var(--text-dark) !important;
+            margin: 0 0.5rem;
+            transition: color 0.3s ease;
+        }
+
+        .nav-link:hover {
+            color: var(--primary-blue) !important;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-blue);
+            border-color: var(--primary-blue);
+            font-weight: 600;
+            padding: 0.75rem 1.5rem;
+            border-radius: 50px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--dark-blue);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(30, 136, 229, 0.3);
+        }
+
+        .btn-outline-primary {
+            color: var(--primary-blue);
+            border: 2px solid var(--primary-blue);
+            background-color: transparent;
+            font-weight: 600;
+            padding: 0.75rem 1.5rem;
+            border-radius: 50px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-outline-primary:hover {
+            background-color: var(--primary-blue);
+            border-color: var(--primary-blue);
+            color: var(--white);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(30, 136, 229, 0.3);
+        }
+
+        /* Hero Section */
+        .hero-section {
+            background: linear-gradient(135deg, var(--light-blue) 0%, var(--light-green) 100%);
+            padding: 120px 0 80px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(76, 175, 80, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero-title {
+            font-size: 3.5rem;
+            font-weight: 800;
+            color: var(--text-dark);
+            margin-bottom: 1.5rem;
+            line-height: 1.2;
+        }
+
+        .hero-subtitle {
+            font-size: 1.3rem;
+            color: var(--text-muted);
+            margin-bottom: 2.5rem;
+            line-height: 1.8;
+        }
+
+        .btn-hero {
+            padding: 1rem 2.5rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 50px;
+            box-shadow: 0 5px 20px rgba(30, 136, 229, 0.3);
+        }
+
+        .hero-image {
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero-image img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+        }
+
+        /* Why Section */
+        .why-section {
+            padding: 80px 0;
+            background: var(--white);
+        }
+
+        .section-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 1rem;
+            color: var(--text-dark);
+        }
+
+        .section-subtitle {
+            text-align: center;
+            color: var(--text-muted);
+            margin-bottom: 3rem;
+            font-size: 1.1rem;
+        }
+
+        .why-card {
+            background: var(--white);
+            border-radius: 20px;
+            padding: 2.5rem;
+            height: 100%;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .why-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.12);
+            border-color: var(--primary-blue);
+        }
+
+        .why-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-green));
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+            color: var(--white);
+            font-size: 2rem;
+        }
+
+        .why-card h4 {
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-dark);
+        }
+
+        .why-card p {
+            color: var(--text-muted);
+            line-height: 1.8;
+        }
+
+        /* Features Section */
+        .features-section {
+            padding: 80px 0;
+            background: #f8f9fa;
+        }
+
+        .feature-item {
+            background: var(--white);
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+        }
+
+        .feature-item:hover {
+            transform: translateX(10px);
+            box-shadow: 0 5px 25px rgba(0,0,0,0.12);
+        }
+
+        .feature-icon-small {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-green));
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-size: 1.5rem;
+            margin-right: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .feature-content h5 {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-dark);
+        }
+
+        .feature-content p {
+            color: var(--text-muted);
+            margin: 0;
+            line-height: 1.6;
+        }
+
+        /* Testimonial Section */
+        .testimonial-section {
+            padding: 80px 0;
+            background: var(--white);
+        }
+
+        .testimonial-card {
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-green));
+            border-radius: 25px;
+            padding: 3rem;
+            color: var(--white);
+            box-shadow: 0 15px 50px rgba(30, 136, 229, 0.2);
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .testimonial-card::before {
+            content: '"';
+            position: absolute;
+            top: -20px;
+            left: 30px;
+            font-size: 120px;
+            color: rgba(255,255,255,0.1);
+            font-family: serif;
+            line-height: 1;
+        }
+
+        .testimonial-text {
+            font-size: 1.2rem;
+            font-style: italic;
+            line-height: 1.8;
+            margin-bottom: 2rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        .testimonial-author {
+            display: flex;
+            align-items: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        .testimonial-avatar {
+            width: 60px;
+            height: 60px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.2rem;
+            margin-right: 1rem;
+        }
+
+        .testimonial-info h5 {
+            margin: 0;
+            font-weight: 600;
+        }
+
+        .testimonial-info p {
+            margin: 0;
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+
+        /* Pricing Section */
+        .pricing-section {
+            padding: 80px 0;
+            background: #f8f9fa;
+        }
+
+        .pricing-card {
+            background: var(--white);
+            border-radius: 25px;
+            padding: 2.5rem;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            height: 100%;
+            border: 2px solid transparent;
+            position: relative;
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+
+        .pricing-card.featured {
+            border-color: var(--primary-blue);
+            transform: scale(1.05);
+            background: linear-gradient(135deg, rgba(30, 136, 229, 0.05), rgba(76, 175, 80, 0.05));
+        }
+
+        .pricing-card.featured:hover {
+            transform: scale(1.05) translateY(-10px);
+        }
+
+        .pricing-badge {
+            position: absolute;
+            top: -15px;
+            right: 20px;
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-green));
+            color: var(--white);
+            padding: 0.5rem 1.5rem;
+            border-radius: 50px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            box-shadow: 0 3px 10px rgba(30, 136, 229, 0.3);
+        }
+
+        .pricing-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .pricing-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 1rem;
+        }
+
+        .pricing-price {
+            display: flex;
+            align-items: baseline;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .pricing-amount {
+            font-size: 3rem;
+            font-weight: 800;
+            color: var(--primary-blue);
+            line-height: 1;
+        }
+
+        .pricing-currency {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .pricing-period {
+            font-size: 1rem;
+            color: var(--text-muted);
+        }
+
+        .pricing-free {
+            color: var(--primary-green);
+        }
+
+        .pricing-features {
+            list-style: none;
+            padding: 0;
+            margin: 2rem 0;
+        }
+
+        .pricing-features li {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            color: var(--text-dark);
+        }
+
+        .pricing-features li:last-child {
+            border-bottom: none;
+        }
+
+        .pricing-features li i {
+            color: var(--primary-green);
+            margin-right: 0.75rem;
+            font-size: 1.1rem;
+            width: 20px;
+        }
+
+        .pricing-features li.disabled {
+            color: var(--text-muted);
+            opacity: 0.6;
+        }
+
+        .pricing-features li.disabled i {
+            color: #ccc;
+        }
+
+        .btn-pricing {
+            width: 100%;
+            padding: 1rem;
+            font-weight: 600;
+            border-radius: 50px;
+            margin-top: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-pricing-free {
+            background-color: var(--primary-green);
+            border-color: var(--primary-green);
+            color: var(--white);
+        }
+
+        .btn-pricing-free:hover {
+            background-color: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-pricing-business {
+            background-color: var(--primary-blue);
+            border-color: var(--primary-blue);
+            color: var(--white);
+        }
+
+        .btn-pricing-business:hover {
+            background-color: var(--dark-blue);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(30, 136, 229, 0.3);
+        }
+
+        .btn-pricing-enterprise {
+            background-color: transparent;
+            border: 2px solid var(--primary-blue);
+            color: var(--primary-blue);
+        }
+
+        .btn-pricing-enterprise:hover {
+            background-color: var(--primary-blue);
+            color: var(--white);
+            transform: translateY(-2px);
+        }
+
+        /* CTA Section */
+        .cta-section {
+            padding: 80px 0;
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-green));
+            color: var(--white);
+            text-align: center;
+        }
+
+        .cta-title {
+            font-size: 2.8rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+        }
+
+        .cta-text {
+            font-size: 1.2rem;
+            margin-bottom: 2.5rem;
+            opacity: 0.95;
+            line-height: 1.8;
+        }
+
+        .btn-cta {
+            background-color: var(--white);
+            color: var(--primary-blue);
+            border: none;
+            padding: 1.2rem 3rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 50px;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.2);
+        }
+
+        .btn-cta:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 35px rgba(0,0,0,0.3);
+            color: var(--primary-blue);
+        }
+
+        /* Footer */
+        .footer {
+            background: var(--text-dark);
+            color: rgba(255,255,255,0.8);
+            padding: 40px 0 20px;
+        }
+
+        .footer h5 {
+            color: var(--white);
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+        }
+
+        .footer a {
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer a:hover {
+            color: var(--primary-blue);
+        }
+
+        .footer-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .footer-list li {
+            margin-bottom: 0.75rem;
+        }
+
+        /* Smooth Scroll */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Fade In Animation */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 2.5rem;
+            }
+
+            .hero-subtitle {
+                font-size: 1.1rem;
+            }
+
+            .section-title {
+                font-size: 2rem;
+            }
+
+            .cta-title {
+                font-size: 2rem;
+            }
+
+            .hero-section {
+                padding: 100px 0 60px;
+            }
+
+            .why-card,
+            .feature-item {
+                margin-bottom: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-light fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-hospital me-2"></i>CRM Klinik
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#home">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#why">Mengapa</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#features">Fitur</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#testimonial">Testimoni</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#pricing">Harga</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="btn btn-outline-primary me-2" href="https://app.klinikcrm.id" target="_blank">
+                            <i class="fas fa-user-plus me-1"></i>Daftar
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="btn btn-primary" href="https://app.klinikcrm.id" target="_blank">Login</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero-section">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6 hero-content fade-in">
+                    <h1 class="hero-title">Bangun Loyalitas Pasien Tanpa Ribet</h1>
+                    <p class="hero-subtitle">
+                        Kelola hubungan pasien, otomatisasi follow-up, dan pantau performa klinik Anda — semuanya terintegrasi langsung dengan sistem RME.
+                    </p>
+                    <a href="https://app.klinikcrm.id" target="_blank" class="btn btn-primary btn-hero">
+                        <i class="fas fa-rocket me-2"></i>Coba Sekarang Gratis
+                    </a>
+                </div>
+                <div class="col-lg-6 hero-image fade-in">
+                    <img src="https://via.placeholder.com/600x400/1E88E5/ffffff?text=CRM+Klinik+Dashboard" 
+                         alt="CRM Klinik Dashboard" 
+                         class="img-fluid">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Why Section -->
+    <section id="why" class="why-section">
+        <div class="container">
+            <h2 class="section-title fade-in">Mengapa Klinik Anda Butuh CRM Ini</h2>
+            <p class="section-subtitle fade-in">Solusi lengkap untuk meningkatkan layanan dan loyalitas pasien</p>
+            
+            <div class="row g-4 justify-content-center">
+                <div class="col-md-6 col-lg-4">
+                    <div class="why-card fade-in">
+                        <div class="why-icon">
+                            <i class="fas fa-heart"></i>
+                        </div>
+                        <h4>Tingkatkan Loyalitas Pasien</h4>
+                        <p>Bangun hubungan yang lebih personal dengan pasien melalui komunikasi yang tepat waktu dan relevan. Pantau tingkat kepuasan dan retensi pasien dengan mudah.</p>
+                    </div>
+                </div>
+                
+                <div class="col-md-6 col-lg-4">
+                    <div class="why-card fade-in">
+                        <div class="why-icon">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <h4>Otomatisasi Follow-up Tanpa Repot</h4>
+                        <p>Sistem otomatis mengirim reminder kontrol, follow-up hasil pengobatan, dan pesan personalisasi tanpa perlu manual. Hemat waktu dan tenaga tim Anda.</p>
+                    </div>
+                </div>
+                
+                <div class="col-md-6 col-lg-4">
+                    <div class="why-card fade-in">
+                        <div class="why-icon">
+                            <i class="fas fa-link"></i>
+                        </div>
+                        <h4>Terintegrasi dengan RME</h4>
+                        <p>Sinkronisasi data langsung dengan sistem Rekam Medis Elektronik (RME) Anda. Tidak perlu input ulang, semua data pasien terhubung secara real-time.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features-section">
+        <div class="container">
+            <h2 class="section-title fade-in">Fitur Utama</h2>
+            <p class="section-subtitle fade-in">Semua yang Anda butuhkan untuk mengelola hubungan dengan pasien</p>
+            
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="feature-item fade-in">
+                        <div class="feature-icon-small">
+                            <i class="fas fa-comments"></i>
+                        </div>
+                        <div class="feature-content">
+                            <h5>Kirim Pesan WhatsApp Otomatis</h5>
+                            <p>Kirim pesan otomatis ke pasien dengan template yang dapat disesuaikan. Reminder appointment, hasil lab, atau follow-up kontrol bisa dikirim secara otomatis.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6">
+                    <div class="feature-item fade-in">
+                        <div class="feature-icon-small">
+                            <i class="fas fa-filter"></i>
+                        </div>
+                        <div class="feature-content">
+                            <h5>Segmentasi Pasien</h5>
+                            <p>Kategorikan pasien menjadi baru, lama, tidak aktif, atau berdasarkan kondisi medis. Targetkan pesan yang tepat untuk setiap segment.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6">
+                    <div class="feature-item fade-in">
+                        <div class="feature-icon-small">
+                            <i class="fas fa-bell"></i>
+                        </div>
+                        <div class="feature-content">
+                            <h5>Reminder Kontrol & Follow-up Otomatis</h5>
+                            <p>Atur jadwal reminder otomatis untuk kontrol rutin pasien. Sistem akan mengirim pesan sesuai jadwal yang ditentukan tanpa perlu ingat manual.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6">
+                    <div class="feature-item fade-in">
+                        <div class="feature-icon-small">
+                            <i class="fas fa-sync"></i>
+                        </div>
+                        <div class="feature-content">
+                            <h5>Integrasi Penuh dengan Sistem RME</h5>
+                            <p>Sinkronisasi dua arah dengan sistem Rekam Medis Elektronik. Data pasien, riwayat kunjungan, dan informasi medis terintegrasi secara seamless.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6">
+                    <div class="feature-item fade-in">
+                        <div class="feature-icon-small">
+                            <i class="fas fa-chart-bar"></i>
+                        </div>
+                        <div class="feature-content">
+                            <h5>Laporan Loyalitas dan Pertumbuhan Pasien</h5>
+                            <p>Pantau metrik penting seperti tingkat retensi, kepuasan pasien, efektivitas follow-up, dan pertumbuhan database pasien dengan laporan detail.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonial Section -->
+    <section id="testimonial" class="testimonial-section">
+        <div class="container">
+            <h2 class="section-title fade-in">Testimoni</h2>
+            <p class="section-subtitle fade-in">Apa kata mereka yang sudah menggunakan CRM Klinik</p>
+            
+            <div class="testimonial-card fade-in">
+                <p class="testimonial-text">
+                    "Setelah pakai CRM ini, pasien lama yang dulu jarang datang jadi aktif kontrol lagi. Semua pesan follow-up otomatis, jadi tim marketing nggak kewalahan."
+                </p>
+                <div class="testimonial-author">
+                    <div class="testimonial-avatar">DR</div>
+                    <div class="testimonial-info">
+                        <h5>dr. Rina</h5>
+                        <p>Pemilik Klinik Sehat Sentosa</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section id="pricing" class="pricing-section">
+        <div class="container">
+            <h2 class="section-title fade-in">Pilih Paket yang Tepat untuk Klinik Anda</h2>
+            <p class="section-subtitle fade-in">Mulai dari gratis, upgrade kapan saja sesuai kebutuhan</p>
+            
+            <div class="row g-4 justify-content-center">
+                <!-- Free Plan -->
+                <div class="col-lg-4 col-md-6">
+                    <div class="pricing-card fade-in">
+                        <div class="pricing-header">
+                            <h3 class="pricing-name">Gratis</h3>
+                            <div class="pricing-price">
+                                <span class="pricing-amount pricing-free">Rp 0</span>
+                                <span class="pricing-period">/bulan</span>
+                            </div>
+                        </div>
+                        <ul class="pricing-features">
+                            <li><i class="fas fa-check"></i>Hingga 100 pasien aktif</li>
+                            <li><i class="fas fa-check"></i>50 pesan WhatsApp/bulan</li>
+                            <li><i class="fas fa-check"></i>Basic reminder otomatis</li>
+                            <li><i class="fas fa-check"></i>Segmentasi pasien dasar</li>
+                            <li><i class="fas fa-check"></i>Integrasi RME dasar</li>
+                            <li><i class="fas fa-check"></i>Laporan dasar</li>
+                            <li class="disabled"><i class="fas fa-times"></i>Support email</li>
+                        </ul>
+                        <a href="https://app.klinikcrm.id" target="_blank" class="btn btn-pricing btn-pricing-free">
+                            Mulai Gratis
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Business Plan -->
+                <div class="col-lg-4 col-md-6">
+                    <div class="pricing-card featured fade-in">
+                        <div class="pricing-badge">Paling Populer</div>
+                        <div class="pricing-header">
+                            <h3 class="pricing-name">Business</h3>
+                            <div class="pricing-price">
+                                <span class="pricing-currency">Rp</span>
+                                <span class="pricing-amount">150</span>
+                                <span class="pricing-period">rb/bulan</span>
+                            </div>
+                        </div>
+                        <ul class="pricing-features">
+                            <li><i class="fas fa-check"></i>Hingga 1.000 pasien aktif</li>
+                            <li><i class="fas fa-check"></i>5.000 pesan WhatsApp/bulan</li>
+                            <li><i class="fas fa-check"></i>Advanced reminder & follow-up</li>
+                            <li><i class="fas fa-check"></i>Segmentasi pasien lengkap</li>
+                            <li><i class="fas fa-check"></i>Integrasi RME penuh</li>
+                            <li><i class="fas fa-check"></i>Laporan lengkap & analytics</li>
+                            <li><i class="fas fa-check"></i>Priority email support</li>
+                            <li><i class="fas fa-check"></i>Template pesan custom</li>
+                        </ul>
+                        <a href="https://app.klinikcrm.id" target="_blank" class="btn btn-pricing btn-pricing-business">
+                            Mulai Paket Business
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Enterprise Plan -->
+                <div class="col-lg-4 col-md-6">
+                    <div class="pricing-card fade-in">
+                        <div class="pricing-header">
+                            <h3 class="pricing-name">Enterprise</h3>
+                            <div class="pricing-price">
+                                <span class="pricing-currency">Rp</span>
+                                <span class="pricing-amount">350</span>
+                                <span class="pricing-period">rb/bulan</span>
+                            </div>
+                        </div>
+                        <ul class="pricing-features">
+                            <li><i class="fas fa-check"></i>Pasien unlimited</li>
+                            <li><i class="fas fa-check"></i>Pesan WhatsApp unlimited</li>
+                            <li><i class="fas fa-check"></i>Semua fitur Business</li>
+                            <li><i class="fas fa-check"></i>Custom automation workflow</li>
+                            <li><i class="fas fa-check"></i>API access & integration</li>
+                            <li><i class="fas fa-check"></i>Dedicated account manager</li>
+                            <li><i class="fas fa-check"></i>24/7 priority support</li>
+                            <li><i class="fas fa-check"></i>Custom training & onboarding</li>
+                            <li><i class="fas fa-check"></i>SLA guarantee</li>
+                        </ul>
+                        <a href="https://app.klinikcrm.id" target="_blank" class="btn btn-pricing btn-pricing-enterprise">
+                            Hubungi Sales
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-5 fade-in">
+                <p class="text-muted">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Semua paket termasuk free trial 14 hari • Tidak ada biaya setup • Batal kapan saja
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section id="demo" class="cta-section">
+        <div class="container">
+            <h2 class="cta-title fade-in">Siap Meningkatkan Loyalitas Pasien Anda?</h2>
+            <p class="cta-text fade-in">
+                Ubah cara klinik Anda berinteraksi dengan pasien — lebih personal, otomatis, dan terukur.
+            </p>
+            <a href="https://app.klinikcrm.id" target="_blank" class="btn btn-cta fade-in">
+                <i class="fas fa-calendar-check me-2"></i>Daftar Sekarang
+            </a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-12 text-center">
+                    <p>&copy; <span id="currentYear"></span> CRM Klinik — All rights reserved</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap 5.3 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JavaScript -->
+    <script>
+        // Set current year in footer
+        document.getElementById('currentYear').textContent = new Date().getFullYear();
+
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                const href = this.getAttribute('href');
+                if (href !== '#' && href !== '') {
+                    e.preventDefault();
+                    const target = document.querySelector(href);
+                    if (target) {
+                        const offsetTop = target.offsetTop - 80;
+                        window.scrollTo({
+                            top: offsetTop,
+                            behavior: 'smooth'
+                        });
+                    }
+                }
+            });
+        });
+
+        // Navbar background on scroll
+        window.addEventListener('scroll', function() {
+            const navbar = document.querySelector('.navbar');
+            if (window.scrollY > 50) {
+                navbar.style.boxShadow = '0 4px 20px rgba(0,0,0,0.15)';
+            } else {
+                navbar.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
+            }
+        });
+
+        // Fade in animation on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver(function(entries) {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
+
+        // Observe all fade-in elements
+        document.querySelectorAll('.fade-in').forEach(el => {
+            observer.observe(el);
+        });
+    </script>
+</body>
+</html>
+
