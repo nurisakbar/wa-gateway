@@ -13,6 +13,7 @@ const SubscriptionPlan = require('./SubscriptionPlan');
 const UserSubscription = require('./UserSubscription');
 const Invoice = require('./Invoice');
 const Broadcast = require('./Broadcast');
+const File = require('./File');
 
 // Define associations
 User.hasMany(Device, { 
@@ -196,6 +197,28 @@ Broadcast.belongsTo(Device, {
   as: 'device'
 });
 
+// File associations
+User.hasMany(File, {
+  foreignKey: 'user_id',
+  as: 'files',
+  onDelete: 'CASCADE'
+});
+
+File.belongsTo(User, {
+  foreignKey: 'user_id',
+  as: 'user'
+});
+
+Broadcast.belongsTo(File, {
+  foreignKey: 'file_id',
+  as: 'file'
+});
+
+File.hasMany(Broadcast, {
+  foreignKey: 'file_id',
+  as: 'broadcasts'
+});
+
 module.exports = {
   sequelize,
   User,
@@ -209,5 +232,6 @@ module.exports = {
   SubscriptionPlan,
   UserSubscription,
   Invoice,
-  Broadcast
+  Broadcast,
+  File
 }; 
