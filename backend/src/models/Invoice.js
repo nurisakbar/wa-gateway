@@ -93,6 +93,16 @@ const Invoice = sequelize.define('Invoice', {
     },
     comment: 'Admin user who confirmed the payment'
   },
+  external_invoice_id: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    comment: 'External invoice ID from payment provider'
+  },
+  payment_method: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    comment: 'Payment method used'
+  },
   items: {
     type: DataTypes.JSON,
     defaultValue: [],

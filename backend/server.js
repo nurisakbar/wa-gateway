@@ -303,6 +303,20 @@ const startServer = async () => {
             allowNull: true
           }));
         }
+        if (!table.external_invoice_id) {
+          addOps.push(qi.addColumn('invoices', 'external_invoice_id', {
+            type: require('sequelize').STRING(255),
+            allowNull: true,
+            comment: 'External invoice ID from payment provider'
+          }));
+        }
+        if (!table.payment_method) {
+          addOps.push(qi.addColumn('invoices', 'payment_method', {
+            type: require('sequelize').STRING(255),
+            allowNull: true,
+            comment: 'Payment method used'
+          }));
+        }
         if (addOps.length > 0) {
           await Promise.all(addOps);
           logInfo('Invoices table updated: missing columns added');
